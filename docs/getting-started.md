@@ -88,3 +88,24 @@ both ways — pulling before each turn, pushing after. See [Overleaf sync](overl
 - [Commands](commands.md) — every slash command and key
 - [Choosing a model](models.md) — presets, doctor, benchmark
 - [Configuration](configuration.md) — backends, themes, env vars
+
+---
+
+## Uninstall
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash
+
+# Windows (PowerShell)
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1)))
+
+# npm only
+npm uninstall -g ownhandoff
+```
+
+Add `--purge` to also remove `~/.handoff/` (config, projects, cache, skills):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash -s -- --purge
+```
