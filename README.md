@@ -1,10 +1,6 @@
 # handoff
 
-**Own your research.** A local-first, [Claude Code](https://claude.com/claude-code)-style
-research companion that lives in your terminal — it reads the literature, drafts and
-cites your paper, and helps run your experiments, all powered by models running on
-*your* machine through [Ollama](https://ollama.com), Llama.cpp, MLX, vLLM, or Hugging Face. Unpublished ideas, data, and drafts never leave your computer. **Privacy is the product, not a footnote.**
-
+**Own your research.** A local-first research companion that lives in your terminal. It reads the literature, drafts and cites your paper, and helps run your experiments, all powered by models running on *your* machine through Ollama, Llama.cpp, MLX, vLLM, or Hugging Face. Unpublished ideas, data, and drafts never leave your computer.
 
 - 🔒 **Private by default** — runs against local models (Ollama, llama.cpp, MLX, or self-hosted vLLM); your work never leaves the machine. Cloud is only ever used after handoff asks you first.
 - 🔬 **Reads the literature** — fact-check a claim or survey a topic against scholarly sources, queried live: OpenAlex (`/research`, `search_papers` with newest-first `sort=date`) plus `search_arxiv` for the freshest preprints, indexed within a day of submission.
@@ -30,13 +26,13 @@ and the `handoff` CLI itself. No other steps.
 ### Linux & macOS
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.sh | bash
+TBD
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.ps1 | iex
+TBD
 ```
 
 ### Package only, with npm
@@ -44,116 +40,10 @@ irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/instal
 If you just want the CLI and will install the model backends yourself:
 
 ```sh
-npm install -g ownhandoff
+TBD
 ```
 
-This installs **only** the `handoff` command — **not** Ollama or any other
-backend. (npm also blocks package install-scripts by default, so it can't set
-up backends for you even if we wanted it to. Use the installer above for a
-one-shot setup.) The npm package is named **`ownhandoff`**; the command it
-installs is **`handoff`**. Then start it with `handoff`.
-
----
-
-## Requirements
-
-- **Node.js 18+** — the installer checks for this and points you to <https://nodejs.org> if it's missing.
-- **[Ollama](https://ollama.com/download)** — the default local backend. After installing it, pull a model:
-
-  ```sh
-  ollama pull qwen3:8b
-  ```
-
-  On first run, handoff's setup wizard offers to pull a model for you if none is present. handoff bootstraps what it can automatically — and always tells you what it set up.
-- **[uv](https://docs.astral.sh/uv/)** *(recommended, installed by the installer)* — powers the Python experiment runner: each experiment becomes an isolated, reproducible uv project. Without it, `run_code` falls back to a plain per-project `venv`.
-
-> Ollama is the default so everything stays local. handoff also supports **llama.cpp**
-> and **MLX** (local), self-hosted **vLLM**, and a cloud **HuggingFace** backend (needs
-> an API token) — pick yours in the setup wizard or with `/model`. See
-> [`docs/configuration.md`](docs/configuration.md#backends).
-
----
-
-## Quickstart
-
-```sh
-handoff
-```
-
-The first launch walks you through a short setup wizard (backend → model → quantization), then drops you into the chat. A typical research session:
-
-1. **Start a study.** `/project new Memory and Attention` scaffolds the workspace and makes it active.
-2. **Link your paper (optional).** `/overleaf` opens a form — paste your Overleaf project link and a Git token. handoff clones it into `paper/` and from then on syncs both ways automatically.
-3. **Work in plain language.** Ask handoff to:
-   - *"Find recent work on retrieval-augmented attention and add the three most-cited to my bibliography."* → it searches the literature and writes the `.bib` **inside `paper/`** so Overleaf sees it.
-   - *"Start the paper."* → it asks which template (Blank LaTeX / ACL / NeurIPS, or one you added under `~/.handoff/templates/`), then copies that whole template folder — `main.tex`, the venue's styles, and a starter bib — into `paper/`.
-   - *"Draft a related-work paragraph and cite those."* → it edits your main `.tex` in place; you see a diff box, not a wall of LaTeX.
-   - *"Write a script in `experiments/` to plot the results."* → it creates the file in your project, no permission prompts for in-project writes.
-4. **Check a claim.** `/research transformers need positional encodings` returns a SUPPORTED / CONTESTED / REFUTED verdict with citations.
-5. **Keep it honest.** `/audit-paper` catalogs every number and comparison in the paper; `/handoff` turns the current state into a shareable summary.
-
-Scroll the transcript with the **arrow keys** or the **mouse wheel**; **Esc** interrupts the model mid-response; press **`~`** on an empty prompt to toggle off-work mode. Text selection / copy-paste work as usual.
-
----
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `/project` | open the project menu — switch, create, or delete (or `/project new <name>`) |
-| `/research <claim>` | fact-check a claim or survey a topic against the scholarly literature |
-| `/overleaf` | connect & sync your paper with Overleaf |
-| `/audit-paper` | scan `paper/` for unsupported claims, numbers, and comparisons |
-| `/claims`, `/unsupported` | review tracked claims and their evidence status |
-| `/claim-add`, `/claim-status`, `/claim-link-run`, `/claim-link-paper` | manage claims and attach evidence |
-| `/handoff [--for-me\|--for-pi\|--for-reviewer\|--for-industry-partner]` | generate a transfer packet summarizing where the work stands |
-| `/compose-skill` | write a new skill in your `$EDITOR` |
-| `/skill <name>` | run one of your skills |
-| `/skills` | list your skills |
-| `/model` | switch the active model; presets `/model cool·fast·balanced·deep`; diagnostics `/model doctor·benchmark` |
-| `/settings` | set the inference preset, toggle personalization, change the theme, toggle the mascot, set the context window, or toggle flash attention / KV-cache |
-| `/profile` | view or manage what handoff has learned about you (local, editable): `show`, `enable`/`disable`, `forget <key>`, `export`, `reset` |
-| `/mode` | toggle hands-on (approve sensitive tools) / hands-off (auto) |
-| `/resume` | restore the last session |
-| `/clear` | reset the conversation |
-| `/help` | show the command panel |
-| `/quit` | exit handoff (`/exit` too) |
-
-Press **`~`** on an empty prompt to toggle **off-work mode** (a general assistant with no
-project/Overleaf context). Full reference: [`docs/commands.md`](docs/commands.md).
-
-### Flags
-
-| Flag | Effect |
-|------|--------|
-| `--resume`, `-r` | restore your last session on launch |
-
----
-
-## Configuration
-
-handoff reads `~/.handoff/config.json` (written by the setup wizard) and a few
-environment variables. Env vars override the file for a single run:
-
-| Variable | Meaning |
-|----------|---------|
-| `HANDOFF_BACKEND` | `ollama` (default), `llama_cpp`, `mlx`, `vllm`, or `hf` |
-| `HANDOFF_MODEL` | model id, e.g. `qwen3:8b` |
-| `HANDOFF_OLLAMA_NUM_CTX` | Ollama context window (`num_ctx`); also set in `/settings` |
-| `HANDOFF_OLLAMA_KEEP_ALIVE` | how long Ollama keeps the model loaded (e.g. `30m`, `-1` to pin) |
-| `HANDOFF_THEME` | `synthwave` (default), `aurora`, `sunset`, `matrix`, `ocean`, `mono`, `dracula`, `nord`, `gruvbox`, `rosepine`, `solarized`, `forest`, `coffee` |
-| `HANDOFF_MODE` | `permissions` (hands-on) or `auto` (hands-off) |
-| `HANDOFF_MAX_TOKENS` | cap on generated tokens |
-| `HANDOFF_NO_ANIM` | set to disable the animated banner mascot for this run |
-| `HANDOFF_REDUCED_MOTION` | set to hold the mascot still (respects reduced-motion) |
-| `NO_COLOR` | render monochrome (the mascot still animates) |
-| `HF_TOKEN` | HuggingFace API token (only for the `hf` backend) |
-
-The Ollama endpoint (`ollamaBaseUrl`, default `http://localhost:11434`) is set in
-`config.json`. handoff talks to Ollama over its native `/api/chat` endpoint so it can
-keep the model loaded between turns and control the context window — see
-[`docs/configuration.md`](docs/configuration.md#speeding-up-local-inference-ollama) for
-the full reference and tips on faster local inference.
+This installs **only** the `handoff` command — **not** Ollama or any other backend. (npm also blocks package install-scripts by default, so it can't set up backends for you even if we wanted it to. Use the installer above for a one-shot setup.) The npm package is named **`ownhandoff`**; the command it installs is **`handoff`**. Then start it with `handoff`.
 
 ---
 
@@ -168,17 +58,14 @@ handoff keeps everything under `~/.handoff/`:
 ├── research/papers/         # cached papers from /research
 └── projects/<name>/         # one research workspace per study
     ├── literature/          #   notes + cached papers               (private)
-    ├── experiments/         #   one uv project per experiment        (private)
+    ├── experiments/         #   one uv project per experiment       (private)
     ├── runs/                #   experiment ledger + run capsules    (private)
     ├── results/             #   tables + figures                    (private)
     ├── claims/              #   claim ledger (claims.jsonl)         (private)
     └── paper/               #   main.tex + refs.bib — the ONLY folder that syncs to Overleaf
 ```
 
-Only `paper/` is mirrored to Overleaf — your LaTeX draft **and** its `refs.bib` live
-there together so citations sync online; everything else stays local and private.
-Ollama stores its models separately (commonly `/usr/share/ollama/.ollama/models`
-on a Linux systemd install, or `~/.ollama/models` for a manual `ollama serve`).
+Only `paper/` is mirrored to Overleaf — your LaTeX draft **and** its `refs.bib` live there together so citations sync online; everything else stays local and private. Ollama stores its models separately (commonly `/usr/share/ollama/.ollama/models` on a Linux systemd install, or `~/.ollama/models` for a manual `ollama serve`).
 
 ---
 
@@ -208,9 +95,7 @@ npm run typecheck      # tsc --noEmit
 npm test               # node:test suite (logic + render checks)
 ```
 
-There's no build step — `handoff` runs the TypeScript source directly through
-[tsx](https://github.com/privatenumber/tsx). See
-[`docs/architecture.md`](docs/architecture.md) for a contributor's tour.
+See [`docs/architecture.md`](docs/architecture.md) for a contributor's tour.
 
 ---
 
@@ -219,30 +104,29 @@ There's no build step — `handoff` runs the TypeScript source directly through
 ### Linux & macOS
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash
+TBD
 ```
 
 Add `--purge` to also delete your config, skills, projects, and cache (`~/.handoff/`):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash -s -- --purge
+TBD
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1))) -Purge
+TBD
 ```
 
 ### Any OS, with npm
 
 ```sh
-npm uninstall -g ownhandoff
-rm -rf ~/.handoff      # optional: remove your config, skills, projects, and cache
+TBD
 ```
 
 ---
 
 ## License
 
-[MIT](./LICENSE) © 2026 Inigo Parra
+[MIT](./LICENSE) 2026
