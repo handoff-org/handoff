@@ -4,8 +4,8 @@ import { homedir, userInfo } from 'os';
 import { spawnSync } from 'child_process';
 import type { Theme } from '../config/theme.js';
 import { hexToRgb, rgbToHex, mix } from './color.js';
-import { renderMorph } from './ascii/AsciiMorphRenderer.js';
-import { colorizeFrame, labelRow, type Seg as MascotSeg } from './ascii/colorize.js';
+import { renderLogo, labelRow, type Seg as MascotSeg } from './ascii/logo.js';
+import { colorizeGradient, themePalette } from './ascii/gradient.js';
 
 const VERSION = '0.1.0';
 
@@ -121,19 +121,18 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
   // The one-line status of where you're working right now.
   const focusText = focus === 'general' ? 'off-work · general' : project ?? 'no project open';
 
-  // Left column: the animated 3D mascot canvas + a label beneath it. When no
-  // animation frame is supplied (disabled / reduced-motion / non-tty), render a
-  // calm static frame the same way, so the layout is identical either way.
+  // Left column: the `h>` logo canvas + a label beneath it. When no animation
+  // frame is supplied (disabled / reduced-motion / non-tty), render a calm static
+  // frame (phase 0) the same way, so the layout is identical either way.
   const noColor = process.env['NO_COLOR'] != null;
   const canvasRows: MascotSeg[][] =
     mascotRows ??
     (() => {
-      const frame = colorizeFrame(
-        renderMorph({ width: LEFT_INNER, height: CANVAS_H, timeMs: 0, reducedMotion: true }),
-        mascotColor,
-        !noColor,
-      );
-      frame.push(labelRow('Tilde', LEFT_INNER, mascotColor, !noColor));
+      const palette = themePalette(theme);
+      const frame = colorizeGradient(renderLogo(LEFT_INNER, CANVAS_H), palette, 0, {
+        color: !noColor,
+      });
+      frame.push(labelRow('', LEFT_INNER, palette[0]!, !noColor));
       return frame;
     })();
   const mascotPanelRows: PanelRow[] = canvasRows.map((segs): PanelRow => ({ segs, center: false }));

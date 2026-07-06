@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import React, { useRef } from 'react';
 import { Text } from 'ink';
 import { render } from 'ink-testing-library';
-import { useMorphMascot } from '../ui/useMorphMascot.js';
+import { useLogoAnimation } from '../ui/useLogoAnimation.js';
 
 function Harness({ enabled, reducedMotion }: { enabled: boolean; reducedMotion?: boolean }) {
   const visible = useRef(true);
-  const rows = useMorphMascot({
+  const rows = useLogoAnimation({
     width: 36,
     height: 15,
-    base: '#2dd4bf',
-    fps: 12,
+    colors: ['#22c55e', '#22d3ee', '#d946ef'],
+    fps: 20,
     color: false,
     enabled,
     reducedMotion,

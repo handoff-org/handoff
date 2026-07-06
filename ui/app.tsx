@@ -6,8 +6,8 @@ import { tmpdir } from 'os';
 import { basename, join } from 'path';
 import { type ChatEntry } from './types.js';
 import { bannerLines, LEFT_INNER, CANVAS_H } from './Banner.js';
-import { useMorphMascot } from './useMorphMascot.js';
-import { hexToRgb, rgbToHex, mix } from './color.js';
+import { useLogoAnimation } from './useLogoAnimation.js';
+import { themePalette } from './ascii/gradient.js';
 import { Overlays, type OverlayMode, type PendingQuestion } from './Overlays.js';
 import { sanitizeTyped, classifyEnter, isCompleteEscapeSeq, caretRowCol } from './input.js';
 import { matchCommands } from './commands.js';
@@ -1745,13 +1745,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const toolCount = registry.list().length;
   const spinner = SPINNER_FRAMES[tick % SPINNER_FRAMES.length];
 
-  // Animated banner mascot. It only ticks while the banner is on-screen (the ref
-  // below), and degrades to the static sprite when it can't or shouldn't animate:
+  // Animated banner logo. It only ticks while the banner is on-screen (the ref
+  // below), and degrades to the static logo when it can't or shouldn't animate:
   // no tty, reduced-motion env, disabled in config, or a one-column narrow banner.
-  const mascotBase = useMemo(
-    () => rgbToHex(mix(hexToRgb(theme.mascot), [0, 0, 0], 0.22)),
-    [theme],
-  );
+  const logoColors = useMemo(() => themePalette(theme), [theme]);
   const twoCol = Math.max(24, width) - 7 - LEFT_INNER >= 16;
   const animateMascot =
     (process.stdout.isTTY ?? false) &&
@@ -1759,11 +1756,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     config.bannerAnimation !== false &&
     process.env['HANDOFF_REDUCED_MOTION'] == null;
   const bannerVisibleRef = useRef(true);
-  const mascotRows = useMorphMascot({
+  const mascotRows = useLogoAnimation({
     width: LEFT_INNER,
     height: CANVAS_H,
-    base: mascotBase,
-    fps: 12,
+    colors: logoColors,
+    fps: 20,
     color: process.env['NO_COLOR'] == null,
     enabled: animateMascot,
     reducedMotion: process.env['HANDOFF_REDUCED_MOTION'] != null,
