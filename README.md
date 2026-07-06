@@ -129,4 +129,4 @@ TBD
 
 ## License
 
-[MIT](./LICENSE) 2026 Inigo Parra
+[MIT](./LICENSE) 2026
