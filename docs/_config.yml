@@ -13,7 +13,7 @@ description: >-
   Own your research. A local-first, terminal research companion that reads the
   literature, drafts and cites your paper, and helps run your experiments —
   powered by models running on your own machine.
-url: "https://iparramartin.github.io"
+url: "https://handoff-org.github.io"
 baseurl: "/handoff"
 
 # just-the-docs, pulled in as a remote theme (supported on GitHub Pages via the
