@@ -208,13 +208,22 @@ if [ "$LOCAL_CHECKOUT" = 1 ]; then
   fi
 fi
 
-if npm install -g "$INSTALL_SRC"; then
+GIT_SRC="git+https://github.com/handoff-org/handoff.git"
+
+install_cli() {
+  local src="$1"
+  npm install -g "$src" 2>/dev/null && return 0
+  npm install -g --force "$src" 2>/dev/null && return 0
+  return 1
+}
+
+if install_cli "$INSTALL_SRC"; then
   ok "handoff CLI installed. The 'handoff' command is now on your PATH."
   STATUS_CLI="installed"
-elif npm install -g --force "$INSTALL_SRC"; then
-  # A previous install can leave a stale 'handoff' bin that makes npm abort with
-  # EEXIST. --force overwrites it, keeping re-runs of this installer idempotent.
-  ok "handoff CLI installed (replaced a previous install). The 'handoff' command is now on your PATH."
+elif [ "$LOCAL_CHECKOUT" = 0 ] && install_cli "$GIT_SRC"; then
+  # npm registry package not yet published — fall back to installing directly
+  # from the GitHub repository.
+  ok "handoff CLI installed from GitHub. The 'handoff' command is now on your PATH."
   STATUS_CLI="installed"
 else
   warn "Global install failed (often an npm-prefix permissions issue)."
