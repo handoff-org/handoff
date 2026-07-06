@@ -32,6 +32,8 @@ relative_links:
 
 # --- just-the-docs options -------------------------------------------------
 color_scheme: dark
+logo: "/assets/letter120.png"
+favicon_ico: "/assets/letter120.png"
 search_enabled: true
 heading_anchors: true
 aux_links:

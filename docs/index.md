@@ -6,8 +6,7 @@ description: "handoff — a local-first research companion that lives in your te
 permalink: /
 ---
 
-# handoff
-{: .fs-9 }
+![handoff]({{ '/assets/banner120.png' | relative_url }}){: style="width:100%; border-radius:8px; margin-bottom:1.5rem;"}
 
 A local-first terminal agent for researchers — reads the literature, runs your
 experiments, and helps write your paper, powered by models on *your* machine.
