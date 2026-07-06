@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output (handoff runs from source via tsx; dist/ is only for publishing)
+dist/
+
+# Jekyll / GitHub Pages local build artifacts (the docs/ site builds server-side)
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/Gemfile.lock
+
+# OS / editor cruft
+.DS_Store
+*.log
+BUILD_SEQUENCE.txt
+PRODUCT_PLAN.txt
+TODO.md

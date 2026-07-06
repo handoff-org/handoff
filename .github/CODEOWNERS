@@ -1,0 +1,10 @@
+# CODEOWNERS — who GitHub automatically requests for review on a PR.
+# Docs: https://docs.github.com/articles/about-code-owners
+#
+# handoff is currently maintained by a single owner, so the catch-all rule below
+# assigns every path. CODEOWNERS uses the LAST matching pattern, so add more
+# specific rules BELOW this line to override it for particular areas, e.g.:
+#   /docs/       @IParraMartin
+#   /installers/ @IParraMartin
+
+*       @IParraMartin

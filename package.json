@@ -1,0 +1,65 @@
+{
+  "name": "ownhandoff",
+  "version": "0.1.0",
+  "description": "Own your data. A local-first, Claude Code-style TUI coding agent powered by your own Ollama models.",
+  "type": "module",
+  "bin": {
+    "handoff": "bin/handoff.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "ui",
+    "config",
+    "skills",
+    "templates",
+    "installers",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "tsx src/index.tsx",
+    "start": "tsx src/index.tsx",
+    "mascot": "tsx src/mascotPreview.tsx",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts test/*.test.tsx",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "keywords": [
+    "tui",
+    "agent",
+    "ai",
+    "cli",
+    "llm",
+    "ollama",
+    "local-first",
+    "terminal",
+    "coding-agent"
+  ],
+  "author": "Inigo Parra",
+  "license": "MIT",
+  "homepage": "https://github.com/handoff-org/handoff#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/handoff-org/handoff.git"
+  },
+  "bugs": {
+    "url": "https://github.com/handoff-org/handoff/issues"
+  },
+  "dependencies": {
+    "@huggingface/inference": "^4.13.20",
+    "ink": "^5.0.1",
+    "react": "^18.3.1",
+    "tsx": "^4.16.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.3",
+    "ink-testing-library": "^4.0.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,44 @@
+export interface Command {
+  name: string;
+  desc: string;
+}
+
+/** The slash commands shown in the menu, banner, and `/help`. */
+export const COMMANDS: Command[] = [
+  { name: '/project', desc: 'switch, create, or delete a project  (/project new <name>)' },
+  { name: '/research', desc: 'fact-check a claim against the literature' },
+  { name: '/overleaf', desc: 'connect & sync your paper with Overleaf' },
+  { name: '/compose-skill', desc: 'write a new skill in your editor' },
+  { name: '/skill', desc: 'run a skill  (/skill <name>)' },
+  { name: '/skills', desc: 'list your skills' },
+  { name: '/model', desc: 'pick a model  (/model cool·fast·balanced·deep · doctor · benchmark)' },
+  { name: '/settings', desc: 'inference preset, personalization, theme, or Ollama tuning' },
+  { name: '/profile', desc: 'view or manage what handoff has learned  (show · forget · reset · disable)' },
+  { name: '/mode', desc: 'toggle hands-on / hands-off' },
+  { name: '/audit-paper', desc: 'scan paper/ for unsupported claims and numbers' },
+  { name: '/claims', desc: 'show all tracked claims with status' },
+  { name: '/unsupported', desc: 'list claims with no linked evidence' },
+  { name: '/claim-add', desc: 'add a claim  (/claim-add <text>)' },
+  { name: '/claim-status', desc: 'full detail for one claim  (/claim-status <id>)' },
+  { name: '/claim-link-run', desc: 'link a run as evidence  (/claim-link-run <id> <run_id>)' },
+  { name: '/claim-link-paper', desc: 'link a citation  (/claim-link-paper <id> <key>)' },
+  { name: '/reproduce', desc: 'print repro.sh for a run  (/reproduce <run_id>)' },
+  { name: '/rerun', desc: 're-run and compare metrics  (/rerun <run_id>)' },
+  { name: '/compare-runs', desc: 'diff two runs’ metrics and code  (/compare-runs <a> <b>)' },
+  { name: '/promote-run', desc: 'mark a run canonical  (/promote-run <run_id>)' },
+  { name: '/handoff', desc: 'generate a transfer packet  (--for-me · --for-pi · --for-reviewer · --for-industry-partner)' },
+  { name: '/resume', desc: 'restore the last session' },
+  { name: '/clear', desc: 'reset the conversation' },
+  { name: '/help', desc: 'show this help' },
+  { name: '/quit', desc: 'exit handoff' },
+];
+
+/**
+ * Commands matching the slash-menu prefix — only while the user is typing the
+ * command word itself (a leading `/` and no arguments yet).
+ */
+export function matchCommands(input: string): Command[] {
+  if (!input.startsWith('/') || input.trim().includes(' ')) return [];
+  const prefix = input.trim().split(/\s+/)[0] ?? '';
+  return COMMANDS.filter((c) => c.name.startsWith(prefix));
+}

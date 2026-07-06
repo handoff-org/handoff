@@ -1,0 +1,92 @@
+name: Bug report
+description: Something in handoff isn't working as expected.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill in the details below so it can be reproduced.
+        **Do not paste secrets** — redact any tokens or private paths from logs.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: I'm on a recent version of handoff (reinstalled/updated if unsure).
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect instead?
+      placeholder: When I run `/audit-paper`, handoff crashes with…
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact steps (commands typed, what was on screen).
+      placeholder: |
+        1. `handoff`
+        2. `/project new Test`
+        3. Ask it to "…"
+        4. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      description: Which model backend were you using?
+      options:
+        - Ollama
+        - llama.cpp
+        - MLX
+        - vLLM
+        - HuggingFace (cloud)
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: The model id / tag (from `/model` or config.json).
+      placeholder: qwen3:8b
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Windows
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: handoff & Node versions
+      description: Output of `handoff --version` (if available) and `node -v`.
+      placeholder: "handoff 0.1.0 · node v20.11.0"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevant lines from `~/.handoff/logs/handoff.log`, or the terminal output.
+        **Redact any tokens or private paths.**
+      render: text

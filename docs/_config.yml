@@ -1,0 +1,52 @@
+# Jekyll config for the handoff documentation site (GitHub Pages).
+#
+# Deployed by GitHub Pages straight from this /docs folder — no build step on
+# your side. After pushing, enable it under:
+#   Settings → Pages → Source: "Deploy from a branch" → Branch: main → /docs
+#
+# NOTE: `baseurl` must match your repository name. This assumes the repo is
+# named "handoff" (served at https://<user>.github.io/handoff/). If you push it
+# under a different repo name, change `baseurl` to "/<that-name>".
+
+title: handoff
+description: >-
+  Own your research. A local-first, terminal research companion that reads the
+  literature, drafts and cites your paper, and helps run your experiments —
+  powered by models running on your own machine.
+url: "https://iparramartin.github.io"
+baseurl: "/handoff"
+
+# just-the-docs, pulled in as a remote theme (supported on GitHub Pages via the
+# jekyll-remote-theme plugin). Gives a searchable sidebar built for multi-page docs.
+remote_theme: just-the-docs/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-relative-links
+  - jekyll-seo-tag
+
+# Turn [links](getting-started.md) into working links to the built pages.
+relative_links:
+  enabled: true
+  collections: false
+
+# --- just-the-docs options -------------------------------------------------
+color_scheme: dark
+search_enabled: true
+heading_anchors: true
+aux_links:
+  "handoff on GitHub":
+    - "https://github.com/handoff-org/handoff"
+aux_links_new_tab: true
+
+# Small footer on every page.
+back_to_top: true
+back_to_top_text: "Back to top"
+footer_content: >-
+  handoff · local-first research companion · <a href="https://github.com/handoff-org/handoff">GitHub</a>
+
+# Files Jekyll should not copy into the built site.
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor
