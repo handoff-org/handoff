@@ -1,5 +1,5 @@
 # handoff installer for Windows (PowerShell).
-#   irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex
 #
 # Detects Node 18+, installs the `ownhandoff` npm package globally (the command
 # it provides is `handoff`), and points you at Ollama for local models.

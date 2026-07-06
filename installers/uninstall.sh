@@ -1,13 +1,13 @@
 #!/bin/sh
 # handoff uninstaller for Linux & macOS.
-#   curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash
 #
 # Removes the handoff CLI, mlx-lm, and llama.cpp, and reverts the tweaks handoff
 # made to your shell/Ollama config. Ollama itself and its models (~/.ollama) are
 # KEPT — handoff often uses an Ollama you already had.
 # Pass --purge to also delete ~/.handoff/ (config, skills, projects, cache) AND
 # remove Ollama plus all its downloaded models.
-#   curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash -s -- --purge
+#   curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash -s -- --purge
 #
 # Best-effort like the installer: -u catches unset vars, but we deliberately do
 # NOT set -e — one step failing (a missing binary, a permission-denied rm) must
@@ -261,7 +261,7 @@ else
     [ "$kept_data" = 1 ]   && warn "Your data in $DATA_DIR was kept."
     [ "$kept_ollama" = 1 ] && warn "Ollama and its models (~/.ollama) were kept."
     info "${DIM}To remove everything handoff can (data + Ollama + models), re-run with --purge:${RESET}"
-    info "  curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash -s -- --purge"
+    info "  curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash -s -- --purge"
     [ "$kept_data" = 1 ] && info "${DIM}Or delete just handoff's data manually:  rm -rf $DATA_DIR${RESET}"
   fi
 fi

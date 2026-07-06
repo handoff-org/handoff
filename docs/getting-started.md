@@ -9,10 +9,10 @@ nav_order: 2
 
 ```sh
 # macOS / Linux — installs the CLI, Ollama, mlx-lm, llama.cpp, and uv
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.sh | bash
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.ps1 | iex
+irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex
 
 # Any OS — CLI only (add a backend yourself)
 npm install -g ownhandoff
@@ -95,10 +95,10 @@ both ways — pulling before each turn, pushing after. See [Overleaf sync](overl
 
 ```sh
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash
 
 # Windows (PowerShell)
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.ps1)))
 
 # npm only
 npm uninstall -g ownhandoff
@@ -107,5 +107,5 @@ npm uninstall -g ownhandoff
 Add `--purge` to also remove `~/.handoff/` (config, projects, cache, skills):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash -s -- --purge
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash -s -- --purge
 ```

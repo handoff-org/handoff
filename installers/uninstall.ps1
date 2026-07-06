@@ -1,12 +1,12 @@
 # handoff uninstaller for Windows (PowerShell).
-#   irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1 | iex
+#   irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.ps1 | iex
 #
 # Removes the handoff CLI and llama.cpp, and reverts the Ollama env tweaks
 # handoff set. Ollama itself and its models (%USERPROFILE%\.ollama) are KEPT -
 # handoff often uses an Ollama you already had.
 # Pass -Purge to also delete ~\.handoff\ (all config, skills, projects, cache)
 # AND remove Ollama plus all its downloaded models.
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1))) -Purge
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.ps1))) -Purge
 param(
   [switch]$Purge
 )
@@ -124,7 +124,7 @@ if ($Purge) {
     if ($keptData)   { Warn "Your data in $DataDir was kept." }
     if ($keptOllama) { Warn "Ollama and its models ($OllamaData) were kept." }
     Info "To remove everything handoff can (data + Ollama + models), re-run with -Purge:"
-    Info "  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1))) -Purge"
+    Info "  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.ps1))) -Purge"
     if ($keptData) { Info "Or delete just handoff's data manually: Remove-Item -Recurse -Force $DataDir" }
   }
 }

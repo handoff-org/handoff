@@ -33,10 +33,10 @@ your own machine. Cloud is only ever used after you explicitly opt in.
 
 ```sh
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.sh | bash
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.ps1 | iex
+irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex
 
 # Any OS — CLI only
 npm install -g ownhandoff

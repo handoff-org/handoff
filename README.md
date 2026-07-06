@@ -18,10 +18,10 @@ models on *your* machine. Nothing leaves your computer unless you say so.
 
 ```sh
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.sh | bash
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.ps1 | iex
+irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex
 
 # Any OS — CLI only (model backends not included)
 npm install -g ownhandoff
@@ -61,12 +61,12 @@ npm test           # node:test suite
 
 ```sh
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash
 # add --purge to also remove ~/.handoff/ (config, projects, cache)
-curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.sh | bash -s -- --purge
+curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.sh | bash -s -- --purge
 
 # Windows (PowerShell)
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/main/installers/uninstall.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/uninstall.ps1)))
 
 # npm
 npm uninstall -g ownhandoff

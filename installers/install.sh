@@ -1,6 +1,6 @@
 #!/bin/sh
 # handoff installer for Linux & macOS.
-#   curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/main/installers/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.sh | bash
 #
 # Installs handoff and every local-model backend it supports:
 #   Ollama · mlx-lm (Apple Silicon) · llama.cpp
