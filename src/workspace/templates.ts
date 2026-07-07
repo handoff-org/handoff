@@ -2,8 +2,8 @@ export type PaperTemplate = 'blank' | 'acl' | 'neurips';
 
 export const TEMPLATE_LABELS: Record<PaperTemplate, string> = {
   blank: 'Blank LaTeX',
-  acl: 'ACL 2025',
-  neurips: 'NeurIPS 2025',
+  acl: 'ACL 2026',
+  neurips: 'NeurIPS 2026',
 };
 
 /**
