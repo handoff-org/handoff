@@ -117,7 +117,15 @@ function paperCitationChecklist(): string {
     'Papers & citations: existing main .tex → read it, edit in place, write back the complete compilable file. ' +
     'The bibliography lives in paper/refs.bib (or the active .bib in paper/). Citations render only when: ' +
     'natbib is loaded; \\bibliographystyle{plainnat} AND \\bibliography{<base>} appear (in that order) before ' +
-    '\\end{document}; and each \\cite{key} matches a .bib key. Never fabricate citations, DOIs, venues, or results.'
+    '\\end{document}; and each \\cite{key} matches a .bib key. Never fabricate citations, DOIs, venues, or results.\n\n' +
+    'LaTeX math — ALL math notation MUST be wrapped in a math environment; bare LaTeX math in plain text ' +
+    'causes a compilation error:\n' +
+    '- Inline math (in a sentence): $A_{\\xi}$, $\\alpha$, $x_i^2$, $f(x) = \\sum_i w_i$\n' +
+    '- Display math (its own line): \\[...\\] or \\begin{equation}...\\end{equation}\n' +
+    '- Never write A_{xi}, \\alpha, x^2, or any LaTeX math command outside of $...$, \\[...\\], or a math environment.\n' +
+    'Paper structure (if building from scratch): Abstract → Introduction → Related Work → Methodology → ' +
+    'Experiments → Results → Discussion → Conclusion → Limitations → References → Appendix. ' +
+    'To compile and render the PDF, use compile_paper.'
   );
 }
 
