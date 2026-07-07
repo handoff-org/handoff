@@ -171,6 +171,13 @@ enable_ollama_perf() {
     launchctl setenv OLLAMA_FLASH_ATTENTION 1 2>/dev/null || true
     launchctl setenv OLLAMA_KV_CACHE_TYPE q8_0 2>/dev/null || true
     launchctl setenv OLLAMA_NUM_PARALLEL 1 2>/dev/null || true
+    # launchctl setenv only affects processes started AFTER this point. If an
+    # Ollama.app / server is already running, it keeps its old (untuned) env until
+    # relaunched — and since it's up, handoff won't start its own tuned server.
+    # Flag that so the summary can tell the user to restart Ollama.
+    if curl -fsS "http://localhost:11434/api/tags" >/dev/null 2>&1; then
+      STATUS_OLLAMA_PERF="on after you restart Ollama (a server is already running)"
+    fi
   fi
 }
 
@@ -330,6 +337,11 @@ if command -v ollama >/dev/null 2>&1; then
       info "      Environment=\"OLLAMA_FLASH_ATTENTION=1\""
       info "      Environment=\"OLLAMA_KV_CACHE_TYPE=q8_0\""
       info "  then: sudo systemctl restart ollama"
+      ;;
+    *restart\ Ollama*)
+      warn "  Ollama is already running, so the speed-ups apply only after a restart."
+      info "  Quit Ollama (menu-bar icon → Quit) and reopen it, or reboot. A fresh"
+      info "  install where Ollama isn't running yet gets them automatically."
       ;;
   esac
 fi
