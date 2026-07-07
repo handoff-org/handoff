@@ -66,6 +66,14 @@ seedTemplates();
 const lastSession = await loadLastSession();
 const doResume = RESUME && !!lastSession;
 
+// Enter the alternate screen buffer so the TUI renders on a clean slate and
+// the original terminal content is restored exactly when handoff exits —
+// same behaviour as vim, less, man. No-op on terminals that don't support it.
+if (process.stdout.isTTY) {
+  process.stdout.write('\x1b[?1049h\x1b[2J\x1b[H');
+  process.on('exit', () => process.stdout.write('\x1b[?1049l'));
+}
+
 const instance = render(
   <ErrorBoundary>
     <Root initialConfig={config} autoResume={doResume} />
