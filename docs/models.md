@@ -43,8 +43,10 @@ presets stay tight (`cool` ~5K, `fast` ~4K, `balanced` ~10K tokens); the roomy p
 minus the reasoning-output reserve and a safety margin — so a bigger window keeps long
 conversations coherent instead of dropping old turns early. The system prompt stays
 byte-identical (for backend prefix-caching), recent turns are kept verbatim, old tool output
-is capped, and the oldest turns are dropped. Your full conversation is still saved to disk and
-restored by `/resume`. Turn off with `contextCompaction: false`.
+is capped, and the oldest turns are dropped — replaced by a short factual digest (what you
+asked, what the assistant did, which tools it ran) so the model keeps their gist rather than a
+blank. Your full conversation is still saved to disk and restored by `/resume`. Turn off with
+`contextCompaction: false`.
 
 If a turn is slow, handoff prints one actionable note ("CPU spill — try a smaller model
 or lower context") rather than a stream of warnings.

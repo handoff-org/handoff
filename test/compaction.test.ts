@@ -27,18 +27,60 @@ test('system message is kept byte-identical', () => {
   assert.equal(out[0]!.content, 'SYSTEM PROMPT');
 });
 
-test('recent turns kept verbatim; oldest dropped; trim marker inserted once', () => {
+test('recent turns kept verbatim; oldest dropped; replaced by one digest', () => {
   const msgs: Message[] = [sys, ...exchange('old', 8000), ...exchange('recent', 40)];
   const out = compactHistory(msgs, { maxPromptTokens: 400 });
   const text = out.map((m) => m.content).join('\n');
   // Recent exchange survives verbatim.
   assert.match(text, /recent-user/);
   assert.match(text, /recent-assistant/);
-  // Old exchange is gone.
-  assert.doesNotMatch(text, /old-user/);
-  // Exactly one trim marker.
-  const markers = out.filter((m) => m.content.includes('trimmed to fit the context budget'));
-  assert.equal(markers.length, 1);
+  // The old exchange is gone verbatim, but its gist survives in the digest.
+  assert.doesNotMatch(text, /u{200}/); // the full 8000-char old content is not present
+  const digests = out.filter((m) => m.content.includes('earlier conversation summary'));
+  assert.equal(digests.length, 1, 'exactly one digest, inserted once');
+  assert.match(digests[0]!.content, /you: old-user/);
+  assert.match(digests[0]!.content, /assistant: old-assistant/);
+});
+
+test('the digest captures dropped tool calls and respects its cap', () => {
+  const msgs: Message[] = [
+    sys,
+    { role: 'user', content: 'add authentication to the app' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: '1', type: 'function', function: { name: 'write_file', arguments: '{}' } }],
+    },
+    { role: 'tool', content: 'ok', tool_call_id: '1' },
+    // A large current turn that is always kept and pushes the older turns out.
+    { role: 'user', content: 'X'.repeat(4000) },
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 300, summaryCapChars: 400 });
+  const digest = out.find((m) => m.role === 'system' && m.content.includes('earlier conversation summary'));
+  assert.ok(digest, 'a digest system message should be inserted');
+  assert.match(digest!.content, /you: add authentication/);
+  assert.match(digest!.content, /ran: write_file/); // the dropped tool call is named
+  assert.ok(digest!.content.length <= 400, `digest over cap: ${digest!.content.length}`);
+});
+
+test('truncation with no full drops inserts a short note, not a summary', () => {
+  const bigTool = 'X'.repeat(8000);
+  const msgs: Message[] = [
+    sys,
+    { role: 'user', content: 'run it' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: '1', type: 'function', function: { name: 'run', arguments: '{}' } }],
+    },
+    { role: 'tool', content: bigTool, tool_call_id: '1' },
+    ...exchange('recent', 40),
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 1200, toolCapChars: 200 });
+  const notes = out.filter((m) => m.role === 'system' && m.content.startsWith('[earlier'));
+  assert.equal(notes.length, 1);
+  assert.match(notes[0]!.content, /tool output shortened/);
+  assert.doesNotMatch(notes[0]!.content, /summary/);
 });
 
 test('old tool output is capped rather than dropped when it can fit truncated', () => {

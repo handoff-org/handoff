@@ -22,7 +22,7 @@ The wizard and in-app commands write `config.json` for you — you rarely need t
 | `modelPerformanceMode` | `cool` \| `balanced` \| `max` | `cool` | Advisor aggressiveness. |
 | `inferencePreset` | `cool` \| `fast` \| `balanced` \| `deep` \| `long_context` \| `manual` | `manual` | Bundles context + output + keep-alive + prompt budget. |
 | `maxPromptTokens` | number | — | Prompt-token budget. Unset = derived from preset. |
-| `contextCompaction` | boolean | `true` | Trim sent history to the prompt budget each turn (full history saved to disk). |
+| `contextCompaction` | boolean | `true` | Trim sent history to the prompt budget each turn; dropped turns are replaced by a short digest (full history saved to disk). |
 | `personalizationEnabled` | boolean | `false` | Local adaptive personalization. Opt-in on first run. |
 | `personalizationIncludeInPrompt` | boolean | `true` | Include profile in the system prompt (local backends). |
 | `personalizationAllowCloudPrompt` | boolean | `false` | Allow profile in prompts to cloud backends. |
