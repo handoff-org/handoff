@@ -10,6 +10,7 @@ import {
   OllamaModel,
   VLLMModel,
 } from '../src/agent/model.js';
+import { reasoningOutputReserve } from '../src/agent/contextBudget.js';
 
 // --- ThinkFilter ------------------------------------------------------------
 
@@ -282,9 +283,11 @@ test('OllamaModel sends keep_alive and options to /api/chat', async (t) => {
   assert.equal(sent.think, true); // native thinking on → reasoning lands in its own field
   assert.equal(sent.keep_alive, '30m');
   assert.equal(sent.options.num_ctx, 8192);
-  // num_predict is floored to 8192: `think:true` reasoning counts against it, so a
-  // tight cap (256) would be spent inside <think> and return an empty answer.
-  assert.equal(sent.options.num_predict, 8192);
+  // num_predict is floored (via reasoningOutputReserve): `think:true` reasoning
+  // counts against it, so a tight cap (256) would be spent inside <think> and
+  // return an empty answer. The floor is half of numCtx here (4096), not a flat
+  // 8192, so it can never by itself exceed the context window.
+  assert.equal(sent.options.num_predict, reasoningOutputReserve(8192));
 });
 
 test('a large explicit maxNewTokens is respected above the reasoning floor', async (t) => {

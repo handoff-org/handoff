@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyPreset } from '../src/agent/presets.js';
+import { reasoningOutputReserve } from '../src/agent/contextBudget.js';
 import type { HardwareProfile } from '../src/system/hardware.js';
 
 /** A 16 GB M-series MacBook, plugged in unless overridden. */
@@ -34,8 +35,9 @@ test('cool bundles a tight context/output/keep-alive/budget', () => {
   assert.equal(r.maxNewTokens, 1024);
   assert.equal(r.ollamaKeepAlive, '5m');
   assert.equal(r.ollamaNumCtx, 8192); // 16GB Mac, cool
-  // Budget is the preset nominal (5000) clamped to 60% of the context window.
-  assert.equal(r.maxPromptTokens, Math.min(5000, Math.floor(8192 * 0.6)));
+  // Budget is the preset nominal (5000) clamped to leave room for the
+  // reasoning-output reserve within the context window.
+  assert.equal(r.maxPromptTokens, Math.min(5000, 8192 - reasoningOutputReserve(8192)));
   assert.equal(r.warning, undefined);
 });
 
@@ -43,7 +45,7 @@ test('fast clamps context to 4096', () => {
   const r = applyPreset('fast', mac())!;
   assert.equal(r.modelPerformanceMode, 'cool');
   assert.equal(r.ollamaNumCtx, 4096);
-  assert.equal(r.maxPromptTokens, Math.min(4000, Math.floor(4096 * 0.6)));
+  assert.equal(r.maxPromptTokens, Math.min(4000, 4096 - reasoningOutputReserve(4096)));
 });
 
 test('balanced uses balanced mode and roomier output', () => {

@@ -1,6 +1,7 @@
 import { InferenceClient } from '@huggingface/inference';
 import type { Config } from '../../config/schema.js';
 import type { ToolSchema } from '../tools/registry.js';
+import { reasoningOutputReserve } from './contextBudget.js';
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 
@@ -439,10 +440,14 @@ async function* streamOllamaNative(
   // max_tokens → native num_predict. IMPORTANT: `think: true` (below) makes the
   // model emit hidden reasoning that ALSO counts against num_predict, so a tight
   // preset cap (e.g. "cool" = 1024) can be spent entirely inside the <think>
-  // block, leaving no visible answer — the model then returns empty. Keep a floor
-  // so reasoning models always have room to finish; short answers still stop
-  // early on their own, so this costs nothing on typical turns.
-  if (config.maxNewTokens) options.num_predict = Math.max(config.maxNewTokens, 8192);
+  // block, leaving no visible answer — the model then returns empty. Keep a
+  // floor so reasoning models always have room to finish; short answers still
+  // stop early on their own, so this costs nothing on typical turns. The floor
+  // is scaled to numCtx (via the same reserve promptBudgetFor subtracts out) so
+  // it can never itself exceed the context window on a small preset.
+  if (config.maxNewTokens) {
+    options.num_predict = Math.max(config.maxNewTokens, reasoningOutputReserve(config.ollamaNumCtx));
+  }
 
   let res: Response;
   try {

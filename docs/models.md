@@ -46,11 +46,14 @@ by `/resume`. Turn off with `contextCompaction: false`.
 If a turn is slow, handoff prints one actionable note ("CPU spill — try a smaller model
 or lower context") rather than a stream of warnings.
 
-**Reasoning models (Qwen3, DeepSeek-R1, etc.):** handoff floors `num_predict` at 8192
-even for small presets. Without the floor, the entire token budget can be spent inside
-`<think>` and the model returns an empty answer. Short answers still stop early — 8192
-is a safety net, not a target. If output is still cut off, try `/model balanced` or
-`/model deep`.
+**Reasoning models (Qwen3, DeepSeek-R1, etc.):** handoff floors `num_predict` at up to
+8192 (half of `numCtx`, whichever is smaller) even for small presets. Without the floor,
+the entire token budget can be spent inside `<think>` and the model returns an empty
+answer. Short answers still stop early — this is a safety net, not a target. The prompt
+budget above reserves the same amount, so the two can never together overflow the
+context window mid-turn. If output is still cut off, try `/model balanced` or `/model
+deep` for more output room, or `/model long_context` for more context window headroom
+if you're already on `deep`.
 
 ## Quantization
 

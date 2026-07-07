@@ -30,14 +30,27 @@ export function estimateMessagesTokens(msgs: Message[]): number {
 }
 
 /**
+ * Native Ollama calls always float `num_predict` up to at least this many
+ * tokens (see model.ts) so a thinking model has room to close its `<think>`
+ * block before hitting the cap — a tight preset cap alone can be spent
+ * entirely on hidden reasoning, leaving no visible answer. Capped at half of
+ * numCtx so the reserve itself never crowds out all room for the prompt on a
+ * small context window. Shared with promptBudgetFor below so the two numbers
+ * can never together add up to more than numCtx and overflow mid-turn.
+ */
+export function reasoningOutputReserve(numCtx: number): number {
+  return Math.min(8192, Math.floor(numCtx / 2));
+}
+
+/**
  * The prompt-token budget for a preset — how much conversation we're willing to
  * send the model each turn. Bundled per preset (cool is tight, deep is roomy),
- * but never allowed past ~60% of the context window: the rest is reserved for
- * the model's own output and the backend's KV headroom. `manual` defers to half
- * the context window.
+ * but never allowed to crowd out the reasoning output reserve above: the rest
+ * of the context window is left for the model's own output and the backend's
+ * KV headroom. `manual` defers to half the context window.
  */
 export function promptBudgetFor(preset: InferencePreset, numCtx: number): number {
-  const ceiling = Math.max(1024, Math.floor(numCtx * 0.6));
+  const ceiling = Math.max(1024, numCtx - reasoningOutputReserve(numCtx));
   const byPreset: Record<InferencePreset, number> = {
     cool: 5000,
     fast: 4000,

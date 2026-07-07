@@ -4,6 +4,7 @@ import {
   estimateTokens,
   estimateMessagesTokens,
   promptBudgetFor,
+  reasoningOutputReserve,
   assessTurn,
 } from '../src/agent/contextBudget.js';
 import type { Message } from '../src/agent/model.js';
@@ -28,16 +29,27 @@ test('estimateMessagesTokens counts content, framing, and tool-call payloads', (
   assert.equal(estimateMessagesTokens(msgs), 114);
 });
 
-test('promptBudgetFor returns preset values, capped at 60% of context', () => {
+test('reasoningOutputReserve floors at 8192, capped at half of numCtx', () => {
+  assert.equal(reasoningOutputReserve(64000), 8192);
+  assert.equal(reasoningOutputReserve(16384), 8192);
+  assert.equal(reasoningOutputReserve(8192), 4096); // half, since half < 8192
+  assert.equal(reasoningOutputReserve(4096), 2048);
+});
+
+test('promptBudgetFor returns preset values, capped to leave room for reasoning output', () => {
   // Ample context → the preset's nominal budget wins.
   assert.equal(promptBudgetFor('cool', 64000), 5000);
   assert.equal(promptBudgetFor('balanced', 64000), 10000);
   assert.equal(promptBudgetFor('deep', 64000), 20000);
   assert.equal(promptBudgetFor('long_context', 64000), 24000);
-  // Small context → the 60% ceiling clamps it.
-  assert.equal(promptBudgetFor('balanced', 8192), Math.floor(8192 * 0.6));
+  // Small context → the ceiling (numCtx minus the reasoning reserve) clamps it,
+  // so a maxed-out prompt plus a full reasoning pass can never overflow numCtx.
+  assert.equal(promptBudgetFor('balanced', 8192), 8192 - reasoningOutputReserve(8192));
   // manual defers to half the window.
-  assert.equal(promptBudgetFor('manual', 8192), Math.min(Math.floor(8192 * 0.5), Math.floor(8192 * 0.6)));
+  assert.equal(
+    promptBudgetFor('manual', 8192),
+    Math.min(Math.floor(8192 * 0.5), 8192 - reasoningOutputReserve(8192)),
+  );
 });
 
 test('assessTurn flags CPU spill first and unconditionally', () => {
