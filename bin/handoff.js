@@ -4,7 +4,8 @@
 import { spawn, execFile } from 'child_process';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import { homedir } from 'os';
 import { createRequire } from 'module';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -41,21 +42,35 @@ function ollamaInstalled() {
   });
 }
 
+// Read the two Ollama server-perf fields from the stored config (~/.handoff/
+// config.json) so the user's /settings choices are authoritative when WE start
+// the server. Best-effort: an absent or unreadable config yields no overrides.
+function storedOllamaPerf() {
+  try {
+    const raw = readFileSync(join(homedir(), '.handoff', 'config.json'), 'utf8');
+    const cfg = JSON.parse(raw);
+    return { flash: cfg.ollamaFlashAttention, kv: cfg.ollamaKvCacheType };
+  } catch {
+    return {};
+  }
+}
+
 async function ensureOllamaServe() {
   if (await isOllamaRunning()) return;
   if (!(await ollamaInstalled())) return;
 
-  // Apply handoff's performance defaults for a server WE auto-start, without
-  // clobbering anything the user or the installer's shell profile already set.
-  // This runs before the UI, so it would otherwise shadow OllamaPrepare's
-  // startOllamaServe (which sets these) — leaving a fresh shell with an untuned
-  // server. Mirrors ollamaServeEnv() in src/agent/ollama.ts: flash attention lets
-  // Ollama use a quantized (q8_0) KV cache (~45% less KV memory), and pinning
-  // num_parallel to 1 stops Ollama sizing the KV cache as num_ctx × N for
-  // concurrency a single-user TUI never uses (~58% less resident memory).
+  // Apply handoff's server-perf settings for a server WE auto-start. Precedence:
+  // the stored /settings choice wins (so it overrides a stale shell export),
+  // else an inherited OLLAMA_* env, else the tuned default. This runs before the
+  // UI, so without it a fresh shell — or an installer's shell export — would
+  // shadow OllamaPrepare's config-aware startOllamaServe and silently ignore the
+  // user's pick. Mirrors ollamaServeEnv() in src/agent/ollama.ts. num_parallel
+  // has no /settings knob, so keep it at 1 unless the user exported their own.
+  const { flash, kv } = storedOllamaPerf();
   const env = { ...process.env };
-  if (env.OLLAMA_FLASH_ATTENTION == null) env.OLLAMA_FLASH_ATTENTION = '1';
-  if (env.OLLAMA_KV_CACHE_TYPE == null) env.OLLAMA_KV_CACHE_TYPE = 'q8_0';
+  env.OLLAMA_FLASH_ATTENTION =
+    flash === false ? '0' : flash === true ? '1' : (env.OLLAMA_FLASH_ATTENTION ?? '1');
+  env.OLLAMA_KV_CACHE_TYPE = kv ?? env.OLLAMA_KV_CACHE_TYPE ?? 'q8_0';
   if (env.OLLAMA_NUM_PARALLEL == null) env.OLLAMA_NUM_PARALLEL = '1';
 
   const srv = spawn('ollama', ['serve'], { detached: true, stdio: 'ignore', env });

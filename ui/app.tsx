@@ -1697,7 +1697,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         setMode('chat');
         addEntry({
           kind: 'note',
-          content: `flash attention → ${on ? 'on' : 'off'}  ·  restart Ollama to apply (quit & relaunch handoff)`,
+          content: `flash attention → ${on ? 'on' : 'off'}  ·  applies next time handoff starts Ollama (stop any running server first)`,
         });
         return;
       }
@@ -1723,7 +1723,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     setMode('chat');
     addEntry({
       kind: 'note',
-      content: `KV cache → ${kvType}  ·  restart Ollama to apply (quit & relaunch handoff)`,
+      content: `KV cache → ${kvType}  ·  applies next time handoff starts Ollama (stop any running server first)`,
     });
   }, []);
 
@@ -1753,7 +1753,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // below), and degrades to the static logo when it can't or shouldn't animate:
   // no tty, reduced-motion env, disabled in config, or a one-column narrow banner.
   const logoColors = useMemo(() => themePalette(theme), [theme]);
-  const twoCol = Math.max(24, width) - 7 - LEFT_INNER >= 16;
+  const twoCol = Math.max(24, width) - 7 - LEFT_INNER >= 32;
   const animateMascot =
     (process.stdout.isTTY ?? false) &&
     twoCol &&

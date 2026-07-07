@@ -20,8 +20,8 @@ import { themePalette } from '../ui/ascii/gradient.js';
 
 const args = process.argv.slice(2);
 
-const PREVIEW_W = 62;
-const PREVIEW_H = 24;
+const PREVIEW_W = 46;
+const PREVIEW_H = 18;
 
 const snapIdx = args.indexOf('--snapshot');
 if (snapIdx >= 0) {
@@ -71,7 +71,7 @@ function Preview() {
     backend: 'ollama',
     modelId: 'qwen3:8b',
     theme,
-    width: 84,
+    width: 110,
     mode: 'permissions',
     toolCount: 12,
     focus: 'research',

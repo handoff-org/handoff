@@ -9,14 +9,15 @@ import { colorizeGradient, themePalette } from './ascii/gradient.js';
 
 const VERSION = '0.1.0';
 
-// inner width of the welcome card's left cell — the box the mascot animates in.
-// exported so the animation controller composites to exactly this width.
-export const LEFT_INNER = 44;
+// inner width of the welcome card's left cell — the `h>` logo is rendered here
+// at the art's native size (see ui/ascii/logoArt.ts), beside the info panel.
+// Exported so the animation controller composites to exactly this width.
+export const LEFT_INNER = 46;
 
-// height (rows) of the animated 3D mascot canvas in the banner's left cell. A
-// label row is drawn beneath it, so the left column is CANVAS_H + 1 rows tall.
-// Large on purpose: the ASCII ramp needs the cells to read as a defined 3D form.
-export const CANVAS_H = 24;
+// height (rows) of the logo canvas in the banner's left cell — the art's row
+// count. A label row is drawn beneath it, so the left column is CANVAS_H + 1
+// rows tall.
+export const CANVAS_H = 18;
 
 /** The user's first name, for the welcome line — git name, else OS user. */
 const USER_NAME = ((): string => {
@@ -135,7 +136,7 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
       frame.push(labelRow('', LEFT_INNER, palette[0]!, !noColor));
       return frame;
     })();
-  const mascotPanelRows: PanelRow[] = canvasRows.map((segs): PanelRow => ({ segs, center: false }));
+  const logoPanelRows: PanelRow[] = canvasRows.map((segs): PanelRow => ({ segs, center: true }));
 
   // Right column: welcome + where-you're-working, then getting-started and
   // shortcuts. Generous blank gaps between the four groups let the panel
@@ -176,12 +177,21 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
   ];
   void toolCount;
 
+  // Vertically centre the logo against the (taller) info panel so it sits in the
+  // middle of the left cell rather than stuck to the top.
+  const vpad = Math.max(0, Math.floor((infoRows.length - logoPanelRows.length) / 2));
+  const mascotPanelRows: PanelRow[] = [...new Array<PanelRow>(vpad).fill(blank), ...logoPanelRows];
+
   const outerW = Math.max(24, width);
   const title = ` handoff v${VERSION} `;
   const leftInner = LEFT_INNER;
   const dividerCol = leftInner + 3; // column of the inner │ within each line
   const rightInner = outerW - 7 - leftInner; // 7 = borders + 3 padding spaces
-  const twoCol = rightInner >= 16;
+  // Two columns only when the info panel has room for its longest line
+  // (~32 cols: "hands-on · off-work · general"); otherwise stack to one column
+  // (info full-width) rather than clipping. With the ~0.8× logo this needs a
+  // fairly wide terminal (~101 cols); narrower falls back cleanly.
+  const twoCol = rightInner >= 32;
 
   if (twoCol) {
     // Top border with title and a ┬ where the divider meets it.
