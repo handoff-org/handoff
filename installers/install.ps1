@@ -144,7 +144,28 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
 Write-Host ""
 Info "mlx-lm (MLX backend): Apple Silicon macOS only — not applicable on Windows."
 
-# 7. llama.cpp — llama-server
+# 7. LaTeX — local paper compilation (pdflatex / latexmk).
+Write-Host ""
+if (Get-Command pdflatex -ErrorAction SilentlyContinue) {
+  Ok "LaTeX already installed."
+} else {
+  Info "Installing LaTeX / MiKTeX (needed to compile ACL / NeurIPS papers locally)..."
+  $latexOk = $false
+  if (Get-Command winget -ErrorAction SilentlyContinue) {
+    winget install MiKTeX.MiKTeX --silent --accept-package-agreements --accept-source-agreements 2>$null
+    if ($LASTEXITCODE -eq 0) { $latexOk = $true }
+  }
+  if ($latexOk) {
+    # Refresh PATH so miktex binaries are visible in this session.
+    $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' +
+                [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+    Ok "MiKTeX installed. MiKTeX will auto-install missing packages on first compile."
+  } else {
+    Warn "LaTeX install failed. Download MiKTeX from https://miktex.org/download and install, then re-run."
+  }
+}
+
+# 8. llama.cpp — llama-server
 Write-Host ""
 if (Get-Command llama-server -ErrorAction SilentlyContinue) {
   Ok "llama.cpp (llama-server) already installed."
@@ -162,7 +183,7 @@ if (Get-Command llama-server -ErrorAction SilentlyContinue) {
   }
 }
 
-# 8. Done
+# 9. Done
 Write-Host ""
 Ok "Done!"
 Info "Start handoff by running: handoff"

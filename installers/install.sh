@@ -27,6 +27,39 @@ ok()    { printf '%s%s%s\n' "$GREEN" "$*" "$RESET"; }
 warn()  { printf '%s%s%s\n' "$YELLOW" "$*" "$RESET"; }
 fail()  { printf '%s%s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
 
+# Best-effort install of LaTeX (pdflatex) for local paper compilation.
+# macOS: basictex via Homebrew + the tlmgr packages the ACL/NeurIPS templates need.
+# Linux: texlive-latex-extra + fonts via the distro package manager.
+# Returns 0 on success.
+install_latex_macos() {
+  command -v brew >/dev/null 2>&1 || return 1
+  info "  Downloading BasicTeX (~100 MB)..."
+  HOMEBREW_NO_REQUIRE_TAP_TRUST=1 brew install --cask basictex 2>/dev/null || return 1
+  # basictex lands in /Library/TeX/texbin — make it visible in the current session.
+  export PATH="/Library/TeX/texbin:$PATH"
+  command -v tlmgr >/dev/null 2>&1 || return 1
+  info "  Updating tlmgr and installing template packages..."
+  sudo tlmgr update --self --quiet 2>/dev/null || true
+  sudo tlmgr install --quiet \
+    latexmk collection-fontsrecommended inconsolata \
+    microtype booktabs xcolor nicefrac hyperref natbib 2>/dev/null || true
+  command -v pdflatex >/dev/null 2>&1
+}
+
+install_latex_linux() {
+  _apt_pkgs="texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra latexmk"
+  _dnf_pkgs="texlive-latex texlive-collection-latexextra texlive-collection-fontsrecommended texlive-collection-fontsextra latexmk"
+  _pac_pkgs="texlive-core texlive-latexextra texlive-fontsextra"
+  _zyp_pkgs="texlive texlive-latex-extra"
+  _run() { [ "$(id -u)" = 0 ] && $@ 2>/dev/null || sudo $@ 2>/dev/null; }
+  if   command -v apt-get >/dev/null 2>&1; then _run apt-get install -y $_apt_pkgs
+  elif command -v dnf     >/dev/null 2>&1; then _run dnf     install -y $_dnf_pkgs
+  elif command -v pacman  >/dev/null 2>&1; then _run pacman  -Sy --noconfirm $_pac_pkgs
+  elif command -v zypper  >/dev/null 2>&1; then _run zypper  install -y $_zyp_pkgs
+  else return 1; fi
+  command -v pdflatex >/dev/null 2>&1
+}
+
 # Best-effort install of a prebuilt llama.cpp (llama-server) on Linux.
 # Downloads the latest release binary, drops it in ~/.handoff/bin, and makes
 # sure that dir is on PATH. Returns 0 on success, 1 on any failure.
@@ -143,6 +176,7 @@ STATUS_OLLAMA="not attempted"
 STATUS_UV="not attempted"
 STATUS_MLX="not attempted"
 STATUS_LLAMACPP="not attempted"
+STATUS_LATEX="not attempted"
 
 printf '%s\n' "${BOLD}Installing handoff${RESET} ${DIM}(package: $PKG)${RESET}"
 
@@ -398,7 +432,40 @@ else
   esac
 fi
 
-# 7. Summary.
+# 7. LaTeX — local paper compilation (pdflatex / latexmk).
+printf '\n'
+if command -v pdflatex >/dev/null 2>&1; then
+  ok "LaTeX already installed."
+  STATUS_LATEX="already installed"
+else
+  info "Installing LaTeX (needed to compile ACL / NeurIPS papers locally)..."
+  case "$OS" in
+    Darwin)
+      if install_latex_macos; then
+        ok "LaTeX installed (BasicTeX + template packages)."
+        STATUS_LATEX="installed"
+      else
+        warn "LaTeX install failed. Install manually: https://tug.org/mactex/ or brew install --cask mactex-no-gui"
+        STATUS_LATEX="FAILED"
+      fi
+      ;;
+    Linux)
+      if install_latex_linux; then
+        ok "LaTeX installed."
+        STATUS_LATEX="installed"
+      else
+        warn "LaTeX install failed. Install manually: sudo apt-get install texlive-latex-extra texlive-fonts-extra latexmk"
+        STATUS_LATEX="FAILED"
+      fi
+      ;;
+    *)
+      warn "Unsupported OS ($OS). Install LaTeX manually from https://tug.org/mactex/"
+      STATUS_LATEX="unsupported OS"
+      ;;
+  esac
+fi
+
+# 8. Summary.
 printf '\n'
 printf '%s\n' "${BOLD}Setup summary${RESET}"
 info "  handoff CLI  : $STATUS_CLI"
@@ -407,6 +474,7 @@ info "  Ollama tuning: $STATUS_OLLAMA_PERF"
 info "  uv           : $STATUS_UV"
 info "  mlx-lm       : $STATUS_MLX"
 info "  llama.cpp    : $STATUS_LLAMACPP"
+info "  LaTeX        : $STATUS_LATEX"
 printf '\n'
 case "$STATUS_CLI" in
   installed) ok "Done! Start handoff by running: ${BOLD}handoff${RESET}" ;;

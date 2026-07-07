@@ -314,6 +314,65 @@ export function registerBuiltins(registry: ToolRegistry): void {
   });
 
   registry.register({
+    name: 'compile_paper',
+    description:
+      'Compile the active project\'s paper/main.tex to PDF using latexmk (preferred) or ' +
+      'pdflatex. Returns the PDF path on success, or the relevant LaTeX error lines on ' +
+      'failure. Use when the user asks to compile, build, render, or preview the paper.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const paperDir = resolveWorkspacePath('paper');
+      // Prefer latexmk — handles multi-pass BibTeX automatically.
+      // Fall back to two pdflatex passes (enough for most papers without cross-refs).
+      const latexmkAvail = await execAsync('command -v latexmk', { timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false);
+      const pdflatexAvail = await execAsync('command -v pdflatex', { timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!latexmkAvail && !pdflatexAvail) {
+        return (
+          'Neither latexmk nor pdflatex found. Install LaTeX:\n' +
+          '  macOS:  brew install --cask basictex\n' +
+          '  Linux:  sudo apt-get install texlive-latex-extra latexmk\n' +
+          '  Windows: winget install MiKTeX.MiKTeX'
+        );
+      }
+
+      const cmd = latexmkAvail
+        ? 'latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex'
+        : 'pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex';
+
+      try {
+        const { stdout, stderr } = await execAsync(cmd, { cwd: paperDir, timeout: 120_000 });
+        const out = [stdout, stderr].filter(Boolean).join('\n');
+        // Extract the output PDF path from latexmk's summary line, or infer it.
+        const match = out.match(/Output written on (.+\.pdf)/);
+        const pdfPath = match ? `${paperDir}/${match[1].trim()}` : `${paperDir}/main.pdf`;
+        return `PDF compiled successfully: ${pdfPath}`;
+      } catch (err: unknown) {
+        // LaTeX exits non-zero on errors; extract the error lines from the log.
+        const raw = (err instanceof Error ? err.message : String(err)) +
+          '\n' + ((err as { stdout?: string }).stdout ?? '') +
+          '\n' + ((err as { stderr?: string }).stderr ?? '');
+        const errorLines = raw
+          .split('\n')
+          .filter((l) => /^!|^l\.\d|LaTeX Error|Error:|Fatal/i.test(l))
+          .slice(0, 20)
+          .join('\n');
+        return errorLines
+          ? `Compilation failed. LaTeX errors:\n${errorLines}`
+          : `Compilation failed:\n${raw.slice(0, 1000)}`;
+      }
+    },
+  });
+
+  registry.register({
     name: 'ask_user',
     description:
       'Ask the user to choose between concrete options instead of asking in free ' +
