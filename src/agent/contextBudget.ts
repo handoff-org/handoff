@@ -44,22 +44,28 @@ export function reasoningOutputReserve(numCtx: number): number {
 
 /**
  * The prompt-token budget for a preset — how much conversation we're willing to
- * send the model each turn. Bundled per preset (cool is tight, deep is roomy),
- * but never allowed to crowd out the reasoning output reserve above: the rest
- * of the context window is left for the model's own output and the backend's
- * KV headroom. `manual` defers to half the context window.
+ * send the model each turn. The roomy presets (`deep`, `long_context`, and the
+ * user-controlled `manual`) scale with the context window so a capable machine
+ * keeps long conversations coherent instead of dropping old turns early; the
+ * calm presets (`cool`, `fast`, `balanced`) stay tight to keep a laptop cool.
+ *
+ * Every result is clamped to a `safeCeiling`: the window minus the reasoning
+ * output reserve, times 0.85 as a margin against the rough ~4-chars/token
+ * estimate and the backend's KV headroom. So `budget + reasoningOutputReserve`
+ * can never sum past `numCtx` and overflow mid-turn, even if the estimate runs a
+ * little low.
  */
 export function promptBudgetFor(preset: InferencePreset, numCtx: number): number {
-  const ceiling = Math.max(1024, numCtx - reasoningOutputReserve(numCtx));
+  const safeCeiling = Math.max(1024, Math.floor((numCtx - reasoningOutputReserve(numCtx)) * 0.85));
   const byPreset: Record<InferencePreset, number> = {
     cool: 5000,
     fast: 4000,
     balanced: 10000,
-    deep: 20000,
-    long_context: 24000,
-    manual: Math.floor(numCtx * 0.5),
+    deep: safeCeiling,
+    long_context: safeCeiling,
+    manual: safeCeiling,
   };
-  return Math.min(byPreset[preset], ceiling);
+  return Math.min(byPreset[preset], safeCeiling);
 }
 
 export interface TurnStats {

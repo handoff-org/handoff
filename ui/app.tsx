@@ -1127,7 +1127,12 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       let acc = '';
 
       // Laptop context budget + per-turn timing for the slow-turn advisory.
-      const budgetTokens = config.maxPromptTokens ?? promptBudgetFor(config.inferencePreset, config.ollamaNumCtx);
+      // Derive the budget fresh from the preset + window each turn so tuning takes
+      // effect immediately; only a `manual` preset honors an explicit saved value.
+      const budgetTokens =
+        config.inferencePreset === 'manual' && config.maxPromptTokens
+          ? config.maxPromptTokens
+          : promptBudgetFor(config.inferencePreset, config.ollamaNumCtx);
       const compaction = config.contextCompaction !== false;
       const turnStart = Date.now();
       let ttftMs: number | undefined;
@@ -1137,6 +1142,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         signal: controller.signal,
         approve,
         askUser,
+        preset: config.inferencePreset,
         ...(compaction ? { budget: { maxPromptTokens: budgetTokens } } : {}),
       })) {
         if (event.type === 'message_start') {
@@ -1581,7 +1587,6 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       ollamaNumCtx: r.ollamaNumCtx,
       maxNewTokens: r.maxNewTokens,
       ollamaKeepAlive: r.ollamaKeepAlive,
-      maxPromptTokens: r.maxPromptTokens,
     }));
     void writeStore({
       inferencePreset: preset,
@@ -1589,7 +1594,6 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       ollamaNumCtx: r.ollamaNumCtx,
       maxNewTokens: r.maxNewTokens,
       ollamaKeepAlive: r.ollamaKeepAlive,
-      maxPromptTokens: r.maxPromptTokens,
       contextMigrated: true,
     });
     addEntry({

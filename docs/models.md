@@ -37,11 +37,14 @@ applying (prefill is slow and hot on a laptop).
 
 ## Context compaction
 
-Every turn, handoff trims the history *sent* to the model to a **prompt budget** —
-cool ~5K tokens, balanced ~10K, deep ~20K. The system prompt stays byte-identical (for
-backend prefix-caching), recent turns are kept verbatim, old tool output is capped, and
-the oldest turns are dropped. Your full conversation is still saved to disk and restored
-by `/resume`. Turn off with `contextCompaction: false`.
+Every turn, handoff trims the history *sent* to the model to a **prompt budget**. The calm
+presets stay tight (`cool` ~5K, `fast` ~4K, `balanced` ~10K tokens); the roomy presets
+(`deep`, `long_context`, and `manual`) scale with your context window — using most of it,
+minus the reasoning-output reserve and a safety margin — so a bigger window keeps long
+conversations coherent instead of dropping old turns early. The system prompt stays
+byte-identical (for backend prefix-caching), recent turns are kept verbatim, old tool output
+is capped, and the oldest turns are dropped. Your full conversation is still saved to disk and
+restored by `/resume`. Turn off with `contextCompaction: false`.
 
 If a turn is slow, handoff prints one actionable note ("CPU spill — try a smaller model
 or lower context") rather than a stream of warnings.
@@ -51,9 +54,11 @@ or lower context") rather than a stream of warnings.
 the entire token budget can be spent inside `<think>` and the model returns an empty
 answer. Short answers still stop early — this is a safety net, not a target. The prompt
 budget above reserves the same amount, so the two can never together overflow the
-context window mid-turn. If output is still cut off, try `/model balanced` or `/model
-deep` for more output room, or `/model long_context` for more context window headroom
-if you're already on `deep`.
+context window mid-turn. If a turn still spends its whole budget reasoning and returns
+nothing, handoff **automatically retries it once with thinking disabled** so you get an
+answer instead of an error. If even that fails, it points you at `/model deep` (more output),
+`/model long_context` (more window), or a non-reasoning model — whichever you're not already
+on.
 
 ## Quantization
 

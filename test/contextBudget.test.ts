@@ -36,20 +36,37 @@ test('reasoningOutputReserve floors at 8192, capped at half of numCtx', () => {
   assert.equal(reasoningOutputReserve(4096), 2048);
 });
 
-test('promptBudgetFor returns preset values, capped to leave room for reasoning output', () => {
-  // Ample context → the preset's nominal budget wins.
+test('promptBudgetFor: calm presets stay tight, roomy presets scale with the window', () => {
+  const safe = (n: number) => Math.max(1024, Math.floor((n - reasoningOutputReserve(n)) * 0.85));
+
+  // Ample context: calm presets keep their tight nominal budgets…
   assert.equal(promptBudgetFor('cool', 64000), 5000);
+  assert.equal(promptBudgetFor('fast', 64000), 4000);
   assert.equal(promptBudgetFor('balanced', 64000), 10000);
-  assert.equal(promptBudgetFor('deep', 64000), 20000);
-  assert.equal(promptBudgetFor('long_context', 64000), 24000);
-  // Small context → the ceiling (numCtx minus the reasoning reserve) clamps it,
-  // so a maxed-out prompt plus a full reasoning pass can never overflow numCtx.
-  assert.equal(promptBudgetFor('balanced', 8192), 8192 - reasoningOutputReserve(8192));
-  // manual defers to half the window.
-  assert.equal(
-    promptBudgetFor('manual', 8192),
-    Math.min(Math.floor(8192 * 0.5), 8192 - reasoningOutputReserve(8192)),
-  );
+  // …while the roomy presets use most of the window (minus the output reserve + margin).
+  assert.equal(promptBudgetFor('deep', 64000), safe(64000));
+  assert.equal(promptBudgetFor('long_context', 64000), safe(64000));
+  assert.equal(promptBudgetFor('manual', 64000), safe(64000));
+
+  // Roomy presets genuinely scale: a bigger window keeps more history.
+  assert.ok(promptBudgetFor('deep', 64000) > promptBudgetFor('deep', 32768));
+  assert.ok(promptBudgetFor('deep', 32768) > promptBudgetFor('deep', 16384));
+
+  // Small context clamps every preset to the safe ceiling.
+  assert.equal(promptBudgetFor('balanced', 8192), safe(8192));
+  assert.equal(promptBudgetFor('cool', 8192), safe(8192));
+});
+
+test('promptBudgetFor + reasoning reserve can never overflow the window', () => {
+  for (const numCtx of [4096, 8192, 16384, 32768, 64000]) {
+    for (const preset of ['cool', 'fast', 'balanced', 'deep', 'long_context', 'manual'] as const) {
+      const budget = promptBudgetFor(preset, numCtx);
+      assert.ok(
+        budget + reasoningOutputReserve(numCtx) <= numCtx,
+        `${preset}@${numCtx}: ${budget} + reserve > ${numCtx}`,
+      );
+    }
+  }
 });
 
 test('assessTurn flags CPU spill first and unconditionally', () => {

@@ -32,12 +32,23 @@ export type StreamPart =
   | { type: 'reasoning' } // model is inside a <think> block; no visible text this chunk
   | { type: 'final'; content: string; tool_calls?: ToolCall[]; truncated?: boolean };
 
+/** Per-call overrides for a single chatStream request. */
+export interface ChatOptions {
+  /**
+   * Ask the backend to emit hidden reasoning (default true, honored by the native
+   * Ollama path). Set false to force a direct answer — used to retry a turn that
+   * spent its whole output budget inside `<think>` and returned nothing.
+   */
+  think?: boolean;
+}
+
 export interface ChatModel {
   readonly modelId: string;
   chatStream(
     messages: Message[],
     tools: ToolSchema[] | undefined,
     signal?: AbortSignal,
+    opts?: ChatOptions,
   ): AsyncGenerator<StreamPart>;
 }
 
@@ -434,17 +445,18 @@ async function* streamOllamaNative(
   messages: Message[],
   tools: ToolSchema[] | undefined,
   signal: AbortSignal | undefined,
+  enableThinking = true,
 ): AsyncGenerator<StreamPart> {
   const url = `${baseUrl}/api/chat`;
   const options: Record<string, unknown> = { num_ctx: config.ollamaNumCtx };
-  // max_tokens → native num_predict. IMPORTANT: `think: true` (below) makes the
-  // model emit hidden reasoning that ALSO counts against num_predict, so a tight
-  // preset cap (e.g. "cool" = 1024) can be spent entirely inside the <think>
-  // block, leaving no visible answer — the model then returns empty. Keep a
-  // floor so reasoning models always have room to finish; short answers still
-  // stop early on their own, so this costs nothing on typical turns. The floor
-  // is scaled to numCtx (via the same reserve promptBudgetFor subtracts out) so
-  // it can never itself exceed the context window on a small preset.
+  // max_tokens → native num_predict. IMPORTANT: `think` (below) makes the model
+  // emit hidden reasoning that ALSO counts against num_predict, so a tight preset
+  // cap (e.g. "cool" = 1024) can be spent entirely inside the <think> block,
+  // leaving no visible answer — the model then returns empty. Keep a floor so
+  // reasoning models always have room to finish; short answers still stop early on
+  // their own, so this costs nothing on typical turns. The floor is scaled to
+  // numCtx (via the same reserve promptBudgetFor subtracts out) so it can never
+  // itself exceed the context window on a small preset.
   if (config.maxNewTokens) {
     options.num_predict = Math.max(config.maxNewTokens, reasoningOutputReserve(config.ollamaNumCtx));
   }
@@ -459,11 +471,13 @@ async function* streamOllamaNative(
         messages: toOllamaMessages(messages),
         ...(tools ? { tools } : {}),
         stream: true,
-        // Enable native thinking so the model separates reasoning into its own
-        // `thinking` field (leaving `content` clean). Sending false is worse: some
-        // models (qwen3) ignore it and dump the whole monologue into `content`,
-        // sometimes without an opening <think> tag.
-        think: true,
+        // Native thinking separates reasoning into its own `thinking` field
+        // (leaving `content` clean). We pass it explicitly so a caller can disable
+        // it: sending false is normally worse (some models, e.g. qwen3, ignore it
+        // and dump the monologue into `content`), but it's exactly what we want on
+        // a retry — a model that spent its whole budget reasoning gets one more
+        // chance to answer directly.
+        think: enableThinking,
         keep_alive: config.ollamaKeepAlive,
         options,
       }),
@@ -502,7 +516,7 @@ async function* streamOllamaNative(
     // Some models don't declare tool support in their Modelfile. Retry without
     // the tools field and fall back to inline JSON parsing on the response.
     if (res.status === 400 && tools && /does not support tools/i.test(detail)) {
-      yield* streamOllamaNative(baseUrl, config, messages, undefined, signal);
+      yield* streamOllamaNative(baseUrl, config, messages, undefined, signal, enableThinking);
       return;
     }
 
@@ -654,6 +668,7 @@ export class OllamaModel implements ChatModel {
     messages: Message[],
     tools: ToolSchema[] | undefined,
     signal?: AbortSignal,
+    opts?: ChatOptions,
   ): AsyncGenerator<StreamPart> {
     // Use Ollama's NATIVE /api/chat endpoint (not the OpenAI-compat one) so we
     // can pass keep_alive and options.num_ctx — the OpenAI endpoint ignores both.
@@ -663,6 +678,7 @@ export class OllamaModel implements ChatModel {
       messages,
       tools,
       signal,
+      opts?.think ?? true,
     );
   }
 

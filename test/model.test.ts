@@ -290,6 +290,21 @@ test('OllamaModel sends keep_alive and options to /api/chat', async (t) => {
   assert.equal(sent.options.num_predict, reasoningOutputReserve(8192));
 });
 
+test('OllamaModel forwards a think:false override to /api/chat (retry path)', async (t) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let captured: any;
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    captured = { url, init };
+    return fakeRes({ body: streamOf(['{"message":{"content":"answer"},"done":true}\n']) });
+  });
+  const model = new OllamaModel(CFG);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, { think: false })) {
+    void _;
+  }
+  assert.equal(JSON.parse(captured.init.body).think, false);
+});
+
 test('a large explicit maxNewTokens is respected above the reasoning floor', async (t) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let captured: any;

@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runAgentLoop, type AgentEvent } from '../src/agent/loop.js';
 import { ToolRegistry } from '../src/tools/registry.js';
-import type { ChatModel, Message, StreamPart, ToolCall } from '../src/agent/model.js';
+import type { ChatModel, ChatOptions, Message, StreamPart, ToolCall } from '../src/agent/model.js';
+import type { ToolSchema } from '../src/tools/registry.js';
 
 interface Turn {
   content: string;
@@ -219,4 +220,76 @@ test('a truncated, reasoning-only empty response gives an actionable error', asy
   assert.ok(err && err.type === 'error');
   assert.match(err.type === 'error' ? err.message : '', /output limit|reasoning/i);
   assert.match(err.type === 'error' ? err.message : '', /\/model/);
+});
+
+/** Records the `think` flag of each call; scripts pass 1 vs the no-think retry. */
+class RetryProbeModel implements ChatModel {
+  readonly modelId = 'retry';
+  calls: (boolean | undefined)[] = [];
+  constructor(private readonly answerOnRetry: boolean) {}
+  async *chatStream(
+    _messages: Message[],
+    _tools: ToolSchema[] | undefined,
+    _signal?: AbortSignal,
+    opts?: ChatOptions,
+  ): AsyncGenerator<StreamPart> {
+    const think = opts?.think ?? true;
+    this.calls.push(opts?.think);
+    if (think) {
+      // Pass 1: spent the whole budget reasoning, hit the cap, produced nothing.
+      yield { type: 'reasoning' };
+      yield { type: 'final', content: '', truncated: true };
+    } else if (this.answerOnRetry) {
+      // Pass 2 (thinking off): answers directly.
+      yield { type: 'delta', text: 'the answer' };
+      yield { type: 'final', content: 'the answer' };
+    } else {
+      // Pass 2 still starves.
+      yield { type: 'reasoning' };
+      yield { type: 'final', content: '', truncated: true };
+    }
+  }
+}
+
+test('a reasoning turn that truncates empty is retried once without thinking, then answers', async () => {
+  const model = new RetryProbeModel(true);
+  const events = await collect('hard question', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  assert.deepEqual(model.calls, [true, false], 'pass 1 thinks, pass 2 disables thinking');
+  assert.ok(!events.some((e) => e.type === 'error'), 'the retry produced an answer, so no error');
+  const end = events.find((e) => e.type === 'message_end');
+  assert.equal(end && end.type === 'message_end' ? end.content : '', 'the answer');
+});
+
+test('the no-think retry error is preset-aware (deep → suggests long_context)', async () => {
+  const model = new RetryProbeModel(false);
+  const events = await collect('q', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+    preset: 'deep',
+  });
+  assert.deepEqual(model.calls, [true, false], 'still tried the no-think retry');
+  const err = events.find((e) => e.type === 'error');
+  assert.match(err && err.type === 'error' ? err.message : '', /long_context/);
+});
+
+test('a truncated turn with no reasoning is not retried', async () => {
+  class TruncNoReason implements ChatModel {
+    readonly modelId = 'trunc-plain';
+    calls = 0;
+    async *chatStream(): AsyncGenerator<StreamPart> {
+      this.calls++;
+      yield { type: 'final', content: '', truncated: true };
+    }
+  }
+  const model = new TruncNoReason();
+  const events = await collect('q', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  assert.equal(model.calls, 1, 'no retry without reasoning');
+  const err = events.find((e) => e.type === 'error');
+  assert.match(err && err.type === 'error' ? err.message : '', /output limit/);
 });
