@@ -96,14 +96,19 @@ if (Get-Command ollama -ErrorAction SilentlyContinue) {
   }
 }
 
-# 4b. Enable Ollama's flash attention + q8 KV cache by default (faster, leaner
-# local inference). Set as persistent USER environment variables, which the
-# Ollama server reads at startup, plus the current session.
+# 4b. Enable Ollama's flash attention + q8 KV cache + single request slot by
+# default (faster, leaner local inference). Set as persistent USER environment
+# variables, which the Ollama server reads at startup, plus the current session.
+#   OLLAMA_NUM_PARALLEL=1: Ollama sizes the KV cache as num_ctx x num_parallel;
+#   its multi-slot default makes a single-user setup pay several times the
+#   KV-cache memory for concurrency it never uses.
 [Environment]::SetEnvironmentVariable('OLLAMA_FLASH_ATTENTION', '1', 'User')
 [Environment]::SetEnvironmentVariable('OLLAMA_KV_CACHE_TYPE', 'q8_0', 'User')
+[Environment]::SetEnvironmentVariable('OLLAMA_NUM_PARALLEL', '1', 'User')
 $env:OLLAMA_FLASH_ATTENTION = '1'
 $env:OLLAMA_KV_CACHE_TYPE = 'q8_0'
-Ok "Ollama speed-ups enabled: flash attention + q8 KV cache (restart Ollama to apply)."
+$env:OLLAMA_NUM_PARALLEL = '1'
+Ok "Ollama speed-ups enabled: flash attention + q8 KV cache + single slot (restart Ollama to apply)."
 
 # 5. uv — Python project & environment manager used by handoff's experiment runner.
 #    With uv, each project's experiments/ directory becomes a reproducible Python

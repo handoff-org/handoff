@@ -45,7 +45,20 @@ async function ensureOllamaServe() {
   if (await isOllamaRunning()) return;
   if (!(await ollamaInstalled())) return;
 
-  const srv = spawn('ollama', ['serve'], { detached: true, stdio: 'ignore' });
+  // Apply handoff's performance defaults for a server WE auto-start, without
+  // clobbering anything the user or the installer's shell profile already set.
+  // This runs before the UI, so it would otherwise shadow OllamaPrepare's
+  // startOllamaServe (which sets these) — leaving a fresh shell with an untuned
+  // server. Mirrors ollamaServeEnv() in src/agent/ollama.ts: flash attention lets
+  // Ollama use a quantized (q8_0) KV cache (~45% less KV memory), and pinning
+  // num_parallel to 1 stops Ollama sizing the KV cache as num_ctx × N for
+  // concurrency a single-user TUI never uses (~58% less resident memory).
+  const env = { ...process.env };
+  if (env.OLLAMA_FLASH_ATTENTION == null) env.OLLAMA_FLASH_ATTENTION = '1';
+  if (env.OLLAMA_KV_CACHE_TYPE == null) env.OLLAMA_KV_CACHE_TYPE = 'q8_0';
+  if (env.OLLAMA_NUM_PARALLEL == null) env.OLLAMA_NUM_PARALLEL = '1';
+
+  const srv = spawn('ollama', ['serve'], { detached: true, stdio: 'ignore', env });
   srv.unref();
 
   // Wait up to 5 s for the API to become ready.

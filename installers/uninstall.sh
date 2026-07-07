@@ -52,7 +52,8 @@ disable_ollama_perf() {
     tmp="$(mktemp)" || continue
     if grep -v -e '# handoff: faster Ollama' \
                -e 'export OLLAMA_FLASH_ATTENTION=1' \
-               -e 'export OLLAMA_KV_CACHE_TYPE=q8_0' "$prof" > "$tmp" 2>/dev/null; then
+               -e 'export OLLAMA_KV_CACHE_TYPE=q8_0' \
+               -e 'export OLLAMA_NUM_PARALLEL=1' "$prof" > "$tmp" 2>/dev/null; then
       mv "$tmp" "$prof" && DID_PERF=1
     else
       rm -f "$tmp"
@@ -81,6 +82,7 @@ disable_ollama_perf() {
   if [ "$OS" = "Darwin" ] && command -v launchctl >/dev/null 2>&1; then
     launchctl unsetenv OLLAMA_FLASH_ATTENTION 2>/dev/null || true
     launchctl unsetenv OLLAMA_KV_CACHE_TYPE 2>/dev/null || true
+    launchctl unsetenv OLLAMA_NUM_PARALLEL 2>/dev/null || true
   fi
   return 0
 }

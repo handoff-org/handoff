@@ -40,12 +40,24 @@ export interface OllamaPerfOptions {
   flashAttention?: boolean;
   /** KV-cache type (default 'q8_0'). Quantized types need flash attention on. */
   kvCacheType?: 'f16' | 'q8_0' | 'q4_0';
+  /**
+   * Max concurrent request slots (default 1). Ollama sizes the KV cache as
+   * `num_ctx × num_parallel`, so its multi-slot default makes a single-user TUI
+   * pay several times the KV-cache memory for concurrency it never uses
+   * (measured ~+58% resident memory on an M4). Pinning to 1 is a pure win here.
+   */
+  numParallel?: number;
 }
 
 /**
  * Build the environment for `ollama serve` with the perf flags applied. Pure and
  * testable — the flags are read by the server at startup, so they only take
  * effect for a server WE launch (not one that's already running).
+ *
+ * Flash attention and KV-cache type are config-driven, so an explicit option
+ * always wins over the inherited env. `num_parallel` has no config field: an
+ * explicit option wins, otherwise an inherited `OLLAMA_NUM_PARALLEL` is honored,
+ * otherwise it defaults to 1 (single-user).
  */
 export function ollamaServeEnv(
   base: NodeJS.ProcessEnv,
@@ -53,10 +65,13 @@ export function ollamaServeEnv(
 ): NodeJS.ProcessEnv {
   const flash = opts?.flashAttention !== false; // default on
   const kv = opts?.kvCacheType ?? 'q8_0';
+  const parallel =
+    opts?.numParallel ?? (base['OLLAMA_NUM_PARALLEL'] ? Number(base['OLLAMA_NUM_PARALLEL']) : 1);
   return {
     ...base,
     OLLAMA_FLASH_ATTENTION: flash ? '1' : '0',
     OLLAMA_KV_CACHE_TYPE: kv,
+    OLLAMA_NUM_PARALLEL: String(parallel),
   };
 }
 
@@ -65,7 +80,7 @@ export function startOllamaServe(opts?: OllamaPerfOptions): void {
   // The flags only take effect for a server WE start — if the macOS Ollama.app
   // (or a manual `ollama serve`) is already running, isOllamaRunning()
   // short-circuits and these never apply. Values come from config (/settings);
-  // the defaults are flash attention on + q8_0 KV cache.
+  // the defaults are flash attention on + q8_0 KV cache + a single request slot.
   const srv = spawn('ollama', ['serve'], {
     detached: true,
     stdio: 'ignore',

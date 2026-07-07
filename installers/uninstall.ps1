@@ -79,8 +79,10 @@ if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
 # scope + current session). Safe even if they were never set.
 [Environment]::SetEnvironmentVariable('OLLAMA_FLASH_ATTENTION', $null, 'User')
 [Environment]::SetEnvironmentVariable('OLLAMA_KV_CACHE_TYPE', $null, 'User')
+[Environment]::SetEnvironmentVariable('OLLAMA_NUM_PARALLEL', $null, 'User')
 Remove-Item Env:\OLLAMA_FLASH_ATTENTION -ErrorAction SilentlyContinue
 Remove-Item Env:\OLLAMA_KV_CACHE_TYPE -ErrorAction SilentlyContinue
+Remove-Item Env:\OLLAMA_NUM_PARALLEL -ErrorAction SilentlyContinue
 Ok "Removed handoff's Ollama speed-up environment variables."
 
 # 3. mlx-lm — not applicable on Windows.

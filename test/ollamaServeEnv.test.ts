@@ -9,6 +9,22 @@ test('ollamaServeEnv defaults to flash attention on + q8_0 KV cache', () => {
   assert.equal(env['PATH'], '/bin'); // base env preserved
 });
 
+test('ollamaServeEnv pins num_parallel to 1 by default (single-user TUI)', () => {
+  // Ollama sizes the KV cache as num_ctx × num_parallel; its multi-slot default
+  // makes a single user pay several times the KV memory. 1 is a pure win here.
+  assert.equal(ollamaServeEnv({})['OLLAMA_NUM_PARALLEL'], '1');
+});
+
+test('ollamaServeEnv honors an inherited OLLAMA_NUM_PARALLEL, else an explicit opt', () => {
+  // A power user who exported their own value keeps it…
+  assert.equal(ollamaServeEnv({ OLLAMA_NUM_PARALLEL: '3' })['OLLAMA_NUM_PARALLEL'], '3');
+  // …but an explicit option wins over the inherited env.
+  assert.equal(
+    ollamaServeEnv({ OLLAMA_NUM_PARALLEL: '3' }, { numParallel: 1 })['OLLAMA_NUM_PARALLEL'],
+    '1',
+  );
+});
+
 test('ollamaServeEnv turns flash attention off when disabled', () => {
   const env = ollamaServeEnv({}, { flashAttention: false });
   assert.equal(env['OLLAMA_FLASH_ATTENTION'], '0');

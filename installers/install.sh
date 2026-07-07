@@ -112,31 +112,35 @@ install_llamacpp_linux() {
   command -v llama-server >/dev/null 2>&1
 }
 
-# Enable Ollama's flash-attention + q8 KV-cache by default, so every user gets
-# faster local inference out of the box. These are read by the SERVER at startup,
-# so we set them wherever the server might be launched from: the user's shell (a
-# manual `ollama serve`, or the one handoff spawns, inherits it), the Linux
-# systemd service (which does NOT read the shell), and the macOS launchd session
-# (for the GUI app). Idempotent — safe to re-run.
+# Enable Ollama's flash-attention + q8 KV-cache + single request slot by default,
+# so every user gets faster, leaner local inference out of the box. These are read
+# by the SERVER at startup, so we set them wherever the server might be launched
+# from: the user's shell (a manual `ollama serve`, or the one handoff spawns,
+# inherits it), the Linux systemd service (which does NOT read the shell), and the
+# macOS launchd session (for the GUI app). Idempotent — safe to re-run.
+#   OLLAMA_NUM_PARALLEL=1: Ollama sizes the KV cache as num_ctx × num_parallel; its
+#   multi-slot default makes a single-user setup pay several times the KV-cache
+#   memory for concurrency it never uses (~58% more resident memory, measured).
 enable_ollama_perf() {
-  perf_mark="# handoff: faster Ollama (flash attention + q8 KV cache)"
+  perf_mark="# handoff: faster Ollama (flash attention + q8 KV cache + single slot)"
 
   # (a) Shell profiles — covers a shell-launched server and handoff-spawned ones.
   wrote=0
   for prof in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
     [ -f "$prof" ] || continue
     if grep -q 'OLLAMA_FLASH_ATTENTION' "$prof" 2>/dev/null; then wrote=1; continue; fi
-    printf '\n%s\nexport OLLAMA_FLASH_ATTENTION=1\nexport OLLAMA_KV_CACHE_TYPE=q8_0\n' \
+    printf '\n%s\nexport OLLAMA_FLASH_ATTENTION=1\nexport OLLAMA_KV_CACHE_TYPE=q8_0\nexport OLLAMA_NUM_PARALLEL=1\n' \
       "$perf_mark" >> "$prof" && wrote=1
   done
   if [ "$wrote" = 0 ]; then
     # No profile existed yet — create the shell-appropriate default.
     case "$OS" in Darwin) prof="$HOME/.zshrc" ;; *) prof="$HOME/.profile" ;; esac
-    printf '\n%s\nexport OLLAMA_FLASH_ATTENTION=1\nexport OLLAMA_KV_CACHE_TYPE=q8_0\n' \
+    printf '\n%s\nexport OLLAMA_FLASH_ATTENTION=1\nexport OLLAMA_KV_CACHE_TYPE=q8_0\nexport OLLAMA_NUM_PARALLEL=1\n' \
       "$perf_mark" >> "$prof"
   fi
   export OLLAMA_FLASH_ATTENTION=1
   export OLLAMA_KV_CACHE_TYPE=q8_0
+  export OLLAMA_NUM_PARALLEL=1
   STATUS_OLLAMA_PERF="on for new shells"
 
   # (b) Linux systemd service — auto-started as the `ollama` user; it ignores the
@@ -145,7 +149,7 @@ enable_ollama_perf() {
      && systemctl list-unit-files 2>/dev/null | grep -q '^ollama\.service'; then
     _dd="/etc/systemd/system/ollama.service.d"
     _conf="$_dd/10-handoff-perf.conf"
-    _body='[Service]\nEnvironment="OLLAMA_FLASH_ATTENTION=1"\nEnvironment="OLLAMA_KV_CACHE_TYPE=q8_0"\n'
+    _body='[Service]\nEnvironment="OLLAMA_FLASH_ATTENTION=1"\nEnvironment="OLLAMA_KV_CACHE_TYPE=q8_0"\nEnvironment="OLLAMA_NUM_PARALLEL=1"\n'
     if [ "$(id -u)" = 0 ]; then
       mkdir -p "$_dd" && printf '%b' "$_body" > "$_conf" \
         && systemctl daemon-reload 2>/dev/null && systemctl restart ollama 2>/dev/null \
@@ -166,6 +170,7 @@ enable_ollama_perf() {
   if [ "$OS" = "Darwin" ] && command -v launchctl >/dev/null 2>&1; then
     launchctl setenv OLLAMA_FLASH_ATTENTION 1 2>/dev/null || true
     launchctl setenv OLLAMA_KV_CACHE_TYPE q8_0 2>/dev/null || true
+    launchctl setenv OLLAMA_NUM_PARALLEL 1 2>/dev/null || true
   fi
 }
 

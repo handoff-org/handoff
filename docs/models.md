@@ -35,6 +35,25 @@ choice. Switch with `/model cool|fast|balanced|deep` or `/settings → Inference
 Presets are battery-aware: keep-alive shortens on battery; `long context` warns before
 applying (prefill is slow and hot on a laptop).
 
+## Server tuning (Ollama)
+
+handoff configures the Ollama **server** for lean single-user inference. These are read by
+`ollama serve` at startup, so the installer sets them at the OS level (shell profile, plus the
+macOS launchd session and the Linux systemd service), and handoff also applies them for any
+server it launches itself. They only take effect for a server *started* with them set —
+a pre-running Ollama.app or `ollama serve` keeps whatever it started with.
+
+| Setting | Default | Why | Measured (qwen3:4b, M4) |
+|---------|---------|-----|--------------------------|
+| `OLLAMA_FLASH_ATTENTION` | `1` | Enables flash attention — and unlocks a quantized KV cache. | — |
+| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | Half-size KV cache vs `f16`, negligible quality cost. | **~45% less** resident memory @ 16K ctx |
+| `OLLAMA_NUM_PARALLEL` | `1` | Ollama sizes the KV cache as `num_ctx × num_parallel`; a single-user TUI never needs multiple slots. | **~58% less** resident memory @ 8K ctx |
+| `keep_alive` | preset | Keeps the model resident between turns instead of reloading. | cold **654 ms** → warm **84 ms** load |
+
+Toggle flash attention and KV-cache type in `/settings`; `num_parallel` stays at 1 unless you
+export `OLLAMA_NUM_PARALLEL` yourself. On the tightest machines (8 GB), `OLLAMA_KV_CACHE_TYPE=q4_0`
+shaves a further ~15% off the KV cache at a small quality cost — set it manually if you need it.
+
 ## Context compaction
 
 Every turn, handoff trims the history *sent* to the model to a **prompt budget**. The calm
