@@ -58,9 +58,11 @@ test('promptBudgetFor: calm presets stay tight, roomy presets scale with the win
 });
 
 test('promptBudgetFor + reasoning reserve can never overflow the window', () => {
-  for (const numCtx of [4096, 8192, 16384, 32768, 64000]) {
+  // Include tiny windows (512–2048): a fixed 1024 floor used to overshoot there.
+  for (const numCtx of [512, 1024, 2048, 4096, 8192, 16384, 32768, 64000]) {
     for (const preset of ['cool', 'fast', 'balanced', 'deep', 'long_context', 'manual'] as const) {
       const budget = promptBudgetFor(preset, numCtx);
+      assert.ok(budget >= 1, `${preset}@${numCtx}: budget must be positive`);
       assert.ok(
         budget + reasoningOutputReserve(numCtx) <= numCtx,
         `${preset}@${numCtx}: ${budget} + reserve > ${numCtx}`,

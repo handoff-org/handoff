@@ -64,8 +64,8 @@ See [Claims & handoff](claims-and-handoff.md) for the full workflow.
 
 | Command | What it does |
 |---------|--------------|
-| `/model` | Switch the active model. The picker is hardware-aware — see [Choosing a model](models.html). Preset shortcuts: `/model cool\|fast\|balanced\|deep` (bundles context + output + keep-alive + prompt budget). Diagnostics: `/model doctor` (CPU-spill warning) and `/model benchmark` (synthetic speed + tool-call test; `--quick`, `--model <id>`). |
-| `/settings` | Set the **inference preset** (cool / fast / balanced / deep), toggle **personalization**, change the color theme, toggle the banner mascot, set the **performance mode**, the **context window** (Ollama `num_ctx`), or toggle **flash attention** / **KV-cache** type. |
+| `/model` | Switch the active model. The picker is hardware-aware — see [Choosing a model](models.html). Preset shortcuts: `/model cool\|fast\|balanced\|deep` (bundles context + output + keep-alive + prompt budget). Routing tier overrides (when [model routing](configuration.html#model-routing) is on): `/model fast` / `/model think` force the next turn's tier. Diagnostics: `/model doctor` (CPU-spill warning) and `/model benchmark` (synthetic speed + tool-call test; `--quick`, `--model <id>`). |
+| `/settings` | Set the **inference preset** (cool / fast / balanced / deep), toggle **personalization**, change the color theme, toggle the banner mascot, set the **performance mode**, the **context window** (Ollama `num_ctx`), toggle **flash attention** / **KV-cache** type, or configure **model routing** (enable, fast/think model, routing-notes verbosity). |
 | `/profile` | View or manage what handoff has learned about your preferences (local only). `show` (default), `enable` / `disable`, `forget <key>`, `why <key>`, `export`, `reset` → `reset yes`. See [Personalization](configuration.html#personalization). |
 | `/mode` | Toggle hands-on (approve sensitive tools) / hands-off (auto). Also `/mode hands-on`, `/mode hands-off`. |
 | `/resume` | Restore the last session for the active project. |
@@ -78,8 +78,15 @@ See [Claims & handoff](claims-and-handoff.md) for the full workflow.
 | Key | Action |
 |-----|--------|
 | `Enter` | Send your message. |
+| `Shift+Enter` | Insert a newline (multi-line prompt). |
 | `Esc` | Interrupt the model mid-response. |
 | `↑` / `↓`, `PgUp` / `PgDn`, mouse wheel | Scroll the transcript. |
+| `←` / `→` | Move the caret. |
+| `Ctrl+A` / `Ctrl+E` | Jump to start / end of the line. |
+| `Ctrl+U` / `Ctrl+K` | Delete to start / end of the line. |
+| `Ctrl+W` | Delete the previous word. |
+| `Ctrl+P` / `Ctrl+N` | Recall previous / next submitted input (input history). |
+| `Shift+Tab` | Toggle hands-on / hands-off mode. |
 | `~` (on an empty prompt) | Toggle **off-work mode** — a plain general assistant with no project or Overleaf context. Press `~` again to go back on the books. |
 | `/` | Open the slash-command autocomplete menu. |
 

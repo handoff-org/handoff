@@ -72,3 +72,95 @@ export function caretRowCol(value: string, cursor: number): { row: number; col: 
   }
   return { row, col: rem };
 }
+
+// ── Readline-style line editing (pure; wired into the key handler in app.tsx) ──
+//
+// Each returns the next {text, cursor}. Cursor is a code-unit index (matching
+// the rest of the input handling), clamped into range. These operate on the
+// whole buffer (single logical line for the common case); multi-line buffers are
+// handled the same way since the field flattens on submit.
+
+export interface EditState {
+  text: string;
+  cursor: number;
+}
+
+/** Ctrl-U: delete from the cursor back to the start of the buffer. */
+export function killToStart(text: string, cursor: number): EditState {
+  const c = clampCursor(text, cursor);
+  return { text: text.slice(c), cursor: 0 };
+}
+
+/** Ctrl-K: delete from the cursor to the end of the buffer. */
+export function killToEnd(text: string, cursor: number): EditState {
+  const c = clampCursor(text, cursor);
+  return { text: text.slice(0, c), cursor: c };
+}
+
+/**
+ * Ctrl-W: delete the whitespace-delimited word before the cursor, including any
+ * run of spaces immediately preceding it (so repeated presses chew back words).
+ */
+export function deleteWordBack(text: string, cursor: number): EditState {
+  let c = clampCursor(text, cursor);
+  const start = c;
+  // Skip trailing spaces just before the cursor.
+  while (c > 0 && text[c - 1] === ' ') c--;
+  // Then skip the word characters.
+  while (c > 0 && text[c - 1] !== ' ') c--;
+  return { text: text.slice(0, c) + text.slice(start), cursor: c };
+}
+
+function clampCursor(text: string, cursor: number): number {
+  return Math.max(0, Math.min(cursor, text.length));
+}
+
+/**
+ * A bounded, immutable input-history cursor. `entries` is oldest→newest. The
+ * cursor sits "below" the newest entry (index === entries.length) meaning "the
+ * live draft"; `prev()` walks toward older entries, `next()` back toward the
+ * draft. `draft` is the text the user had typed before starting to browse, so
+ * returning past the newest entry restores it.
+ */
+export class HistoryCursor {
+  private idx: number;
+  constructor(
+    private readonly entries: string[],
+    private readonly draft: string,
+  ) {
+    this.idx = entries.length; // start at the live draft
+  }
+
+  /** Move to an older entry; returns its text, or null if already at the oldest. */
+  prev(): string | null {
+    if (this.entries.length === 0) return null;
+    if (this.idx === 0) return this.entries[0] ?? null;
+    this.idx -= 1;
+    return this.entries[this.idx] ?? null;
+  }
+
+  /** Move to a newer entry; returns its text, or the draft when back at the bottom. */
+  next(): string | null {
+    if (this.idx >= this.entries.length) return null; // already at the draft
+    this.idx += 1;
+    if (this.idx >= this.entries.length) return this.draft;
+    return this.entries[this.idx] ?? null;
+  }
+
+  /** True when the cursor is at the live draft (not browsing history). */
+  atDraft(): boolean {
+    return this.idx >= this.entries.length;
+  }
+}
+
+/**
+ * Append a submitted input to a bounded history ring (oldest→newest), skipping
+ * empties and consecutive duplicates. Returns a new array (never mutates).
+ */
+export function pushHistory(history: string[], entry: string, max = 100): string[] {
+  const e = entry.trim();
+  if (!e) return history;
+  if (history.length && history[history.length - 1] === e) return history;
+  const next = [...history, e];
+  return next.length > max ? next.slice(next.length - max) : next;
+}

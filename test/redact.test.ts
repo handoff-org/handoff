@@ -41,3 +41,29 @@ test('does not mangle ordinary prose that merely mentions tokens', () => {
   const s = 'The token bucket algorithm limits requests per second.';
   assert.equal(redactSecrets(s), s);
 });
+
+test('masks bare OpenAI keys', () => {
+  const out = redactSecrets('key sk-abcABC123defDEF456ghiGHI789 works');
+  assert.ok(!out.includes('sk-abcABC123'), `leaked: ${out}`);
+  assert.match(out, /key ••• works/);
+  // sk-proj- form
+  assert.ok(!redactSecrets('sk-proj-abcdefABCDEF0123456789xyz').includes('proj-abcdef'));
+});
+
+test('masks bare GitHub tokens', () => {
+  for (const p of ['ghp', 'gho', 'ghs', 'ghr', 'ghu']) {
+    const tok = `${p}_${'A1b2C3d4E5f6G7h8I9j0'}`; // 20 chars after prefix
+    const out = redactSecrets(`token ${tok} here`);
+    assert.ok(!out.includes(tok), `leaked ${p}: ${out}`);
+  }
+});
+
+test('masks AWS access-key ids', () => {
+  const out = redactSecrets('aws AKIAIOSFODNN7EXAMPLE creds');
+  assert.ok(!out.includes('AKIAIOSFODNN7EXAMPLE'), `leaked: ${out}`);
+});
+
+test('new patterns do not touch ordinary prose', () => {
+  const s = 'The task force met to discuss the project skeleton and the AKIA prefix rule.';
+  assert.equal(redactSecrets(s), s);
+});

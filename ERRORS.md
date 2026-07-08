@@ -4,12 +4,30 @@ Notes from a debugging session on 2026-07-06. Not all of these are fixed yet.
 
 ## 1. Banner logo animation causes visible screen flicker
 
-**Status:** open, not fixed.
+**Status:** mitigated.
 
-- Where: `ui/useLogoAnimation.ts:56` runs a 20fps timer (`fps: 20` set at `ui/app.tsx:1763`), used by the welcome banner (`ui/app.tsx:1759-1768`, `ui/Banner.tsx`).
-- Cause: the animated `h>` logo sweeps a color gradient across ~25 rows of the banner at 20fps. Ink repaints by diffing the full output string and rewriting everything from the first changed line down (no partial/pixel buffering), so a near-full-height block changing every frame forces a near-full-screen repaint 20x/second. On terminals without fast/synchronized redraw (SSH sessions, tmux, some emulators) this reads as visible flicker/tearing.
-- Workaround available today: toggle it off via the settings menu ("Toggle mascot", `ui/Overlays.tsx:83`), or set `HANDOFF_REDUCED_MOTION=1` in the environment.
-- Proposed fix (not applied): lower `fps: 20` at `ui/app.tsx:1763` to ~8-10, and/or lengthen `periodMs` (default 4200 in `ui/useLogoAnimation.ts`), to cut the repaint rate while keeping the sweep visible.
+- Where: `ui/useLogoAnimation.ts` runs a fixed-timestep timer, used by the welcome banner (`ui/app.tsx`, `ui/Banner.tsx`).
+- Cause: the animated `h>` logo sweeps a color gradient across ~25 rows of the banner. Ink repaints by diffing the full output string and rewriting everything from the first changed line down (no partial/pixel buffering), so a near-full-height block changing every frame forces a near-full-screen repaint many times/second. On terminals without fast/synchronized redraw (SSH sessions, tmux, some emulators) this reads as visible flicker/tearing.
+- Mitigation applied: the mascot now runs at **12fps** (was 20), cutting the repaint + GC pressure ~40% while keeping the sweep smooth. The transcript body is separately memoized (`entryNodes` on `[entries, theme, width]`), so an animation frame never re-lays the conversation. The animation timer already goes fully idle while the banner is scrolled off-screen (`visible` ref).
+- Still available: toggle it off via the settings menu ("Toggle mascot"), or set `HANDOFF_REDUCED_MOTION=1` (block glyphs also under `NO_COLOR`). A future improvement could lengthen `periodMs` or gate on synchronized-output support.
+
+## 4. Security & performance hardening pass
+
+**Status:** fixed / added.
+
+A focused review pass (safety, TUI performance, routing UX, DX):
+
+- **SSRF hardening** (`src/tools/ssrf.ts`, new). `web_fetch`/`read_pdf` previously blocked only `169.254.*` + GCP metadata. Now a pure, tested `checkFetchUrl` blocks loopback (`127/8`, `::1`, `0.0.0.0`), private IPv4 (`10/8`, `172.16/12`, `192.168/16`, `100.64/10` CGNAT), link-local (`169.254/16`, `fe80::/10`), unique-local (`fc00::/7`), IPv4-mapped IPv6, and obfuscated decimal/octal/hex IP encodings. DNS-rebinding (resolve-then-pin) is a noted follow-up.
+- **read_pdf shell-injection + temp leak** (`src/tools/builtin.ts`). Replaced `execSync(` + "`pdftotext \"${path}\" -`" + `)` (shell string) with `execFileSync('pdftotext', [path, '-'])` (array args, no shell) and now `unlinkSync` the downloaded temp PDF in a `finally` (was leaking one file per URL fetch).
+- **Wider secret redaction** (`src/util/redact.ts`): added OpenAI `sk-…`, GitHub `gh[posru]_…`, and AWS `AKIA…` patterns.
+- **contextBudget small-window overflow** (`src/agent/contextBudget.ts`): the `promptBudgetFor` floor of 1024 could make `budget + reasoningOutputReserve > numCtx` at `numCtx ≤ 1024`; the ceiling is now clamped to the usable window so the invariant holds for all sizes (tested at 512/1024/2048/4096).
+- **Single alt-screen owner** (`ui/terminalControl.ts`, new): the alternate screen (`?1049h/l`) is now owned solely by `src/index.tsx`; `ui/app.tsx` owns only input/scroll modes (`?1007`, `?2004`). Prevents double-restore and keeps the exit recap on the normal screen.
+- **Streaming render batching** (`ui/streamThrottle.ts`, new): streaming deltas are coalesced to ≤1 React update per ~33ms (≈30fps) instead of one render + transcript re-layout per token.
+- **Cell-width-aware wrapping** (`ui/width.ts`, new): `wrap`/`hardWrap` measure terminal cells (CJK = 2, combining marks = 0, ANSI = 0) instead of `String.length`, so wide/emoji/accented text no longer overflows or wraps early.
+- **ToolRegistry built once** (`src/index.tsx`): was reconstructed + re-registered on every render.
+- **Routing UX**: per-turn tier note is now gated by a `routerNotes` setting (`changes` default / `always` / `off`); `/settings` cycles it. Backing out of a model picker resets the router pick target.
+- **DX**: `npm run check`, ESLint (advisory) + Prettier configs, and a GitHub Actions CI matrix (Node 18/20/22).
+- Tests: new `test/{ssrf,terminalControl,streamThrottle,width,inputEditing}.test.ts`; extended `test/{tools,redact,contextBudget,router}.test.ts`. `npm run typecheck` + `npm test` green.
 
 ## 2. "Model hit its output limit" truncation on reasoning models
 

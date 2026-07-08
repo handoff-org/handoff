@@ -6,29 +6,9 @@ import type { ToolRegistry } from './registry.js';
 import { overleafWriteGuard } from '../workspace/overleaf.js';
 import { resolveWorkspacePath } from '../workspace/project.js';
 import { grepFiles, globFiles } from './search.js';
+import { checkFetchUrl } from './ssrf.js';
 
 const execAsync = promisify(exec);
-
-/**
- * Guard outbound fetches: only http(s), and never link-local / cloud-metadata
- * hosts (SSRF). Returns an error string to show instead of fetching, or null if OK.
- */
-function checkFetchUrl(raw: string): string | null {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    return `Refused: not a valid URL: ${raw}`;
-  }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-    return `Refused: only http(s) URLs are allowed (got "${u.protocol}").`;
-  }
-  const host = u.hostname.toLowerCase();
-  if (host.startsWith('169.254.') || host === 'metadata.google.internal' || host === '[::ffff:169.254.169.254]') {
-    return `Refused: ${host} is a link-local / cloud-metadata address.`;
-  }
-  return null;
-}
 
 export function registerBuiltins(registry: ToolRegistry): void {
   registry.register({
@@ -278,6 +258,7 @@ export function registerBuiltins(registry: ToolRegistry): void {
       const src = String(source);
       const limit = max_chars ? Number(max_chars) : 12_000;
       let localPath = src;
+      let tempPath: string | null = null; // set only when we downloaded a URL
 
       // Download if URL.
       if (src.startsWith('http://') || src.startsWith('https://')) {
@@ -286,17 +267,21 @@ export function registerBuiltins(registry: ToolRegistry): void {
         const { tmpdir } = await import('os');
         const { join: pathJoin } = await import('path');
         const { writeFileSync } = await import('fs');
+        const { randomUUID } = await import('crypto');
         const res = await fetch(src);
         if (!res.ok) return `HTTP ${res.status}: ${res.statusText}`;
         const buf = await res.arrayBuffer();
-        localPath = pathJoin(tmpdir(), `handoff-pdf-${Date.now()}.pdf`);
-        writeFileSync(localPath, Buffer.from(buf));
+        // randomUUID (not Date.now) avoids collisions between concurrent fetches.
+        tempPath = pathJoin(tmpdir(), `handoff-pdf-${randomUUID()}.pdf`);
+        localPath = tempPath;
+        writeFileSync(tempPath, Buffer.from(buf));
       }
 
-      // Use pdftotext (poppler) — widely available on macOS/Linux.
+      // Use pdftotext (poppler) — widely available on macOS/Linux. execFileSync
+      // (array args, no shell) so a path with quotes/spaces/`$()` can't inject.
       try {
-        const { execSync } = await import('child_process');
-        const text = execSync(`pdftotext "${localPath}" -`, {
+        const { execFileSync } = await import('child_process');
+        const text = execFileSync('pdftotext', [localPath, '-'], {
           timeout: 30_000,
           encoding: 'utf-8',
           maxBuffer: 8 * 1024 * 1024,
@@ -309,6 +294,16 @@ export function registerBuiltins(registry: ToolRegistry): void {
           'pdftotext not available. Install with: brew install poppler\n' +
           'Then retry — handoff will extract the text directly.'
         );
+      } finally {
+        // Always clean up a downloaded temp PDF so they don't accumulate in tmp.
+        if (tempPath) {
+          try {
+            const { unlinkSync } = await import('fs');
+            unlinkSync(tempPath);
+          } catch {
+            /* best-effort */
+          }
+        }
       }
     },
   });

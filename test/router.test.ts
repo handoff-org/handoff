@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyTurn, resolveModel, formatTierNote } from '../src/agent/router.js';
+import {
+  classifyTurn,
+  resolveModel,
+  formatTierNote,
+  shouldShowTierNote,
+} from '../src/agent/router.js';
 import type { RouterContext } from '../src/agent/router.js';
 
 const base: RouterContext = {
@@ -68,4 +73,64 @@ test('slash command keeps tier', () => {
 test('formatTierNote produces expected string', () => {
   assert.equal(formatTierNote('fast', 'qwen3:4b'), 'fast model · qwen3:4b');
   assert.equal(formatTierNote('think', 'qwen3:8b'), 'think model · qwen3:8b');
+});
+
+// ── Edge cases (P2.1) ────────────────────────────────────────────────────────
+
+test('hadToolCalls overrides think keywords (chain continuity wins)', () => {
+  // A keyword-heavy follow-up during a tool chain must still keep the tier.
+  const ctx: RouterContext = { ...base, hadToolCalls: true, lastTier: 'fast' };
+  assert.equal(classifyTurn('now synthesize the results and conclusion', ctx), 'keep');
+});
+
+test('long-prompt boundary: 280 chars stays fast, 281 routes to think', () => {
+  assert.equal(classifyTurn('a'.repeat(280), base), 'fast');
+  assert.equal(classifyTurn('a'.repeat(281), base), 'think');
+});
+
+test('keyword false-positive: a word merely containing a keyword substring', () => {
+  // "papers" contains "paper" — current behavior treats it as a hit (substring
+  // match). This test pins that behavior so any future tightening is deliberate.
+  assert.equal(classifyTurn('where are my papers stored', base), 'think');
+  // A clearly unrelated short message with no keyword stays fast.
+  assert.equal(classifyTurn('thanks that works', base), 'fast');
+});
+
+test('slash command keeps tier even with think keywords', () => {
+  const ctx: RouterContext = { ...base, lastTier: 'think' };
+  assert.equal(classifyTurn('/audit-paper abstract methodology', ctx), 'keep');
+});
+
+test('literature task in research focus routes to think', () => {
+  const ctx: RouterContext = { ...base, focus: 'research', activeTask: 'literature' };
+  assert.equal(classifyTurn('anything new?', ctx), 'think');
+});
+
+test('short follow-up with keywords does not keep — routes to think', () => {
+  // Even a short message routes to think when it carries a research keyword.
+  const ctx: RouterContext = { ...base, lastTier: 'fast' };
+  assert.equal(classifyTurn('draft it', ctx), 'think');
+});
+
+// ── shouldShowTierNote (P2.3) ────────────────────────────────────────────────
+
+test('shouldShowTierNote off never shows', () => {
+  assert.equal(shouldShowTierNote('off', null, 'fast', false), false);
+  assert.equal(shouldShowTierNote('off', 'fast', 'think', true), false);
+});
+
+test('shouldShowTierNote always shows', () => {
+  assert.equal(shouldShowTierNote('always', 'fast', 'fast', false), true);
+  assert.equal(shouldShowTierNote('always', null, 'think', false), true);
+});
+
+test('shouldShowTierNote changes: only on switch or forced', () => {
+  // First turn (no prior shown tier) → show.
+  assert.equal(shouldShowTierNote('changes', null, 'fast', false), true);
+  // Same tier as last shown → quiet.
+  assert.equal(shouldShowTierNote('changes', 'fast', 'fast', false), false);
+  // Tier switched → show.
+  assert.equal(shouldShowTierNote('changes', 'fast', 'think', false), true);
+  // Same tier but forced by /model → show (acknowledge the override).
+  assert.equal(shouldShowTierNote('changes', 'think', 'think', true), true);
 });

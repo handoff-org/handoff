@@ -77,3 +77,24 @@ export function resolveModel(tier: RouteTier, lastTier: 'fast' | 'think' | null)
 export function formatTierNote(tier: 'fast' | 'think', modelId: string): string {
   return `${tier} model · ${modelId}`;
 }
+
+/** How often the per-turn routing note is shown. */
+export type RouterNotesMode = 'off' | 'changes' | 'always';
+
+/**
+ * Decide whether to show the per-turn tier note. Default ('changes') keeps the
+ * chat quiet by only announcing when the model tier actually switches, or when
+ * the user forced a tier this turn (so the override is acknowledged). 'always'
+ * shows every turn (debugging); 'off' never shows it.
+ */
+export function shouldShowTierNote(
+  mode: RouterNotesMode,
+  prevShownTier: 'fast' | 'think' | null,
+  nextTier: 'fast' | 'think',
+  forced: boolean,
+): boolean {
+  if (mode === 'off') return false;
+  if (mode === 'always') return true;
+  // 'changes': show on a tier switch or an explicit override.
+  return forced || prevShownTier !== nextTier;
+}

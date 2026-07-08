@@ -93,3 +93,25 @@ test('search_files and find_files locate content and paths in the project', asyn
   assert.match(glob, /run\.py/);
   assert.match(await reg.call('search_files', { pattern: 'nonexistent-xyz' }), /No matches/);
 });
+
+test('read_pdf cleans up its downloaded temp file (no accumulation in tmp)', async () => {
+  const { tmpdir } = await import('os');
+  const { readdirSync } = await import('fs');
+  const tmp = tmpdir();
+  const before = readdirSync(tmp).filter((f) => f.startsWith('handoff-pdf-')).length;
+
+  // Stub fetch so no real network is hit; return a small fake body.
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), { status: 200 })) as typeof fetch;
+  try {
+    // pdftotext may or may not be installed; either way the temp file must go.
+    await reg.call('read_pdf', { source: 'https://example.com/paper.pdf' });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+
+  const after = readdirSync(tmp).filter((f) => f.startsWith('handoff-pdf-')).length;
+  assert.equal(after, before, 'downloaded temp PDF should be removed after extraction');
+});
+

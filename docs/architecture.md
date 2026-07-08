@@ -140,8 +140,8 @@ research, and skills modules register their own. File tools resolve paths throug
 | `search_files` | Regex search over file contents (`path:line: text`), optional glob filter, skips `node_modules`/`.git`/`.venv`/binaries. Backed by `src/tools/search.ts`. |
 | `find_files` | Glob over project paths (`**/*.py`, `results/*.png`). Backed by `src/tools/search.ts`. |
 | `run_shell` | Run a shell command inside the active project root. |
-| `web_fetch` | Fetch a URL (SSRF-guarded: rejects link-local / metadata addresses). |
-| `read_pdf` | Extract text from a local PDF or a direct PDF URL via `pdftotext` (poppler). |
+| `web_fetch` | Fetch a URL (SSRF-guarded by `tools/ssrf.ts`: rejects loopback, private/CGNAT/link-local/unique-local ranges, IPv4-mapped IPv6, and obfuscated decimal/octal/hex IP encodings; http(s) only). |
+| `read_pdf` | Extract text from a local PDF or a direct PDF URL via `pdftotext` (poppler, invoked with array args — no shell; downloaded temp files are cleaned up). |
 | `ask_user` | Present a multiple-choice question to the user; the agent loop routes it to the on-screen picker. |
 
 `src/tools/search.ts` is a **dependency-free, bounded file walker** — no ripgrep
