@@ -76,6 +76,8 @@ export const ConfigSchema = z.object({
   routerFastModelId: z.string().default('qwen3:4b'),
   // undefined → falls back to config.modelId (zero extra setup to activate).
   routerThinkModelId: z.string().optional(),
+  // How often to show the per-turn tier note: only on change (default), always, or never.
+  routerNotes: z.enum(['off', 'changes', 'always']).default('changes'),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -153,6 +155,7 @@ export async function loadConfig(): Promise<Config> {
     routerEnabled: store.routerEnabled,
     routerFastModelId: store.routerFastModelId,
     routerThinkModelId: store.routerThinkModelId,
+    routerNotes: store.routerNotes,
   };
   // A corrupt or hand-edited config.json (e.g. a wrong-typed value that survives
   // JSON.parse) must never brick startup. safeParse + fall back to all-defaults.

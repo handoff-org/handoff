@@ -9,7 +9,17 @@ import { bannerLines, LEFT_INNER, CANVAS_H } from './Banner.js';
 import { useLogoAnimation } from './useLogoAnimation.js';
 import { themePalette } from './ascii/gradient.js';
 import { Overlays, type OverlayMode, type PendingQuestion } from './Overlays.js';
-import { sanitizeTyped, classifyEnter, isCompleteEscapeSeq, caretRowCol } from './input.js';
+import {
+  sanitizeTyped,
+  classifyEnter,
+  isCompleteEscapeSeq,
+  caretRowCol,
+  killToStart,
+  killToEnd,
+  deleteWordBack,
+  pushHistory,
+  HistoryCursor,
+} from './input.js';
 import { matchCommands } from './commands.js';
 import { useTerminalSize } from './useTerminalSize.js';
 import { entryLines, assistantLines } from './lines.js';
@@ -54,8 +64,10 @@ import { SKILL_TEMPLATE, saveUserSkill, loadSkills, findSkill } from '../src/ski
 import { withQuant, type Backend, type FavouriteEntry } from '../config/models.js';
 import { getTheme } from '../config/theme.js';
 import { writeStore } from '../config/store.js';
-import { classifyTurn, resolveModel, formatTierNote } from '../src/agent/router.js';
+import { classifyTurn, resolveModel, formatTierNote, shouldShowTierNote } from '../src/agent/router.js';
 import type { RouterContext } from '../src/agent/router.js';
+import { INPUT_MODES_ON, INPUT_MODES_OFF } from './terminalControl.js';
+import { makeCoalescer } from './streamThrottle.js';
 import { saveSession, loadLastSession } from '../config/sessions.js';
 import {
   loadProject,
@@ -119,6 +131,10 @@ const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', 
 
 // Lines moved per arrow-key / wheel notch when scrolling the transcript.
 const SCROLL_STEP = 3;
+
+// Coalesce streaming deltas to ≤1 state update per this many ms (≈30fps) so a
+// long response doesn't re-render + re-layout the transcript per token.
+const STREAM_FLUSH_MS = 33;
 
 /**
  * Renders the prompt buffer with a block caret at `cursor`. The character under
@@ -228,6 +244,14 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const lastTierRef = useRef<'fast' | 'think' | null>(null);
   const hadToolCallsRef = useRef(false);
   const forceTierRef = useRef<'fast' | 'think' | null>(null);
+  // The tier last *announced* to the user, so a 'changes'-mode note only fires
+  // when the tier actually switches (see shouldShowTierNote).
+  const lastShownTierRef = useRef<'fast' | 'think' | null>(null);
+  // Submitted-input history (oldest→newest) and the live browse cursor. The
+  // cursor is created on the first Ctrl-P and cleared whenever the user edits
+  // the box or submits, so browsing never fights with typing.
+  const historyRef = useRef<string[]>([]);
+  const historyCursorRef = useRef<HistoryCursor | null>(null);
   // Pre-write file contents, captured at tool_call time to render a diff after.
   const pendingWriteRef = useRef<{ path: string; oldText: string; newText: string } | null>(null);
   // Set when the model runs create_project this turn, so the app can pop the
@@ -244,18 +268,20 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // The project awaiting a template pick in the 'template_select' overlay.
   const [templateTarget, setTemplateTarget] = useState<ProjectMeta | null>(null);
 
-  // Render in the terminal's alternate screen (?1049h) with alternate scroll
-  // (?1007h). This gives a clean full-screen canvas AND lets the mouse wheel
-  // scroll the transcript — terminals translate wheel events into arrow keys in
-  // the alt buffer, which the arrow handlers below already handle — without
-  // capturing the mouse, so click-drag text selection / copy-paste keep working.
+  // Input/scroll modes for the live TUI. Alt-scroll (?1007h) lets the mouse
+  // wheel scroll the transcript — terminals translate wheel events into arrow
+  // keys in the alt buffer, which the arrow handlers below already handle —
+  // without capturing the mouse, so click-drag text selection / copy-paste keep
+  // working. Bracketed paste is disabled (?2004l) so pasted URLs/tokens arrive
+  // as plain text instead of ESC[200~…ESC[201~ markers (which corrupt the value
+  // or get misread as an Escape keypress).
+  //
+  // The alternate screen buffer (?1049h/l) is deliberately NOT touched here —
+  // src/index.tsx is its sole owner (see ui/terminalControl.ts) so the post-quit
+  // recap can print on the normal screen and it's never popped twice.
   useEffect(() => {
-    // ?1049h alt screen, ?1007h alt scroll (wheel → arrows), ?2004l disables
-    // bracketed paste so pasted URLs/tokens arrive as plain text instead of
-    // being wrapped in ESC[200~…ESC[201~ markers (which corrupt the value or
-    // get misread as an Escape keypress).
-    process.stdout.write('\x1b[?1049h\x1b[?1007h\x1b[?2004l');
-    const restore = () => process.stdout.write('\x1b[?2004h\x1b[?1007l\x1b[?1049l');
+    process.stdout.write(INPUT_MODES_ON);
+    const restore = () => process.stdout.write(INPUT_MODES_OFF);
     process.on('exit', restore);
     return () => {
       restore();
@@ -1080,6 +1106,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           applyInferencePreset(presetMap[sub]!);
           return true;
         }
+        // Entering the main-model picker: ensure a prior (possibly cancelled)
+        // router fast/think pick can't misdirect this selection.
+        setModelPickTarget('main');
         setMode('backend_select');
         return true;
       }
@@ -1166,9 +1195,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       // Per-turn model selection: when routing is on, pick fast or think model.
       let activeModel: ChatModel = model;
       let activeTier: 'fast' | 'think' = 'think';
+      let tierForced = false;
       if (config.routerEnabled && fastModel) {
         const forced = forceTierRef.current;
-        forceTierRef.current = null;
+        forceTierRef.current = null; // single-turn override, consumed here
+        tierForced = forced !== null;
         const rawTier = forced ?? classifyTurn(modelInput, {
           focus,
           activeTask: activeProject?.paperMode === 'overleaf' ? 'paper' : undefined,
@@ -1179,6 +1210,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         activeTier = resolveModel(rawTier, lastTierRef.current);
         activeModel = activeTier === 'fast' ? (fastModel ?? model) : (thinkModel ?? model);
       }
+      // hadToolCallsRef scope: it reflects whether the PREVIOUS turn ran a tool,
+      // so a tool chain keeps its tier for the immediate follow-up. Reset here at
+      // the start of every turn so one tool call can't make routing sticky
+      // forever; it's set true again below when this turn emits a tool_call.
       hadToolCallsRef.current = false;
 
       // Laptop context budget + per-turn timing for the slow-turn advisory.
@@ -1193,6 +1228,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       let ttftMs: number | undefined;
       let outChars = 0;
       let hadReasoning = false;
+      // Coalesce per-token streaming into ~30fps state updates so a long
+      // response doesn't trigger one React render + transcript re-layout per
+      // token. The final content is delivered as a chat entry on message_end,
+      // so we don't need to flush the tail into `streaming`.
+      const streamCoalescer = makeCoalescer<string>(STREAM_FLUSH_MS, setStreaming);
 
       for await (const event of runAgentLoop(modelInput, turnHistory, activeModel, registry, {
         signal: controller.signal,
@@ -1200,11 +1240,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         askUser,
         preset: config.inferencePreset,
         ...(compaction ? { budget: { maxPromptTokens: budgetTokens } } : {}),
-        // Fast tier: disable thinking so non-reasoning models don't error out.
-        ...(config.routerEnabled && activeTier === 'fast' ? { think: false } : {}),
+        // Fast tier: no thinking (non-reasoning models error on think:true) and
+        // no tools (small models misfire tools on simple greetings/follow-ups).
+        ...(config.routerEnabled && activeTier === 'fast' ? { think: false, noTools: true } : {}),
       })) {
         if (event.type === 'message_start') {
           acc = '';
+          streamCoalescer.reset();
           setStreaming('');
           setReasoning(false);
           setScrollOffset(0);
@@ -1215,7 +1257,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           if (ttftMs === undefined) ttftMs = Date.now() - turnStart;
           outChars += event.text.length;
           acc += event.text;
-          setStreaming(acc);
+          streamCoalescer.push(acc);
           setReasoning(false); // visible text arrived → past the think block
         } else if (event.type === 'message_end') {
           setStreaming(null);
@@ -1317,7 +1359,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           }
           lastTierRef.current = activeTier;
           if (config.routerEnabled) {
-            addEntry({ kind: 'note', content: formatTierNote(activeTier, activeModel.modelId) });
+            const mode = config.routerNotes ?? 'changes';
+            if (shouldShowTierNote(mode, lastShownTierRef.current, activeTier, tierForced)) {
+              addEntry({ kind: 'note', content: formatTierNote(activeTier, activeModel.modelId) });
+            }
+            lastShownTierRef.current = activeTier;
           }
 
           // Personalization: capture an explicitly stated preference from this
@@ -1743,7 +1789,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   }, [config, refreshPersonalizationBlock]);
 
   const onSettingsPicked = useCallback(
-    (v: 'preset' | 'personalization' | 'theme' | 'mascot' | 'performance_mode' | 'context' | 'flash_attention' | 'kv_cache' | 'router_toggle' | 'router_fast_model' | 'router_think_model') => {
+    (v: 'preset' | 'personalization' | 'theme' | 'mascot' | 'performance_mode' | 'context' | 'flash_attention' | 'kv_cache' | 'router_toggle' | 'router_fast_model' | 'router_think_model' | 'router_notes') => {
       if (v === 'preset') {
         setMode('preset_select');
         return;
@@ -1811,13 +1857,24 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         setMode('model_select');
         return;
       }
+      if (v === 'router_notes') {
+        // Cycle changes → always → off.
+        const order = ['changes', 'always', 'off'] as const;
+        const cur = config.routerNotes ?? 'changes';
+        const next = order[(order.indexOf(cur) + 1) % order.length]!;
+        setConfig((c) => ({ ...c, routerNotes: next }));
+        void writeStore({ routerNotes: next });
+        setMode('chat');
+        addEntry({ kind: 'note', content: `routing notes → ${next}` });
+        return;
+      }
       const on = config.bannerAnimation === false;
       setConfig((c) => ({ ...c, bannerAnimation: on }));
       void writeStore({ bannerAnimation: on });
       setMode('chat');
       addEntry({ kind: 'note', content: `banner mascot → ${on ? 'on' : 'off'}` });
     },
-    [config.bannerAnimation, config.ollamaFlashAttention, config.modelPerformanceMode, config.routerEnabled],
+    [config.bannerAnimation, config.ollamaFlashAttention, config.modelPerformanceMode, config.routerEnabled, config.routerNotes],
   );
 
   const onContextPicked = useCallback((numCtx: number) => {
@@ -1874,7 +1931,12 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     width: LEFT_INNER,
     height: CANVAS_H,
     colors: logoColors,
-    fps: 20,
+    // 12fps (not 20): the gradient sweeps ~26 near-full-width rows, and Ink
+    // repaints the whole changed block each frame, so a lower rate cuts repaint
+    // + GC pressure ~40% and reduces flicker on SSH/tmux, while the sweep stays
+    // smooth (see ERRORS.md #1). The transcript is already decoupled from this
+    // (entryNodes is memoized on [entries, theme, width]).
+    fps: 12,
     color: process.env['NO_COLOR'] == null,
     enabled: animateMascot,
     reducedMotion: process.env['HANDOFF_REDUCED_MOTION'] != null,
@@ -2114,6 +2176,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     if (key.return || enter === 'submit') {
       const val = input.trim();
       if (val) {
+        historyRef.current = pushHistory(historyRef.current, val);
+        historyCursorRef.current = null; // exit history browsing on submit
         setInput('');
         setCursor(0);
         void handleSubmit(val);
@@ -2126,10 +2190,57 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     if (key.rightArrow) { setCursor(clampC(cursor + 1)); return; }
     if (key.ctrl && char === 'a') { setCursor(0); return; }            // line start
     if (key.ctrl && char === 'e') { setCursor(input.length); return; } // line end
+    // Readline kill keys. Editing exits history browsing.
+    if (key.ctrl && char === 'u') {
+      const r = killToStart(input, at);
+      historyCursorRef.current = null;
+      setInput(r.text);
+      setCursor(r.cursor);
+      return;
+    }
+    if (key.ctrl && char === 'k') {
+      const r = killToEnd(input, at);
+      historyCursorRef.current = null;
+      setInput(r.text);
+      setCursor(r.cursor);
+      return;
+    }
+    if (key.ctrl && char === 'w') {
+      const r = deleteWordBack(input, at);
+      historyCursorRef.current = null;
+      setInput(r.text);
+      setCursor(r.cursor);
+      return;
+    }
+    // Ctrl-P / Ctrl-N: browse submitted-input history (readline-style). Kept off
+    // the arrow keys so it never fights transcript scroll or the slash-menu.
+    if (key.ctrl && char === 'p') {
+      if (!historyCursorRef.current) {
+        historyCursorRef.current = new HistoryCursor(historyRef.current, input);
+      }
+      const prev = historyCursorRef.current.prev();
+      if (prev !== null) {
+        setInput(prev);
+        setCursor(prev.length);
+      }
+      return;
+    }
+    if (key.ctrl && char === 'n') {
+      if (historyCursorRef.current) {
+        const nextVal = historyCursorRef.current.next();
+        if (nextVal !== null) {
+          setInput(nextVal);
+          setCursor(nextVal.length);
+        }
+        if (historyCursorRef.current.atDraft()) historyCursorRef.current = null;
+      }
+      return;
+    }
 
     // Backspace/Delete removes the character before the caret.
     if (key.backspace || key.delete || char === '\x7f') {
       if (at > 0) {
+        historyCursorRef.current = null; // editing exits history browsing
         setInput(input.slice(0, at - 1) + input.slice(at));
         setCursor(at - 1);
       }
@@ -2155,6 +2266,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       }
       const clean = sanitizeTyped(char);
       if (clean) {
+        historyCursorRef.current = null; // typing exits history browsing
         setInput(input.slice(0, at) + clean + input.slice(at));
         setCursor(at + clean.length);
       }
@@ -2194,7 +2306,12 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           : {}),
       }}
       onHfConsent={onHfConsent}
-      onCancel={() => setMode('chat')}
+      onCancel={() => {
+        // Backing out of any overlay clears a pending router fast/think pick so
+        // a later main-model selection can't be written into a router slot.
+        setModelPickTarget('main');
+        setMode('chat');
+      }}
       onBackendPicked={onBackendPicked}
       onModelPicked={onModelPicked}
       onQuantPicked={onQuantPicked}

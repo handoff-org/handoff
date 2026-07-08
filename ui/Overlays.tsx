@@ -67,7 +67,8 @@ type SettingsValue =
   | 'kv_cache'
   | 'router_toggle'
   | 'router_fast_model'
-  | 'router_think_model';
+  | 'router_think_model'
+  | 'router_notes';
 
 function settingsOptions(
   mascotOn: boolean,
@@ -79,6 +80,7 @@ function settingsOptions(
   personalizationOn: boolean,
   routerEnabled: boolean,
   routerFastModelId: string,
+  routerNotes: string,
 ): Array<{ label: string; value: SettingsValue; hint: string; separator?: boolean }> {
   return [
     {
@@ -137,6 +139,11 @@ function settingsOptions(
       label: 'Think model  (main model)',
       value: 'router_think_model',
       hint: 'research / paper turns · full reasoning',
+    },
+    {
+      label: `Routing notes  (${routerNotes})`,
+      value: 'router_notes',
+      hint: 'when to show the per-turn tier note: changes · always · off',
     },
   ];
 }
@@ -321,6 +328,7 @@ export function Overlays({
           config.personalizationEnabled,
           config.routerEnabled ?? false,
           config.routerFastModelId ?? 'qwen3:4b',
+          config.routerNotes ?? 'changes',
         )}
         onSelect={onSettingsPicked}
         onCancel={onCancel}

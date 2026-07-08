@@ -38,6 +38,10 @@ The wizard and in-app commands write `config.json` for you — you rarely need t
 | `focus` | `research` \| `general` | `research` | Research mode or off-work. Toggle with `~`. |
 | `bannerAnimation` | boolean | `true` | Animate the welcome banner. |
 | `maxNewTokens` | number | — | Cap on generated tokens per turn. |
+| `routerEnabled` | boolean | `false` | Two-tier [model routing](#model-routing): auto-pick a fast vs. think model per turn. |
+| `routerFastModelId` | string | `qwen3:4b` | Model used for the **fast** tier (conversational turns; no extended thinking, no tools). |
+| `routerThinkModelId` | string | — | Model used for the **think** tier. Unset → falls back to `modelId`. |
+| `routerNotes` | `off` \| `changes` \| `always` | `changes` | When to show the per-turn tier note. `changes` = only when the tier switches (or you force one). |
 | `systemPrompt` | string | built-in | Base system prompt. handoff appends project context. |
 
 ## Environment variables
@@ -122,6 +126,29 @@ The same toggles live under `/settings → Personalization`.
 - **`auto` (hands-off)** — all tools run without asking.
 
 In-project file writes are auto-approved in both modes. Toggle with `/mode`.
+
+## Model routing
+
+Reasoning models (Qwen3, etc.) spend 10–15 s "thinking" before every reply — great
+for research and drafting, wasteful for "hi" or "make that shorter". With **model
+routing** on, handoff picks a model per turn:
+
+- **fast tier** (`routerFastModelId`, e.g. `qwen3:1.7b`/`qwen3:4b`) — short,
+  conversational turns. Runs with extended thinking **off** and **no tools**, so a
+  small model can't stall on hidden reasoning or misfire a tool on a greeting.
+- **think tier** (`routerThinkModelId`, defaults to your main `modelId`) — research,
+  paper, literature, long or analytical prompts. Full reasoning and tools.
+
+The choice is rule-based (zero added latency): tool-chain follow-ups and slash
+commands keep the current tier; research keywords, paper/literature project context,
+and long prompts route to think; everything else routes to fast. Turn it on and set
+the fast/think models under `/settings → Model routing`. Override a single turn with
+`/model fast` or `/model think`.
+
+The per-turn tier note is controlled by `routerNotes`: `changes` (default; only when
+the tier switches or you force one), `always` (every turn — handy for debugging), or
+`off`. When routing is enabled with the Ollama backend and handoff starts the server,
+it sets `OLLAMA_MAX_LOADED_MODELS=2` so both tiers stay warm.
 
 ## Sessions
 

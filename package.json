@@ -26,6 +26,10 @@
     "mascot": "tsx src/mascotPreview.tsx",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts test/*.test.tsx",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm test",
     "prepublishOnly": "npm run typecheck && npm test"
   },
   "keywords": [
@@ -59,7 +63,11 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "ink-testing-library": "^4.0.0",
-    "typescript": "^5.5.4"
+    "prettier": "^3.9.4",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.63.0"
   }
 }

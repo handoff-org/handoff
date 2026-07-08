@@ -59,6 +59,8 @@ export interface StoredConfig {
   routerEnabled?: boolean;
   routerFastModelId?: string;
   routerThinkModelId?: string;
+  /** How often to show the per-turn tier note. */
+  routerNotes?: 'off' | 'changes' | 'always';
 }
 
 

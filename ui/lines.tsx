@@ -5,10 +5,13 @@ import { renderInline } from './Markdown.js';
 import { highlight } from './highlight.js';
 import { COMMANDS } from './commands.js';
 import { hexToRgb, mix, rgbToHex } from './color.js';
+import { cellWidth, sliceToWidth } from './width.js';
 import type { ChatEntry } from './types.js';
 import type { Theme } from '../config/theme.js';
 
-/** Word-wrap plain text to a width, hard-splitting over-long words. */
+/** Word-wrap plain text to a width, hard-splitting over-long words. Measures in
+ * terminal cells (CJK/emoji = 2, combining marks = 0, ANSI = 0) so wide text
+ * neither overflows nor wraps early. */
 export function wrap(text: string, width: number): string[] {
   const w = Math.max(4, width);
   if (text.length === 0) return [''];
@@ -17,16 +20,25 @@ export function wrap(text: string, width: number): string[] {
     let cur = '';
     for (const word of para.split(' ')) {
       let piece = word;
-      while (piece.length > w) {
+      // Hard-split a word wider than the line.
+      while (cellWidth(piece) > w) {
         if (cur) {
           out.push(cur);
           cur = '';
         }
-        out.push(piece.slice(0, w));
-        piece = piece.slice(w);
+        const { head, rest } = sliceToWidth(piece, w);
+        // Guard against zero progress (e.g. a lone 2-wide char in a 1-col line).
+        if (head === '') {
+          const chars = [...piece];
+          out.push(chars[0] ?? '');
+          piece = chars.slice(1).join('');
+        } else {
+          out.push(head);
+          piece = rest;
+        }
       }
       if (cur === '') cur = piece;
-      else if ((cur + ' ' + piece).length <= w) cur += ' ' + piece;
+      else if (cellWidth(cur + ' ' + piece) <= w) cur += ' ' + piece;
       else {
         out.push(cur);
         cur = piece;
@@ -310,11 +322,24 @@ export function entryLines(
   }
 }
 
-/** Hard-split a string into chunks of at most w characters (no word breaks). */
+/** Hard-split a string into chunks of at most w display cells (no word breaks). */
 function hardWrap(s: string, w: number): string[] {
-  if (s.length <= w) return [s];
+  if (cellWidth(s) <= w) return [s];
   const out: string[] = [];
-  for (let i = 0; i < s.length; i += w) out.push(s.slice(i, i + w));
+  let rest = s;
+  while (cellWidth(rest) > w) {
+    const { head, rest: tail } = sliceToWidth(rest, w);
+    if (head === '') {
+      // A single char wider than w — emit it alone to guarantee progress.
+      const chars = [...rest];
+      out.push(chars[0] ?? '');
+      rest = chars.slice(1).join('');
+    } else {
+      out.push(head);
+      rest = tail;
+    }
+  }
+  if (rest) out.push(rest);
   return out;
 }
 

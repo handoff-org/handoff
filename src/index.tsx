@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { render } from 'ink';
 import { loadConfig, type Config } from '../config/schema.js';
 import { ToolRegistry } from './tools/registry.js';
@@ -19,6 +19,7 @@ import { appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { redactSecrets } from './util/redact.js';
+import { ALT_SCREEN_ON, ALT_SCREEN_OFF } from '../ui/terminalControl.js';
 
 const RESUME = process.argv.includes('--resume') || process.argv.includes('-r');
 
@@ -32,17 +33,23 @@ function Root({
   // When resuming we already know the config, so skip the setup wizard.
   const [config, setConfig] = useState<Config | null>(autoResume ? initialConfig : null);
 
+  // Build the tool registry exactly once for the app's lifetime — registration
+  // is a side-effecting loop, so doing it inline in render would rebuild and
+  // re-register every tool on each render (e.g. every SetupWizard keystroke).
+  const registry = useMemo(() => {
+    const r = new ToolRegistry();
+    registerBuiltins(r);
+    registerResearchTools(r);
+    registerSkillTools(r);
+    registerWorkspaceTools(r);
+    registerOverleafTools(r);
+    registerRunnerTools(r);
+    return r;
+  }, []);
+
   if (!config) {
     return <SetupWizard initialConfig={initialConfig} onComplete={setConfig} />;
   }
-
-  const registry = new ToolRegistry();
-  registerBuiltins(registry);
-  registerResearchTools(registry);
-  registerSkillTools(registry);
-  registerWorkspaceTools(registry);
-  registerOverleafTools(registry);
-  registerRunnerTools(registry);
 
   return <App initialConfig={config} registry={registry} autoResume={autoResume} />;
 }
@@ -68,10 +75,13 @@ const doResume = RESUME && !!lastSession;
 
 // Enter the alternate screen buffer so the TUI renders on a clean slate and
 // the original terminal content is restored exactly when handoff exits —
-// same behaviour as vim, less, man. No-op on terminals that don't support it.
+// same behaviour as vim, less, man. This module is the SOLE owner of the alt
+// screen (ui/app.tsx only manages input/scroll modes) so it can be popped
+// exactly once, after Ink unmounts, letting the exit recap print on the normal
+// screen. See ui/terminalControl.ts. No-op on terminals that don't support it.
 if (process.stdout.isTTY) {
-  process.stdout.write('\x1b[?1049h\x1b[2J\x1b[H');
-  process.on('exit', () => process.stdout.write('\x1b[?1049l'));
+  process.stdout.write(ALT_SCREEN_ON);
+  process.on('exit', () => process.stdout.write(ALT_SCREEN_OFF));
 }
 
 const instance = render(

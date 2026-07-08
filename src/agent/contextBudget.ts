@@ -56,7 +56,13 @@ export function reasoningOutputReserve(numCtx: number): number {
  * little low.
  */
 export function promptBudgetFor(preset: InferencePreset, numCtx: number): number {
-  const safeCeiling = Math.max(1024, Math.floor((numCtx - reasoningOutputReserve(numCtx)) * 0.85));
+  // The usable prompt space is the window minus the output reserve, times 0.85
+  // as a margin against the rough ~4-chars/token estimate and KV headroom.
+  // Clamp the floor to `usable` itself so that on a very small window (e.g.
+  // numCtx=1024, reserve=512) the invariant budget + reserve <= numCtx still
+  // holds — a fixed 1024 floor used to overshoot there.
+  const usable = Math.max(0, numCtx - reasoningOutputReserve(numCtx));
+  const safeCeiling = Math.max(1, Math.min(usable, Math.floor(usable * 0.85)));
   const byPreset: Record<InferencePreset, number> = {
     cool: 5000,
     fast: 4000,
