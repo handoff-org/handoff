@@ -11,6 +11,16 @@ const OLLAMA_QUANTS = [Q4, Q5, Q8, DEFAULT_QUANT];
 export const OLLAMA_CATALOG: HandoffModelEntry[] = [
   // ── Qwen ──
   {
+    id: 'qwen3:1.7b', backend: 'ollama', label: 'qwen3:1.7b', family: 'qwen',
+    roles: ['fast_cool', 'tool_use'], privacy: 'local', sizeClass: 'micro',
+    totalParamsB: 1.7, quantOptions: OLLAMA_QUANTS, defaultQuant: 'q4_K_M',
+    defaultContextTokens: 4096, safeContextTokens: 4096, maxContextTokens: 32768,
+    minUnifiedMemoryGb: 8, recommendedUnifiedMemoryGb: 8, minimumMacTier: 'any',
+    heatRisk: 'low', maturity: 'recommended',
+    toolUseScore: 3, codingScore: 2, reasoningScore: 2, writingScore: 2, speedScore: 5,
+    notes: 'ultra-fast · router fast tier · tools ok',
+  },
+  {
     id: 'qwen3:4b', backend: 'ollama', label: 'qwen3:4b', family: 'qwen',
     roles: ['fast_cool', 'tool_use', 'coding_agent'], privacy: 'local', sizeClass: 'small',
     totalParamsB: 4, quantOptions: OLLAMA_QUANTS, defaultQuant: 'q4_K_M',
@@ -73,6 +83,16 @@ export const OLLAMA_CATALOG: HandoffModelEntry[] = [
   },
 
   // ── Gemma (Gemma 3 shipping tags; Gemma 4 falls back automatically) ──
+  {
+    id: 'gemma3:1b', backend: 'ollama', label: 'gemma3:1b', family: 'gemma',
+    roles: ['fast_cool'], privacy: 'local', sizeClass: 'micro',
+    totalParamsB: 1, quantOptions: OLLAMA_QUANTS, defaultQuant: 'q4_K_M',
+    defaultContextTokens: 4096, safeContextTokens: 4096, maxContextTokens: 32768,
+    minUnifiedMemoryGb: 8, recommendedUnifiedMemoryGb: 8, minimumMacTier: 'any',
+    heatRisk: 'low', maturity: 'recommended',
+    toolUseScore: 2, codingScore: 2, reasoningScore: 2, writingScore: 3, speedScore: 5,
+    notes: 'ultra-fast · weak tools · conversational only',
+  },
   {
     id: 'gemma3:4b', backend: 'ollama', label: 'gemma3:4b', family: 'gemma',
     roles: ['fast_cool', 'research_writing', 'multimodal'], privacy: 'local', sizeClass: 'small',
@@ -243,5 +263,39 @@ export const OLLAMA_CATALOG: HandoffModelEntry[] = [
     heatRisk: 'low', maturity: 'advanced',
     toolUseScore: 3, codingScore: 3, reasoningScore: 3, writingScore: 3, speedScore: 4,
     notes: 'general · stable',
+  },
+
+  // ── Llama 3.2 (small/micro) ──
+  {
+    id: 'llama3.2:1b', backend: 'ollama', label: 'llama3.2:1b', family: 'legacy',
+    roles: ['fast_cool'], privacy: 'local', sizeClass: 'micro',
+    totalParamsB: 1, quantOptions: OLLAMA_QUANTS, defaultQuant: 'q4_K_M',
+    defaultContextTokens: 4096, safeContextTokens: 4096, maxContextTokens: 131072,
+    minUnifiedMemoryGb: 8, recommendedUnifiedMemoryGb: 8, minimumMacTier: 'any',
+    heatRisk: 'low', maturity: 'recommended',
+    toolUseScore: 2, codingScore: 2, reasoningScore: 2, writingScore: 2, speedScore: 5,
+    notes: 'ultra-fast · weak tools · conversational only',
+  },
+  {
+    id: 'llama3.2:3b', backend: 'ollama', label: 'llama3.2:3b', family: 'legacy',
+    roles: ['fast_cool', 'tool_use'], privacy: 'local', sizeClass: 'micro',
+    totalParamsB: 3, quantOptions: OLLAMA_QUANTS, defaultQuant: 'q4_K_M',
+    defaultContextTokens: 4096, safeContextTokens: 4096, maxContextTokens: 131072,
+    minUnifiedMemoryGb: 8, recommendedUnifiedMemoryGb: 8, minimumMacTier: 'any',
+    heatRisk: 'low', maturity: 'recommended',
+    toolUseScore: 3, codingScore: 2, reasoningScore: 2, writingScore: 3, speedScore: 5,
+    notes: 'fast · decent tools · router fast tier',
+  },
+
+  // ── SmolLM2 ──
+  {
+    id: 'smollm2:1.7b', backend: 'ollama', label: 'smollm2:1.7b', family: 'legacy',
+    roles: ['fast_cool'], privacy: 'local', sizeClass: 'micro',
+    totalParamsB: 1.7, quantOptions: OLLAMA_QUANTS, defaultQuant: 'q4_K_M',
+    defaultContextTokens: 2048, safeContextTokens: 2048, maxContextTokens: 8192,
+    minUnifiedMemoryGb: 8, recommendedUnifiedMemoryGb: 8, minimumMacTier: 'any',
+    heatRisk: 'low', maturity: 'experimental',
+    toolUseScore: 1, codingScore: 2, reasoningScore: 2, writingScore: 2, speedScore: 5,
+    notes: 'ultra-fast · weak tools · short context · conversational only',
   },
 ];

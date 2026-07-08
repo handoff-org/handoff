@@ -36,12 +36,12 @@ test('pressing F on the focused model creates a Favourites section', async () =>
   const { lastFrame, stdin, unmount } = render(<Harness />);
   await tick();
   assert.ok(!(lastFrame() ?? '').includes('Favourites'), 'no favourites before F');
-  stdin.write('f'); // cursor starts on the first model (qwen3:4b)
+  stdin.write('f'); // cursor starts on the first model (qwen3:1.7b)
   await tick();
   const frame = lastFrame() ?? '';
   assert.ok(frame.includes('Favourites'), 'Favourites section appears after F');
   // The favourited model is shown with a star and moved into the section.
-  assert.match(frame, /★ qwen3:4b/);
+  assert.match(frame, /★ qwen3:1\.7b/);
   unmount();
 });
 

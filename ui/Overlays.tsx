@@ -122,11 +122,11 @@ function settingsOptions(
       hint: 'quantize the KV cache to save memory · applies when Ollama restarts',
     },
 
+    { label: 'Model routing', value: 'router_toggle', hint: '', separator: true },
     {
-      label: `Model routing  (${routerEnabled ? 'on' : 'off'})`,
+      label: `Toggle routing  (${routerEnabled ? 'on' : 'off'})`,
       value: 'router_toggle',
       hint: 'auto-select fast vs think model per turn',
-      separator: true,
     },
     {
       label: `Fast model  (${routerFastModelId})`,

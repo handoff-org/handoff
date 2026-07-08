@@ -1200,6 +1200,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         askUser,
         preset: config.inferencePreset,
         ...(compaction ? { budget: { maxPromptTokens: budgetTokens } } : {}),
+        // Fast tier: disable thinking so non-reasoning models don't error out.
+        ...(config.routerEnabled && activeTier === 'fast' ? { think: false } : {}),
       })) {
         if (event.type === 'message_start') {
           acc = '';
@@ -1582,16 +1584,26 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         setConfig((c) => ({ ...c, routerFastModelId: modelId }));
         void writeStore({ routerFastModelId: modelId });
         setModelPickTarget('main');
-        setMode('chat');
-        addEntry({ kind: 'note', content: `routing fast model → ${modelId}` });
+        if (config.backend === 'ollama') {
+          setPullModelId(modelId);
+          setMode('model_prepare');
+        } else {
+          setMode('chat');
+          addEntry({ kind: 'note', content: `routing fast model → ${modelId}` });
+        }
         return;
       }
       if (modelPickTarget === 'router_think') {
         setConfig((c) => ({ ...c, routerThinkModelId: modelId }));
         void writeStore({ routerThinkModelId: modelId });
         setModelPickTarget('main');
-        setMode('chat');
-        addEntry({ kind: 'note', content: `routing think model → ${modelId}` });
+        if (config.backend === 'ollama') {
+          setPullModelId(modelId);
+          setMode('model_prepare');
+        } else {
+          setMode('chat');
+          addEntry({ kind: 'note', content: `routing think model → ${modelId}` });
+        }
         return;
       }
       setConfig((c) => ({ ...c, modelId }));
