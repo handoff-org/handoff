@@ -718,8 +718,8 @@ export class LlamaCppModel implements ChatModel {
 }
 
 /**
- * mlx_lm.server rejects the `system` role with a 404. Merge any system messages
- * into the content of the first user message so the server sees only user/assistant.
+ * mlx_lm.server rejects `{ role: 'system' }` messages with a 404. Merge all
+ * system messages into the first user message so the conversation is valid.
  */
 function mergeSystemMessages(messages: Message[]): Message[] {
   const systemParts: string[] = [];
@@ -732,7 +732,6 @@ function mergeSystemMessages(messages: Message[]): Message[] {
   const prefix = systemParts.join('\n\n');
   const firstUser = rest.findIndex((m) => m.role === 'user');
   if (firstUser < 0) {
-    // No user message yet — prepend a synthetic one.
     return [{ role: 'user', content: prefix }, ...rest];
   }
   return rest.map((m, i) =>

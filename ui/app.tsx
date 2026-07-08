@@ -19,7 +19,7 @@ import { runAgentLoop } from '../src/agent/loop.js';
 import { buildSystem } from '../src/agent/systemPrompt.js';
 import { writeTargetsProject } from '../src/agent/approval.js';
 import { redactSecrets } from '../src/util/redact.js';
-import { createModel, fetchVllmModels, type Message } from '../src/agent/model.js';
+import { createModel, fetchVllmModels, type Message, type ChatModel } from '../src/agent/model.js';
 import { isModelInstalled, listInstalledModels, ollamaPs, psRowFor } from '../src/agent/ollama.js';
 import { detectHardware } from '../src/system/hardware.js';
 import { advise, defaultContextForHardware, type PerformanceMode, type BenchmarkRecord } from '../src/agent/advisor.js';
@@ -54,6 +54,8 @@ import { SKILL_TEMPLATE, saveUserSkill, loadSkills, findSkill } from '../src/ski
 import { withQuant, type Backend, type FavouriteEntry } from '../config/models.js';
 import { getTheme } from '../config/theme.js';
 import { writeStore } from '../config/store.js';
+import { classifyTurn, resolveModel, formatTierNote } from '../src/agent/router.js';
+import type { RouterContext } from '../src/agent/router.js';
 import { saveSession, loadLastSession } from '../config/sessions.js';
 import {
   loadProject,
@@ -194,6 +196,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const [cursor, setCursor] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<OverlayMode>('chat');
+  const [modelPickTarget, setModelPickTarget] = useState<'main' | 'router_fast' | 'router_think'>('main');
   const [pending, setPending] = useState<Pending | null>(null);
   const [activeProject, setActiveProjectState] = useState<ProjectMeta | null>(() =>
     getActiveProject(),
@@ -222,6 +225,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // (see the effect below). The value is otherwise unused.
   const [, setRepaintTick] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const lastTierRef = useRef<'fast' | 'think' | null>(null);
+  const hadToolCallsRef = useRef(false);
+  const forceTierRef = useRef<'fast' | 'think' | null>(null);
   // Pre-write file contents, captured at tool_call time to render a diff after.
   const pendingWriteRef = useRef<{ path: string; oldText: string; newText: string } | null>(null);
   // Set when the model runs create_project this turn, so the app can pop the
@@ -334,6 +340,26 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config.backend, config.modelId, config.hfToken, config.ollamaBaseUrl, config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl],
   );
+
+  // Fast model: only created when routing is on and the fast id differs from main.
+  const fastModel = useMemo(() => {
+    if (!config.routerEnabled) return null;
+    const fastId = config.routerFastModelId;
+    if (!fastId || fastId === config.modelId) return null;
+    return createModel({ ...config, modelId: fastId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.routerEnabled, config.routerFastModelId, config.modelId,
+      config.backend, config.hfToken, config.ollamaBaseUrl,
+      config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl]);
+
+  // Think model: reuses existing `model` when IDs match (the common case).
+  const thinkModel = useMemo(() => {
+    if (!config.routerThinkModelId || config.routerThinkModelId === config.modelId) return model;
+    return createModel({ ...config, modelId: config.routerThinkModelId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model, config.routerThinkModelId, config.modelId,
+      config.backend, config.hfToken, config.ollamaBaseUrl,
+      config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl]);
 
   const addEntry = (entry: ChatEntry) => {
     setEntries((prev) => [...prev, entry]);
@@ -1030,6 +1056,16 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           void runModelBenchmark({ quick, ...(modelId ? { modelId } : {}) });
           return true;
         }
+        // Router tier overrides: /model fast | think — force next turn's model tier.
+        if (sub === 'fast' || sub === 'think') {
+          if (!config.routerEnabled) {
+            addEntry({ kind: 'note', content: 'Model routing is off — enable it in /settings' });
+          } else {
+            forceTierRef.current = sub as 'fast' | 'think';
+            addEntry({ kind: 'note', content: `Next turn: ${sub} model forced` });
+          }
+          return true;
+        }
         // Preset shortcuts: /model cool | fast | balanced | deep | long-context | manual.
         const presetMap: Record<string, InferencePreset> = {
           cool: 'cool',
@@ -1079,6 +1115,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       config.systemPrompt,
       config.mode,
       config.bannerAnimation,
+      config.routerEnabled,
       resumeSession,
       activeProject,
       focus,
@@ -1126,6 +1163,24 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       abortRef.current = controller;
       let acc = '';
 
+      // Per-turn model selection: when routing is on, pick fast or think model.
+      let activeModel: ChatModel = model;
+      let activeTier: 'fast' | 'think' = 'think';
+      if (config.routerEnabled && fastModel) {
+        const forced = forceTierRef.current;
+        forceTierRef.current = null;
+        const rawTier = forced ?? classifyTurn(modelInput, {
+          focus,
+          activeTask: activeProject?.paperMode === 'overleaf' ? 'paper' : undefined,
+          lastTier: lastTierRef.current,
+          hadToolCalls: hadToolCallsRef.current,
+          historyLength: turnHistory.length,
+        } satisfies RouterContext);
+        activeTier = resolveModel(rawTier, lastTierRef.current);
+        activeModel = activeTier === 'fast' ? (fastModel ?? model) : (thinkModel ?? model);
+      }
+      hadToolCallsRef.current = false;
+
       // Laptop context budget + per-turn timing for the slow-turn advisory.
       // Derive the budget fresh from the preset + window each turn so tuning takes
       // effect immediately; only a `manual` preset honors an explicit saved value.
@@ -1139,12 +1194,14 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       let outChars = 0;
       let hadReasoning = false;
 
-      for await (const event of runAgentLoop(modelInput, turnHistory, model, registry, {
+      for await (const event of runAgentLoop(modelInput, turnHistory, activeModel, registry, {
         signal: controller.signal,
         approve,
         askUser,
         preset: config.inferencePreset,
         ...(compaction ? { budget: { maxPromptTokens: budgetTokens } } : {}),
+        // Fast tier: disable thinking so non-reasoning models don't error out.
+        ...(config.routerEnabled && activeTier === 'fast' ? { think: false } : {}),
       })) {
         if (event.type === 'message_start') {
           acc = '';
@@ -1192,6 +1249,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
               pendingWriteRef.current = null;
             }
           }
+          hadToolCallsRef.current = true;
           addEntry({ kind: 'tool_call', name: event.name, args: event.args });
         } else if (event.type === 'tool_result') {
           // A fresh project → remember to pop the template chooser after the turn.
@@ -1256,6 +1314,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
             addEntry({ kind: 'note', content: a.message });
           } else if (!a.slow) {
             lastPerfNoteRef.current = '';
+          }
+          lastTierRef.current = activeTier;
+          if (config.routerEnabled) {
+            addEntry({ kind: 'note', content: formatTierNote(activeTier, activeModel.modelId) });
           }
 
           // Personalization: capture an explicitly stated preference from this
@@ -1517,6 +1579,33 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
 
   const onModelPicked = useCallback(
     (modelId: string, hasQuant: boolean) => {
+      // Router sub-targets: update the fast/think slot instead of the main model.
+      if (modelPickTarget === 'router_fast') {
+        setConfig((c) => ({ ...c, routerFastModelId: modelId }));
+        void writeStore({ routerFastModelId: modelId });
+        setModelPickTarget('main');
+        if (config.backend === 'ollama') {
+          setPullModelId(modelId);
+          setMode('model_prepare');
+        } else {
+          setMode('chat');
+          addEntry({ kind: 'note', content: `routing fast model → ${modelId}` });
+        }
+        return;
+      }
+      if (modelPickTarget === 'router_think') {
+        setConfig((c) => ({ ...c, routerThinkModelId: modelId }));
+        void writeStore({ routerThinkModelId: modelId });
+        setModelPickTarget('main');
+        if (config.backend === 'ollama') {
+          setPullModelId(modelId);
+          setMode('model_prepare');
+        } else {
+          setMode('chat');
+          addEntry({ kind: 'note', content: `routing think model → ${modelId}` });
+        }
+        return;
+      }
       setConfig((c) => ({ ...c, modelId }));
       recordPersonalizationEvent({
         type: 'model_selected',
@@ -1538,7 +1627,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         addEntry({ kind: 'note', content: `switched model → ${modelId}` });
       }
     },
-    [config.backend, recordPersonalizationEvent],
+    [config.backend, modelPickTarget, recordPersonalizationEvent],
   );
 
   const onQuantPicked = useCallback(
@@ -1654,7 +1743,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   }, [config, refreshPersonalizationBlock]);
 
   const onSettingsPicked = useCallback(
-    (v: 'preset' | 'personalization' | 'theme' | 'mascot' | 'performance_mode' | 'context' | 'flash_attention' | 'kv_cache') => {
+    (v: 'preset' | 'personalization' | 'theme' | 'mascot' | 'performance_mode' | 'context' | 'flash_attention' | 'kv_cache' | 'router_toggle' | 'router_fast_model' | 'router_think_model') => {
       if (v === 'preset') {
         setMode('preset_select');
         return;
@@ -1704,13 +1793,31 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         });
         return;
       }
+      if (v === 'router_toggle') {
+        const on = !config.routerEnabled;
+        setConfig((c) => ({ ...c, routerEnabled: on }));
+        void writeStore({ routerEnabled: on });
+        setMode('chat');
+        addEntry({ kind: 'note', content: `model routing → ${on ? 'on' : 'off'}` });
+        return;
+      }
+      if (v === 'router_fast_model') {
+        setModelPickTarget('router_fast');
+        setMode('model_select');
+        return;
+      }
+      if (v === 'router_think_model') {
+        setModelPickTarget('router_think');
+        setMode('model_select');
+        return;
+      }
       const on = config.bannerAnimation === false;
       setConfig((c) => ({ ...c, bannerAnimation: on }));
       void writeStore({ bannerAnimation: on });
       setMode('chat');
       addEntry({ kind: 'note', content: `banner mascot → ${on ? 'on' : 'off'}` });
     },
-    [config.bannerAnimation, config.ollamaFlashAttention, config.modelPerformanceMode],
+    [config.bannerAnimation, config.ollamaFlashAttention, config.modelPerformanceMode, config.routerEnabled],
   );
 
   const onContextPicked = useCallback((numCtx: number) => {

@@ -11,7 +11,7 @@ export const COMMANDS: Command[] = [
   { name: '/compose-skill', desc: 'write a new skill in your editor' },
   { name: '/skill', desc: 'run a skill  (/skill <name>)' },
   { name: '/skills', desc: 'list your skills' },
-  { name: '/model', desc: 'pick a model  (/model cool·fast·balanced·deep · doctor · benchmark)' },
+  { name: '/model', desc: 'pick a model  (/model cool·fast·balanced·deep · fast·think tier override · doctor · benchmark)' },
   { name: '/settings', desc: 'inference preset, personalization, theme, or Ollama tuning' },
   { name: '/profile', desc: 'view or manage what handoff has learned  (show · forget · reset · disable)' },
   { name: '/mode', desc: 'toggle hands-on / hands-off' },

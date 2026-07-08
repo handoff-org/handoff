@@ -121,8 +121,8 @@ export function assessTurn(s: TurnStats): TurnAssessment {
   const decodeSecs = decodeMs / 1000;
   const tps = s.outputTokens / decodeSecs;
   if (s.outputTokens >= 40 && decodeSecs >= 4 && tps < 5) {
-    // If the model was thinking, the slowness is expected behaviour, not a
-    // hardware problem — give a different, non-alarmist message.
+    // If the model was thinking, the slowness is expected — give a different,
+    // non-alarmist message that points at the root cause.
     if (s.hadReasoning) {
       return {
         slow: true,

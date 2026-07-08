@@ -56,7 +56,18 @@ const KV_CACHE_OPTIONS = [
   { label: 'f16  (full)', value: 'f16' as const, hint: 'no quantization · most memory' },
 ];
 
-type SettingsValue = 'preset' | 'personalization' | 'theme' | 'mascot' | 'performance_mode' | 'context' | 'flash_attention' | 'kv_cache';
+type SettingsValue =
+  | 'preset'
+  | 'personalization'
+  | 'theme'
+  | 'mascot'
+  | 'performance_mode'
+  | 'context'
+  | 'flash_attention'
+  | 'kv_cache'
+  | 'router_toggle'
+  | 'router_fast_model'
+  | 'router_think_model';
 
 function settingsOptions(
   mascotOn: boolean,
@@ -66,6 +77,8 @@ function settingsOptions(
   perfMode: string,
   preset: string,
   personalizationOn: boolean,
+  routerEnabled: boolean,
+  routerFastModelId: string,
 ): Array<{ label: string; value: SettingsValue; hint: string; separator?: boolean }> {
   return [
     {
@@ -107,6 +120,23 @@ function settingsOptions(
       label: `KV cache  (currently ${kvType})`,
       value: 'kv_cache',
       hint: 'quantize the KV cache to save memory · applies when Ollama restarts',
+    },
+
+    { label: 'Model routing', value: 'router_toggle', hint: '', separator: true },
+    {
+      label: `Toggle routing  (${routerEnabled ? 'on' : 'off'})`,
+      value: 'router_toggle',
+      hint: 'auto-select fast vs think model per turn',
+    },
+    {
+      label: `Fast model  (${routerFastModelId})`,
+      value: 'router_fast_model',
+      hint: 'conversational turns · no extended thinking',
+    },
+    {
+      label: 'Think model  (main model)',
+      value: 'router_think_model',
+      hint: 'research / paper turns · full reasoning',
     },
   ];
 }
@@ -289,6 +319,8 @@ export function Overlays({
           config.modelPerformanceMode,
           config.inferencePreset,
           config.personalizationEnabled,
+          config.routerEnabled ?? false,
+          config.routerFastModelId ?? 'qwen3:4b',
         )}
         onSelect={onSettingsPicked}
         onCancel={onCancel}

@@ -49,7 +49,7 @@ function storedOllamaPerf() {
   try {
     const raw = readFileSync(join(homedir(), '.handoff', 'config.json'), 'utf8');
     const cfg = JSON.parse(raw);
-    return { flash: cfg.ollamaFlashAttention, kv: cfg.ollamaKvCacheType };
+    return { flash: cfg.ollamaFlashAttention, kv: cfg.ollamaKvCacheType, routerEnabled: cfg.routerEnabled === true };
   } catch {
     return {};
   }
@@ -66,12 +66,17 @@ async function ensureOllamaServe() {
   // shadow OllamaPrepare's config-aware startOllamaServe and silently ignore the
   // user's pick. Mirrors ollamaServeEnv() in src/agent/ollama.ts. num_parallel
   // has no /settings knob, so keep it at 1 unless the user exported their own.
-  const { flash, kv } = storedOllamaPerf();
+  const { flash, kv, routerEnabled } = storedOllamaPerf();
   const env = { ...process.env };
   env.OLLAMA_FLASH_ATTENTION =
     flash === false ? '0' : flash === true ? '1' : (env.OLLAMA_FLASH_ATTENTION ?? '1');
   env.OLLAMA_KV_CACHE_TYPE = kv ?? env.OLLAMA_KV_CACHE_TYPE ?? 'q8_0';
   if (env.OLLAMA_NUM_PARALLEL == null) env.OLLAMA_NUM_PARALLEL = '1';
+  // When routing is on, allow two models to stay resident simultaneously so
+  // tier switches don't pay a cold-start penalty. Only set if not already set.
+  if (routerEnabled && env.OLLAMA_MAX_LOADED_MODELS == null) {
+    env.OLLAMA_MAX_LOADED_MODELS = '2';
+  }
 
   const srv = spawn('ollama', ['serve'], { detached: true, stdio: 'ignore', env });
   srv.unref();
