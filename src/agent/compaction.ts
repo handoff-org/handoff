@@ -58,9 +58,7 @@ function summarizeDroppedBlocks(dropped: Block[], capChars: number): string {
       lines.push(`you: ${clip(lead.content ?? '', 100)}`);
     } else if (lead.role === 'assistant') {
       const names = [
-        ...new Set(
-          block.flatMap((m) => (m.tool_calls ?? []).map((c) => c.function.name)),
-        ),
+        ...new Set(block.flatMap((m) => (m.tool_calls ?? []).map((c) => c.function.name))),
       ];
       const text = clip(lead.content ?? '', 80);
       let entry = text ? `assistant: ${text}` : 'assistant made tool calls';
@@ -120,7 +118,9 @@ export function compactHistory(messages: Message[], opts: CompactionOptions): Me
   // Reserve room for the digest that may replace dropped turns. A conservative
   // fixed reserve (a cap-length string) means the actual digest — always ≤ cap —
   // is guaranteed to fit, so budget + output reserve can't overflow the window.
-  const summaryReserve = estimateMessagesTokens([{ role: 'system', content: 'x'.repeat(summaryCap) }]);
+  const summaryReserve = estimateMessagesTokens([
+    { role: 'system', content: 'x'.repeat(summaryCap) },
+  ]);
 
   // Reserve room for head + a possible summary; the rest is for blocks.
   const available = opts.maxPromptTokens - headTokens - summaryReserve;

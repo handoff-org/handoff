@@ -32,7 +32,12 @@ import { redactSecrets } from '../src/util/redact.js';
 import { createModel, fetchVllmModels, type Message, type ChatModel } from '../src/agent/model.js';
 import { isModelInstalled, listInstalledModels, ollamaPs, psRowFor } from '../src/agent/ollama.js';
 import { detectHardware } from '../src/system/hardware.js';
-import { advise, defaultContextForHardware, type PerformanceMode, type BenchmarkRecord } from '../src/agent/advisor.js';
+import {
+  advise,
+  defaultContextForHardware,
+  type PerformanceMode,
+  type BenchmarkRecord,
+} from '../src/agent/advisor.js';
 import { buildDoctorReport } from '../src/agent/doctor.js';
 import { benchmarkModel, loadBenchmarks, saveBenchmark } from '../src/agent/benchmark.js';
 import { applyPreset, PRESET_LABELS, type InferencePreset } from '../src/agent/presets.js';
@@ -64,7 +69,12 @@ import { SKILL_TEMPLATE, saveUserSkill, loadSkills, findSkill } from '../src/ski
 import { withQuant, type Backend, type FavouriteEntry } from '../config/models.js';
 import { getTheme } from '../config/theme.js';
 import { writeStore } from '../config/store.js';
-import { classifyTurn, resolveModel, formatTierNote, shouldShowTierNote } from '../src/agent/router.js';
+import {
+  classifyTurn,
+  resolveModel,
+  formatTierNote,
+  shouldShowTierNote,
+} from '../src/agent/router.js';
 import type { RouterContext } from '../src/agent/router.js';
 import { INPUT_MODES_ON, INPUT_MODES_OFF } from './terminalControl.js';
 import { makeCoalescer } from './streamThrottle.js';
@@ -81,10 +91,7 @@ import {
   type ProjectMeta,
 } from '../src/workspace/project.js';
 import { initPaper } from '../src/workspace/paper.js';
-import {
-  generateHandoffPacket,
-  parseHandoffFlags,
-} from '../src/workspace/handoff.js';
+import { generateHandoffPacket, parseHandoffFlags } from '../src/workspace/handoff.js';
 import {
   readClaims,
   appendClaim,
@@ -157,7 +164,7 @@ function InputContent({
     return (
       <Box>
         <Text color={accent}>{cursorOn ? '█' : ' '}</Text>
-        <Text dimColor>Send a message  (/help for commands)</Text>
+        <Text dimColor>Send a message (/help for commands)</Text>
       </Box>
     );
   }
@@ -177,7 +184,9 @@ function InputContent({
         return (
           <Box key={i}>
             <Text>{line.slice(0, rem)}</Text>
-            <Text color={accent} inverse={cursorOn}>{under}</Text>
+            <Text color={accent} inverse={cursorOn}>
+              {under}
+            </Text>
             <Text>{line.slice(rem + 1)}</Text>
           </Box>
         );
@@ -212,7 +221,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const [cursor, setCursor] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<OverlayMode>('chat');
-  const [modelPickTarget, setModelPickTarget] = useState<'main' | 'router_fast' | 'router_think'>('main');
+  const [modelPickTarget, setModelPickTarget] = useState<'main' | 'router_fast' | 'router_think'>(
+    'main',
+  );
   const [pending, setPending] = useState<Pending | null>(null);
   const [activeProject, setActiveProjectState] = useState<ProjectMeta | null>(() =>
     getActiveProject(),
@@ -338,18 +349,33 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
 
   // Fetch available models from vLLM server whenever backend or URL changes.
   useEffect(() => {
-    if (config.backend !== 'vllm') { setVllmModels([]); return; }
-    fetchVllmModels(config.vllmBaseUrl).then(setVllmModels).catch(() => setVllmModels([]));
+    if (config.backend !== 'vllm') {
+      setVllmModels([]);
+      return;
+    }
+    fetchVllmModels(config.vllmBaseUrl)
+      .then(setVllmModels)
+      .catch(() => setVllmModels([]));
   }, [config.backend, config.vllmBaseUrl]);
 
   useEffect(() => {
-    if (config.backend !== 'llama_cpp') { setLlamaCppModels([]); return; }
-    fetchVllmModels(config.llamaCppBaseUrl).then(setLlamaCppModels).catch(() => setLlamaCppModels([]));
+    if (config.backend !== 'llama_cpp') {
+      setLlamaCppModels([]);
+      return;
+    }
+    fetchVllmModels(config.llamaCppBaseUrl)
+      .then(setLlamaCppModels)
+      .catch(() => setLlamaCppModels([]));
   }, [config.backend, config.llamaCppBaseUrl]);
 
   useEffect(() => {
-    if (config.backend !== 'mlx') { setMlxModels([]); return; }
-    fetchVllmModels(config.mlxBaseUrl).then(setMlxModels).catch(() => setMlxModels([]));
+    if (config.backend !== 'mlx') {
+      setMlxModels([]);
+      return;
+    }
+    fetchVllmModels(config.mlxBaseUrl)
+      .then(setMlxModels)
+      .catch(() => setMlxModels([]));
   }, [config.backend, config.mlxBaseUrl]);
 
   // Fetch installed Ollama models when the model picker opens.
@@ -364,7 +390,15 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const model = useMemo(
     () => createModel(config),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [config.backend, config.modelId, config.hfToken, config.ollamaBaseUrl, config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl],
+    [
+      config.backend,
+      config.modelId,
+      config.hfToken,
+      config.ollamaBaseUrl,
+      config.vllmBaseUrl,
+      config.llamaCppBaseUrl,
+      config.mlxBaseUrl,
+    ],
   );
 
   // Fast model: only created when routing is on and the fast id differs from main.
@@ -374,18 +408,34 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     if (!fastId || fastId === config.modelId) return null;
     return createModel({ ...config, modelId: fastId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.routerEnabled, config.routerFastModelId, config.modelId,
-      config.backend, config.hfToken, config.ollamaBaseUrl,
-      config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl]);
+  }, [
+    config.routerEnabled,
+    config.routerFastModelId,
+    config.modelId,
+    config.backend,
+    config.hfToken,
+    config.ollamaBaseUrl,
+    config.vllmBaseUrl,
+    config.llamaCppBaseUrl,
+    config.mlxBaseUrl,
+  ]);
 
   // Think model: reuses existing `model` when IDs match (the common case).
   const thinkModel = useMemo(() => {
     if (!config.routerThinkModelId || config.routerThinkModelId === config.modelId) return model;
     return createModel({ ...config, modelId: config.routerThinkModelId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, config.routerThinkModelId, config.modelId,
-      config.backend, config.hfToken, config.ollamaBaseUrl,
-      config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl]);
+  }, [
+    model,
+    config.routerThinkModelId,
+    config.modelId,
+    config.backend,
+    config.hfToken,
+    config.ollamaBaseUrl,
+    config.vllmBaseUrl,
+    config.llamaCppBaseUrl,
+    config.mlxBaseUrl,
+  ]);
 
   const addEntry = (entry: ChatEntry) => {
     setEntries((prev) => [...prev, entry]);
@@ -455,14 +505,20 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       // anywhere on the filesystem." A file write/dir create that escapes the
       // active project still prompts, even in auto, so a stray path can't clobber
       // files outside the workspace unattended.
-      if ((name === 'write_file' || name === 'edit_file' || name === 'make_dir') && !writeTargetsProject(args)) {
+      if (
+        (name === 'write_file' || name === 'edit_file' || name === 'make_dir') &&
+        !writeTargetsProject(args)
+      ) {
         return new Promise<boolean>((res) => setPending({ name, args, resolve: res }));
       }
       if (config.mode === 'auto') return Promise.resolve(true);
       if (!registry.isSensitive(name)) return Promise.resolve(true);
       // The research loop writes files constantly; applying edits inside the
       // active project — and syncing the linked paper — shouldn't need a yes.
-      if ((name === 'write_file' || name === 'edit_file' || name === 'make_dir') && writeTargetsProject(args)) {
+      if (
+        (name === 'write_file' || name === 'edit_file' || name === 'make_dir') &&
+        writeTargetsProject(args)
+      ) {
         return Promise.resolve(true);
       }
       if (name === 'overleaf_push' || name === 'overleaf_sync') return Promise.resolve(true);
@@ -517,13 +573,17 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     const b = initialConfig.backend;
     if (b !== 'llama_cpp' && b !== 'mlx' && b !== 'vllm') return;
     const url =
-      b === 'vllm' ? initialConfig.vllmBaseUrl
-      : b === 'mlx' ? initialConfig.mlxBaseUrl
-      : initialConfig.llamaCppBaseUrl;
+      b === 'vllm'
+        ? initialConfig.vllmBaseUrl
+        : b === 'mlx'
+          ? initialConfig.mlxBaseUrl
+          : initialConfig.llamaCppBaseUrl;
     const start =
-      b === 'vllm' ? `vllm serve ${initialConfig.modelId}`
-      : b === 'mlx' ? `mlx_lm.server --model ${initialConfig.modelId} --port ${new URL(url).port || '8080'}`
-      : `llama-server -m <model.gguf> --port ${new URL(url).port || '8080'}`;
+      b === 'vllm'
+        ? `vllm serve ${initialConfig.modelId}`
+        : b === 'mlx'
+          ? `mlx_lm.server --model ${initialConfig.modelId} --port ${new URL(url).port || '8080'}`
+          : `llama-server -m <model.gguf> --port ${new URL(url).port || '8080'}`;
     const label = b === 'llama_cpp' ? 'llama.cpp' : b === 'mlx' ? 'MLX' : 'vLLM';
     void fetchVllmModels(url)
       .then((models) => {
@@ -641,7 +701,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         const slug = slugifyProject(arg);
         const meta = loadProject(slug);
         if (!meta) {
-          addEntry({ kind: 'error', message: `no project "${slug}" — type /project to list yours` });
+          addEntry({
+            kind: 'error',
+            message: `no project "${slug}" — type /project to list yours`,
+          });
           return;
         }
         switchProject(meta);
@@ -670,7 +733,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       setTemplateTarget(null);
       if (!meta) return;
       if (!templateKey) {
-        addEntry({ kind: 'note', content: `no template chosen — set one up later with start_paper` });
+        addEntry({
+          kind: 'note',
+          content: `no template chosen — set one up later with start_paper`,
+        });
         return;
       }
       const res = initPaper(meta, templateKey);
@@ -681,9 +747,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         metadata: { template: templateKey },
       });
       addEntry(
-        res.ok
-          ? { kind: 'note', content: res.message }
-          : { kind: 'error', message: res.message },
+        res.ok ? { kind: 'note', content: res.message } : { kind: 'error', message: res.message },
       );
       // Refresh the system message so the model knows a paper now exists.
       setHistory((h) => [
@@ -709,195 +773,246 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     setMode('overleaf_link');
   }, []);
 
-  const handleHandoff = useCallback(
-    (argStr: string) => {
-      const meta = getActiveProject();
-      if (!meta) {
-        addEntry({ kind: 'note', content: 'no active project — create one with /project new <name>' });
-        return;
-      }
-      try {
-        const opts = parseHandoffFlags(argStr);
-        const { content, outputPath } = generateHandoffPacket(meta, opts);
-        addEntry({ kind: 'note', content });
-        addEntry({ kind: 'note', content: `saved → ${outputPath}` });
-      } catch (e) {
-        addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
-      }
-    },
-    [],
-  );
+  const handleHandoff = useCallback((argStr: string) => {
+    const meta = getActiveProject();
+    if (!meta) {
+      addEntry({
+        kind: 'note',
+        content: 'no active project — create one with /project new <name>',
+      });
+      return;
+    }
+    try {
+      const opts = parseHandoffFlags(argStr);
+      const { content, outputPath } = generateHandoffPacket(meta, opts);
+      addEntry({ kind: 'note', content });
+      addEntry({ kind: 'note', content: `saved → ${outputPath}` });
+    } catch (e) {
+      addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
 
   /** Dispatcher for all /claim-* and /audit-paper commands. */
-  const handleClaims = useCallback(
-    (cmd: string, argStr: string) => {
-      const meta = getActiveProject();
-      if (!meta) {
-        addEntry({ kind: 'note', content: 'no active project — create one with /project new <name>' });
+  const handleClaims = useCallback((cmd: string, argStr: string) => {
+    const meta = getActiveProject();
+    if (!meta) {
+      addEntry({
+        kind: 'note',
+        content: 'no active project — create one with /project new <name>',
+      });
+      return;
+    }
+    const slug = meta.slug;
+    try {
+      if (cmd === '/audit-paper') {
+        const result = auditPaper(slug);
+        addEntry({ kind: 'note', content: formatAuditReport(result, meta.title) });
         return;
       }
-      const slug = meta.slug;
-      try {
-        if (cmd === '/audit-paper') {
-          const result = auditPaper(slug);
-          addEntry({ kind: 'note', content: formatAuditReport(result, meta.title) });
-          return;
-        }
 
-        if (cmd === '/claims') {
-          const claims = readClaims(slug);
-          addEntry({ kind: 'note', content: formatClaimsSummary(claims, meta.title) });
-          return;
-        }
-
-        if (cmd === '/unsupported') {
-          const claims = readClaims(slug).filter(
-            (c) => c.status === 'unsupported' || c.status === 'weakly_supported',
-          );
-          if (claims.length === 0) {
-            addEntry({ kind: 'note', content: 'No unsupported claims — great!' });
-          } else {
-            addEntry({ kind: 'note', content: formatClaimsSummary(claims, `${meta.title} — unsupported`) });
-          }
-          return;
-        }
-
-        if (cmd === '/claim-add') {
-          const text = argStr.trim().replace(/^["']|["']$/g, '');
-          if (!text) {
-            addEntry({ kind: 'note', content: 'usage: /claim-add <claim text>' });
-            return;
-          }
-          const now = new Date().toISOString();
-          appendClaim(slug, {
-            id: newClaimId(),
-            text,
-            type: 'unknown',
-            status: 'unsupported',
-            locations: [],
-            evidence: [],
-            risks: ['No linked evidence'],
-            createdAt: now,
-            updatedAt: now,
-          });
-          addEntry({ kind: 'note', content: `Claim added. Run /audit-paper to auto-detect more.` });
-          return;
-        }
-
-        if (cmd === '/claim-status') {
-          const id = argStr.trim();
-          if (!id) { addEntry({ kind: 'note', content: 'usage: /claim-status <id>' }); return; }
-          const claim = readClaims(slug).find((c) => c.id === id);
-          if (!claim) { addEntry({ kind: 'error', message: `No claim "${id}"` }); return; }
-          addEntry({ kind: 'note', content: formatClaimDetail(claim) });
-          return;
-        }
-
-        if (cmd === '/claim-link-run') {
-          const [id, runId] = argStr.trim().split(/\s+/);
-          if (!id || !runId) {
-            addEntry({ kind: 'note', content: 'usage: /claim-link-run <claim_id> <run_id>' });
-            return;
-          }
-          const updated = updateClaim(slug, id, {
-            status: 'weakly_supported',
-            evidence: [
-              ...(readClaims(slug).find((c) => c.id === id)?.evidence ?? []),
-              { kind: 'run', ref: runId, addedAt: new Date().toISOString() },
-            ],
-            risks: [],
-          });
-          if (!updated) { addEntry({ kind: 'error', message: `No claim "${id}"` }); return; }
-          addEntry({ kind: 'note', content: `Linked run ${runId} → claim ${id} (status: weakly_supported)\nRun /claim-status ${id} to review, then set supported with /claim-link-run if evidence is strong.` });
-          return;
-        }
-
-        if (cmd === '/claim-link-paper') {
-          const [id, citKey] = argStr.trim().split(/\s+/);
-          if (!id || !citKey) {
-            addEntry({ kind: 'note', content: 'usage: /claim-link-paper <claim_id> <citation_key>' });
-            return;
-          }
-          const updated = updateClaim(slug, id, {
-            status: 'weakly_supported',
-            evidence: [
-              ...(readClaims(slug).find((c) => c.id === id)?.evidence ?? []),
-              { kind: 'paper', ref: citKey, addedAt: new Date().toISOString() },
-            ],
-            risks: [],
-          });
-          if (!updated) { addEntry({ kind: 'error', message: `No claim "${id}"` }); return; }
-          addEntry({ kind: 'note', content: `Linked citation ${citKey} → claim ${id} (status: weakly_supported)` });
-          return;
-        }
-      } catch (e) {
-        addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
-      }
-    },
-    [],
-  );
-
-  /** Dispatcher for the run-capsule commands: /reproduce /rerun /compare-runs /promote-run. */
-  const handleCapsules = useCallback(
-    (cmd: string, argStr: string) => {
-      const meta = getActiveProject();
-      if (!meta) {
-        addEntry({ kind: 'note', content: 'no active project — create one with /project new <name>' });
+      if (cmd === '/claims') {
+        const claims = readClaims(slug);
+        addEntry({ kind: 'note', content: formatClaimsSummary(claims, meta.title) });
         return;
       }
-      const slug = meta.slug;
-      const args = argStr.trim().split(/\s+/).filter(Boolean);
-      try {
-        if (cmd === '/reproduce') {
-          const id = args[0];
-          if (!id) { addEntry({ kind: 'note', content: 'usage: /reproduce <run_id>' }); return; }
-          const c = readCapsule(slug, id);
-          if (!c) { addEntry({ kind: 'error', message: `No run "${id}" — see the runs/ folder or query_runs` }); return; }
-          addEntry({ kind: 'note', content: formatReproPreview(slug, c) });
-          return;
-        }
-        if (cmd === '/rerun') {
-          const id = args[0];
-          if (!id) { addEntry({ kind: 'note', content: 'usage: /rerun <run_id>' }); return; }
-          const c = readCapsule(slug, id);
-          if (!c) { addEntry({ kind: 'error', message: `No run "${id}"` }); return; }
-          addEntry({ kind: 'note', content: `re-running ${id} (${c.language})…` });
-          const res = executeRun(slug, { language: c.language as 'python' | 'r' | 'julia' | 'shell', code: c.code, description: `rerun of ${id}` });
-          const fresh = readCapsule(slug, res.capsuleId);
+
+      if (cmd === '/unsupported') {
+        const claims = readClaims(slug).filter(
+          (c) => c.status === 'unsupported' || c.status === 'weakly_supported',
+        );
+        if (claims.length === 0) {
+          addEntry({ kind: 'note', content: 'No unsupported claims — great!' });
+        } else {
           addEntry({
             kind: 'note',
-            content: fresh ? formatCompare(c, fresh) : `reran → ${res.capsuleId} · exit ${res.exitCode}`,
+            content: formatClaimsSummary(claims, `${meta.title} — unsupported`),
+          });
+        }
+        return;
+      }
+
+      if (cmd === '/claim-add') {
+        const text = argStr.trim().replace(/^["']|["']$/g, '');
+        if (!text) {
+          addEntry({ kind: 'note', content: 'usage: /claim-add <claim text>' });
+          return;
+        }
+        const now = new Date().toISOString();
+        appendClaim(slug, {
+          id: newClaimId(),
+          text,
+          type: 'unknown',
+          status: 'unsupported',
+          locations: [],
+          evidence: [],
+          risks: ['No linked evidence'],
+          createdAt: now,
+          updatedAt: now,
+        });
+        addEntry({ kind: 'note', content: `Claim added. Run /audit-paper to auto-detect more.` });
+        return;
+      }
+
+      if (cmd === '/claim-status') {
+        const id = argStr.trim();
+        if (!id) {
+          addEntry({ kind: 'note', content: 'usage: /claim-status <id>' });
+          return;
+        }
+        const claim = readClaims(slug).find((c) => c.id === id);
+        if (!claim) {
+          addEntry({ kind: 'error', message: `No claim "${id}"` });
+          return;
+        }
+        addEntry({ kind: 'note', content: formatClaimDetail(claim) });
+        return;
+      }
+
+      if (cmd === '/claim-link-run') {
+        const [id, runId] = argStr.trim().split(/\s+/);
+        if (!id || !runId) {
+          addEntry({ kind: 'note', content: 'usage: /claim-link-run <claim_id> <run_id>' });
+          return;
+        }
+        const updated = updateClaim(slug, id, {
+          status: 'weakly_supported',
+          evidence: [
+            ...(readClaims(slug).find((c) => c.id === id)?.evidence ?? []),
+            { kind: 'run', ref: runId, addedAt: new Date().toISOString() },
+          ],
+          risks: [],
+        });
+        if (!updated) {
+          addEntry({ kind: 'error', message: `No claim "${id}"` });
+          return;
+        }
+        addEntry({
+          kind: 'note',
+          content: `Linked run ${runId} → claim ${id} (status: weakly_supported)\nRun /claim-status ${id} to review, then set supported with /claim-link-run if evidence is strong.`,
+        });
+        return;
+      }
+
+      if (cmd === '/claim-link-paper') {
+        const [id, citKey] = argStr.trim().split(/\s+/);
+        if (!id || !citKey) {
+          addEntry({ kind: 'note', content: 'usage: /claim-link-paper <claim_id> <citation_key>' });
+          return;
+        }
+        const updated = updateClaim(slug, id, {
+          status: 'weakly_supported',
+          evidence: [
+            ...(readClaims(slug).find((c) => c.id === id)?.evidence ?? []),
+            { kind: 'paper', ref: citKey, addedAt: new Date().toISOString() },
+          ],
+          risks: [],
+        });
+        if (!updated) {
+          addEntry({ kind: 'error', message: `No claim "${id}"` });
+          return;
+        }
+        addEntry({
+          kind: 'note',
+          content: `Linked citation ${citKey} → claim ${id} (status: weakly_supported)`,
+        });
+        return;
+      }
+    } catch (e) {
+      addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
+
+  /** Dispatcher for the run-capsule commands: /reproduce /rerun /compare-runs /promote-run. */
+  const handleCapsules = useCallback((cmd: string, argStr: string) => {
+    const meta = getActiveProject();
+    if (!meta) {
+      addEntry({
+        kind: 'note',
+        content: 'no active project — create one with /project new <name>',
+      });
+      return;
+    }
+    const slug = meta.slug;
+    const args = argStr.trim().split(/\s+/).filter(Boolean);
+    try {
+      if (cmd === '/reproduce') {
+        const id = args[0];
+        if (!id) {
+          addEntry({ kind: 'note', content: 'usage: /reproduce <run_id>' });
+          return;
+        }
+        const c = readCapsule(slug, id);
+        if (!c) {
+          addEntry({
+            kind: 'error',
+            message: `No run "${id}" — see the runs/ folder or query_runs`,
           });
           return;
         }
-        if (cmd === '/compare-runs') {
-          const [a, b] = args;
-          if (!a || !b) { addEntry({ kind: 'note', content: 'usage: /compare-runs <id_a> <id_b>' }); return; }
-          const ca = readCapsule(slug, a);
-          const cb = readCapsule(slug, b);
-          if (!ca || !cb) {
-            addEntry({ kind: 'error', message: `Unknown run(s): ${[!ca && a, !cb && b].filter(Boolean).join(', ')}` });
-            return;
-          }
-          addEntry({ kind: 'note', content: formatCompare(ca, cb) });
-          return;
-        }
-        if (cmd === '/promote-run') {
-          const id = args[0];
-          if (!id) { addEntry({ kind: 'note', content: 'usage: /promote-run <run_id>' }); return; }
-          addEntry(
-            promoteRun(slug, id)
-              ? { kind: 'note', content: `Promoted ${id} as a canonical run.` }
-              : { kind: 'error', message: `No run "${id}"` },
-          );
-          return;
-        }
-      } catch (e) {
-        addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+        addEntry({ kind: 'note', content: formatReproPreview(slug, c) });
+        return;
       }
-    },
-    [],
-  );
+      if (cmd === '/rerun') {
+        const id = args[0];
+        if (!id) {
+          addEntry({ kind: 'note', content: 'usage: /rerun <run_id>' });
+          return;
+        }
+        const c = readCapsule(slug, id);
+        if (!c) {
+          addEntry({ kind: 'error', message: `No run "${id}"` });
+          return;
+        }
+        addEntry({ kind: 'note', content: `re-running ${id} (${c.language})…` });
+        const res = executeRun(slug, {
+          language: c.language as 'python' | 'r' | 'julia' | 'shell',
+          code: c.code,
+          description: `rerun of ${id}`,
+        });
+        const fresh = readCapsule(slug, res.capsuleId);
+        addEntry({
+          kind: 'note',
+          content: fresh
+            ? formatCompare(c, fresh)
+            : `reran → ${res.capsuleId} · exit ${res.exitCode}`,
+        });
+        return;
+      }
+      if (cmd === '/compare-runs') {
+        const [a, b] = args;
+        if (!a || !b) {
+          addEntry({ kind: 'note', content: 'usage: /compare-runs <id_a> <id_b>' });
+          return;
+        }
+        const ca = readCapsule(slug, a);
+        const cb = readCapsule(slug, b);
+        if (!ca || !cb) {
+          addEntry({
+            kind: 'error',
+            message: `Unknown run(s): ${[!ca && a, !cb && b].filter(Boolean).join(', ')}`,
+          });
+          return;
+        }
+        addEntry({ kind: 'note', content: formatCompare(ca, cb) });
+        return;
+      }
+      if (cmd === '/promote-run') {
+        const id = args[0];
+        if (!id) {
+          addEntry({ kind: 'note', content: 'usage: /promote-run <run_id>' });
+          return;
+        }
+        addEntry(
+          promoteRun(slug, id)
+            ? { kind: 'note', content: `Promoted ${id} as a canonical run.` }
+            : { kind: 'error', message: `No run "${id}"` },
+        );
+        return;
+      }
+    } catch (e) {
+      addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
 
   const onOverleafLink = useCallback(
     (url: string, token: string) => {
@@ -924,11 +1039,12 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const runModelDoctor = useCallback(async () => {
     const hardware = detectHardware();
     const mode = config.modelPerformanceMode as PerformanceMode;
-    const installedModels = config.backend === 'ollama'
-      ? await listInstalledModels(config.ollamaBaseUrl)
-      : undefined;
+    const installedModels =
+      config.backend === 'ollama' ? await listInstalledModels(config.ollamaBaseUrl) : undefined;
     const psRows = config.backend === 'ollama' ? ollamaPs() : undefined;
-    const benchmarks = (await loadBenchmarks(config.modelBenchmarkCachePath)) as unknown as BenchmarkRecord[];
+    const benchmarks = (await loadBenchmarks(
+      config.modelBenchmarkCachePath,
+    )) as unknown as BenchmarkRecord[];
     const advice = advise({
       hardware,
       backend: config.backend,
@@ -957,43 +1073,49 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   }, [config]);
 
   // Benchmark the current model with synthetic prompts only (no project data).
-  const runModelBenchmark = useCallback(async (opts?: { quick?: boolean; modelId?: string }) => {
-    const targetId = opts?.modelId ?? config.modelId;
-    // Benchmark a different model than the active one by cloning config for it.
-    const benchModel = targetId === config.modelId ? model : createModel({ ...config, modelId: targetId });
-    const kind = opts?.quick ? 'quick, no tool-call test' : 'synthetic prompts, no project data';
-    addEntry({ kind: 'note', content: `Benchmarking ${targetId} (${kind})…` });
-    try {
-      const result = await benchmarkModel({
-        model: benchModel,
-        backend: config.backend,
-        modelId: targetId,
-        quant: findCatalogEntry(config.backend, targetId)?.defaultQuant ?? 'default',
-        contextTokens: config.ollamaNumCtx,
-        now: Date.now(),
-        handoffVersion: 'dev',
-        toolCallTest: !opts?.quick,
-      });
-      await saveBenchmark(result, config.modelBenchmarkCachePath);
-      recordPersonalizationEvent({
-        type: 'model_benchmark',
-        timestamp: new Date().toISOString(),
-        summary: `${targetId} ${result.tier}`,
-        metadata: { modelId: targetId, tier: result.tier, fullGpu: result.fullGpu },
-      });
-      const spill = result.fullGpu ? '' : ' · CPU spill';
-      const tool = opts?.quick ? '' : ` · ${result.toolCallOk ? 'tool-call ok' : 'tool-call FAILED'}`;
-      addEntry({
-        kind: 'note',
-        content:
-          `Benchmark: ${result.tokensPerSec} tok/s (${result.tier})${spill}${tool}` +
-          (result.ttftMs != null ? ` · ${result.ttftMs}ms to first token` : '') +
-          (result.error ? `\n  error: ${result.error}` : ''),
-      });
-    } catch (e) {
-      addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
-    }
-  }, [config, model, recordPersonalizationEvent]);
+  const runModelBenchmark = useCallback(
+    async (opts?: { quick?: boolean; modelId?: string }) => {
+      const targetId = opts?.modelId ?? config.modelId;
+      // Benchmark a different model than the active one by cloning config for it.
+      const benchModel =
+        targetId === config.modelId ? model : createModel({ ...config, modelId: targetId });
+      const kind = opts?.quick ? 'quick, no tool-call test' : 'synthetic prompts, no project data';
+      addEntry({ kind: 'note', content: `Benchmarking ${targetId} (${kind})…` });
+      try {
+        const result = await benchmarkModel({
+          model: benchModel,
+          backend: config.backend,
+          modelId: targetId,
+          quant: findCatalogEntry(config.backend, targetId)?.defaultQuant ?? 'default',
+          contextTokens: config.ollamaNumCtx,
+          now: Date.now(),
+          handoffVersion: 'dev',
+          toolCallTest: !opts?.quick,
+        });
+        await saveBenchmark(result, config.modelBenchmarkCachePath);
+        recordPersonalizationEvent({
+          type: 'model_benchmark',
+          timestamp: new Date().toISOString(),
+          summary: `${targetId} ${result.tier}`,
+          metadata: { modelId: targetId, tier: result.tier, fullGpu: result.fullGpu },
+        });
+        const spill = result.fullGpu ? '' : ' · CPU spill';
+        const tool = opts?.quick
+          ? ''
+          : ` · ${result.toolCallOk ? 'tool-call ok' : 'tool-call FAILED'}`;
+        addEntry({
+          kind: 'note',
+          content:
+            `Benchmark: ${result.tokensPerSec} tok/s (${result.tier})${spill}${tool}` +
+            (result.ttftMs != null ? ` · ${result.ttftMs}ms to first token` : '') +
+            (result.error ? `\n  error: ${result.error}` : ''),
+        });
+      } catch (e) {
+        addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+      }
+    },
+    [config, model, recordPersonalizationEvent],
+  );
 
   const runCommand = useCallback(
     (raw: string): boolean => {
@@ -1016,7 +1138,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         setHistory([
           {
             role: 'system',
-            content: buildSystem(config.systemPrompt, focus === 'general' ? null : activeProject, promptOpts),
+            content: buildSystem(
+              config.systemPrompt,
+              focus === 'general' ? null : activeProject,
+              promptOpts,
+            ),
           },
         ]);
         addEntry({ kind: 'note', content: '— context cleared —' });
@@ -1040,12 +1166,23 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           if (key === 'yes') {
             profileRef.current = resetProfile();
             refreshPersonalizationBlock();
-            addEntry({ kind: 'note', content: 'personalization profile cleared (previous version backed up).' });
+            addEntry({
+              kind: 'note',
+              content: 'personalization profile cleared (previous version backed up).',
+            });
           } else {
-            addEntry({ kind: 'note', content: 'this clears everything handoff has learned. confirm with: /profile reset yes' });
+            addEntry({
+              kind: 'note',
+              content:
+                'this clears everything handoff has learned. confirm with: /profile reset yes',
+            });
           }
         } else if (sub === 'forget') {
-          if (!key) addEntry({ kind: 'note', content: 'usage: /profile forget <key>  (see /profile show for keys)' });
+          if (!key)
+            addEntry({
+              kind: 'note',
+              content: 'usage: /profile forget <key>  (see /profile show for keys)',
+            });
           else {
             profileRef.current = forgetPreference(profileRef.current, key);
             void saveProfile(profileRef.current);
@@ -1063,7 +1200,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         } else {
           addEntry({
             kind: 'note',
-            content: 'usage: /profile [show · enable · disable · forget <key> · why <key> · export · reset]',
+            content:
+              'usage: /profile [show · enable · disable · forget <key> · why <key> · export · reset]',
           });
         }
         return true;
@@ -1200,13 +1338,15 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         const forced = forceTierRef.current;
         forceTierRef.current = null; // single-turn override, consumed here
         tierForced = forced !== null;
-        const rawTier = forced ?? classifyTurn(modelInput, {
-          focus,
-          activeTask: activeProject?.paperMode === 'overleaf' ? 'paper' : undefined,
-          lastTier: lastTierRef.current,
-          hadToolCalls: hadToolCallsRef.current,
-          historyLength: turnHistory.length,
-        } satisfies RouterContext);
+        const rawTier =
+          forced ??
+          classifyTurn(modelInput, {
+            focus,
+            activeTask: activeProject?.paperMode === 'overleaf' ? 'paper' : undefined,
+            lastTier: lastTierRef.current,
+            hadToolCalls: hadToolCallsRef.current,
+            historyLength: turnHistory.length,
+          } satisfies RouterContext);
         activeTier = resolveModel(rawTier, lastTierRef.current);
         activeModel = activeTier === 'fast' ? (fastModel ?? model) : (thinkModel ?? model);
       }
@@ -1276,7 +1416,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
               } catch {
                 /* new file: no prior contents */
               }
-              pendingWriteRef.current = { path: resolved, oldText, newText: String(a.content ?? '') };
+              pendingWriteRef.current = {
+                path: resolved,
+                oldText,
+                newText: String(a.content ?? ''),
+              };
             } catch {
               pendingWriteRef.current = null;
             }
@@ -1286,7 +1430,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
             try {
               const a = JSON.parse(event.args) as { path?: string };
               const resolved = resolveWorkspacePath(String(a.path ?? ''));
-              pendingWriteRef.current = { path: resolved, oldText: readFileSync(resolved, 'utf8'), newText: '' };
+              pendingWriteRef.current = {
+                path: resolved,
+                oldText: readFileSync(resolved, 'utf8'),
+                newText: '',
+              };
             } catch {
               pendingWriteRef.current = null;
             }
@@ -1310,7 +1458,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           } else if (event.name === 'edit_file' && w && /^Edited /.test(event.result)) {
             // Read the post-edit file to render the change as a diff.
             let newText = '';
-            try { newText = readFileSync(w.path, 'utf8'); } catch { /* gone */ }
+            try {
+              newText = readFileSync(w.path, 'utf8');
+            } catch {
+              /* gone */
+            }
             const { rows, added, removed, truncated } = summarizeDiff(w.oldText, newText);
             if (added + removed === 0) {
               addEntry({ kind: 'note', content: `no changes to ${basename(w.path)}` });
@@ -1375,7 +1527,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
               const clean = sanitizePreference(detected.phrase);
               if (clean.ok) {
                 profileRef.current = applyExplicit(
-                  profileRef.current, detected, clean.value, new Date().toISOString(),
+                  profileRef.current,
+                  detected,
+                  clean.value,
+                  new Date().toISOString(),
                 );
                 void saveProfile(profileRef.current);
                 refreshPersonalizationBlock();
@@ -1418,7 +1573,21 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         }
       }
     },
-    [history, model, registry, approve, askUser, config.systemPrompt, config.backend, config.hfConsent, config.personalizationEnabled, activeProject, focus, promptOpts, refreshPersonalizationBlock],
+    [
+      history,
+      model,
+      registry,
+      approve,
+      askUser,
+      config.systemPrompt,
+      config.backend,
+      config.hfConsent,
+      config.personalizationEnabled,
+      activeProject,
+      focus,
+      promptOpts,
+      refreshPersonalizationBlock,
+    ],
   );
 
   // Resolve the HuggingFace consent screen: on acceptance persist the flag and
@@ -1507,7 +1676,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     if ('error' in res) {
       addEntry({ kind: 'error', message: `skill not saved — ${res.error}` });
     } else {
-      addEntry({ kind: 'note', content: `skill "${res.name}" created — run it with /skill ${res.name}` });
+      addEntry({
+        kind: 'note',
+        content: `skill "${res.name}" created — run it with /skill ${res.name}`,
+      });
     }
   }, [stdout, setRawMode, isRawModeSupported]);
 
@@ -1518,10 +1690,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         addEntry({ kind: 'error', message: `no skill "${name}" — type /skills to list yours` });
         return;
       }
-      void runTurn(
-        `/skill ${skill.name}`,
-        `Follow this skill's instructions:\n\n${skill.body}`,
-      );
+      void runTurn(`/skill ${skill.name}`, `Follow this skill's instructions:\n\n${skill.body}`);
     },
     [runTurn],
   );
@@ -1570,7 +1739,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         handleHandoff(trimmed.replace(/^\/handoff\s*/i, ''));
         return;
       }
-      if (/^\/(audit-paper|claims|unsupported|claim-add|claim-status|claim-link-run|claim-link-paper)\b/i.test(trimmed)) {
+      if (
+        /^\/(audit-paper|claims|unsupported|claim-add|claim-status|claim-link-run|claim-link-paper)\b/i.test(
+          trimmed,
+        )
+      ) {
         const spaceIdx = trimmed.indexOf(' ');
         const cmd = (spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)).toLowerCase();
         const args = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1);
@@ -1591,7 +1764,18 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       }
       await runTurn(userInput, userInput);
     },
-    [runCommand, runTurn, researchSubmit, composeSkill, runSkill, handleProject, handleOverleaf, handleHandoff, handleClaims, handleCapsules],
+    [
+      runCommand,
+      runTurn,
+      researchSubmit,
+      composeSkill,
+      runSkill,
+      handleProject,
+      handleOverleaf,
+      handleHandoff,
+      handleClaims,
+      handleCapsules,
+    ],
   );
 
   const onBackendPicked = useCallback((backend: Backend) => {
@@ -1602,26 +1786,19 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     setMode('model_select');
   }, []);
 
-  const onToggleFavourite = useCallback(
-    (modelId: string) => {
-      // Functional updater: read the freshest favourites from state (never a
-      // stale closure), compute the next set, and persist. Stable identity.
-      setConfig((c) => {
-        const backend = c.backend as Backend;
-        const existing = (c.favourites ?? []) as FavouriteEntry[];
-        const idx = existing.findIndex(
-          (f) => f.backend === backend && f.modelId === modelId,
-        );
-        const next =
-          idx === -1
-            ? [...existing, { backend, modelId }]
-            : existing.filter((_, i) => i !== idx);
-        void writeStore({ favourites: next });
-        return { ...c, favourites: next };
-      });
-    },
-    [],
-  );
+  const onToggleFavourite = useCallback((modelId: string) => {
+    // Functional updater: read the freshest favourites from state (never a
+    // stale closure), compute the next set, and persist. Stable identity.
+    setConfig((c) => {
+      const backend = c.backend as Backend;
+      const existing = (c.favourites ?? []) as FavouriteEntry[];
+      const idx = existing.findIndex((f) => f.backend === backend && f.modelId === modelId);
+      const next =
+        idx === -1 ? [...existing, { backend, modelId }] : existing.filter((_, i) => i !== idx);
+      void writeStore({ favourites: next });
+      return { ...c, favourites: next };
+    });
+  }, []);
 
   const onModelPicked = useCallback(
     (modelId: string, hasQuant: boolean) => {
@@ -1709,87 +1886,126 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // Apply a laptop inference preset: bundle context + max output + keep-alive +
   // prompt budget for the current hardware, persist, and report what changed.
   // Shared by the /settings picker and the `/model cool|fast|…` shortcuts.
-  const applyInferencePreset = useCallback((preset: InferencePreset) => {
-    if (preset === 'manual') {
-      setConfig((c) => ({ ...c, inferencePreset: 'manual' }));
-      void writeStore({ inferencePreset: 'manual' });
-      addEntry({ kind: 'note', content: 'inference preset → manual  ·  context/output/keep-alive left as set' });
-      return;
-    }
-    const r = applyPreset(preset, detectHardware());
-    if (!r) return;
-    setConfig((c) => ({
-      ...c,
-      inferencePreset: preset,
-      modelPerformanceMode: r.modelPerformanceMode,
-      ollamaNumCtx: r.ollamaNumCtx,
-      maxNewTokens: r.maxNewTokens,
-      ollamaKeepAlive: r.ollamaKeepAlive,
-    }));
-    void writeStore({
-      inferencePreset: preset,
-      modelPerformanceMode: r.modelPerformanceMode,
-      ollamaNumCtx: r.ollamaNumCtx,
-      maxNewTokens: r.maxNewTokens,
-      ollamaKeepAlive: r.ollamaKeepAlive,
-      contextMigrated: true,
-    });
-    addEntry({
-      kind: 'note',
-      content:
-        `inference preset → ${PRESET_LABELS[preset].label.toLowerCase()}  ·  context ${r.ollamaNumCtx}  ·  ` +
-        `output ${r.maxNewTokens}  ·  keep-alive ${r.ollamaKeepAlive}  ·  prompt budget ~${Math.round(r.maxPromptTokens / 1000)}K` +
-        (r.warning ? `\n${r.warning}` : ''),
-    });
-    recordPersonalizationEvent({
-      type: 'settings_changed',
-      timestamp: new Date().toISOString(),
-      summary: `performanceMode=${r.modelPerformanceMode}`,
-      metadata: { key: 'performanceMode', value: r.modelPerformanceMode },
-    });
-  }, [recordPersonalizationEvent]);
+  const applyInferencePreset = useCallback(
+    (preset: InferencePreset) => {
+      if (preset === 'manual') {
+        setConfig((c) => ({ ...c, inferencePreset: 'manual' }));
+        void writeStore({ inferencePreset: 'manual' });
+        addEntry({
+          kind: 'note',
+          content: 'inference preset → manual  ·  context/output/keep-alive left as set',
+        });
+        return;
+      }
+      const r = applyPreset(preset, detectHardware());
+      if (!r) return;
+      setConfig((c) => ({
+        ...c,
+        inferencePreset: preset,
+        modelPerformanceMode: r.modelPerformanceMode,
+        ollamaNumCtx: r.ollamaNumCtx,
+        maxNewTokens: r.maxNewTokens,
+        ollamaKeepAlive: r.ollamaKeepAlive,
+      }));
+      void writeStore({
+        inferencePreset: preset,
+        modelPerformanceMode: r.modelPerformanceMode,
+        ollamaNumCtx: r.ollamaNumCtx,
+        maxNewTokens: r.maxNewTokens,
+        ollamaKeepAlive: r.ollamaKeepAlive,
+        contextMigrated: true,
+      });
+      addEntry({
+        kind: 'note',
+        content:
+          `inference preset → ${PRESET_LABELS[preset].label.toLowerCase()}  ·  context ${r.ollamaNumCtx}  ·  ` +
+          `output ${r.maxNewTokens}  ·  keep-alive ${r.ollamaKeepAlive}  ·  prompt budget ~${Math.round(r.maxPromptTokens / 1000)}K` +
+          (r.warning ? `\n${r.warning}` : ''),
+      });
+      recordPersonalizationEvent({
+        type: 'settings_changed',
+        timestamp: new Date().toISOString(),
+        summary: `performanceMode=${r.modelPerformanceMode}`,
+        metadata: { key: 'performanceMode', value: r.modelPerformanceMode },
+      });
+    },
+    [recordPersonalizationEvent],
+  );
 
-  const onPresetPicked = useCallback((preset: InferencePreset) => {
-    applyInferencePreset(preset);
-    setMode('chat');
-  }, [applyInferencePreset]);
+  const onPresetPicked = useCallback(
+    (preset: InferencePreset) => {
+      applyInferencePreset(preset);
+      setMode('chat');
+    },
+    [applyInferencePreset],
+  );
 
   // Personalization sub-menu picks: toggle a flag, reset, or view the profile.
-  const onPersonalizationPicked = useCallback((key: string) => {
-    const toggle = (
-      field:
-        | 'personalizationEnabled'
-        | 'personalizationIncludeInPrompt'
-        | 'personalizationAllowCloudPrompt'
-        | 'personalizationLearnFromProjects'
-        | 'personalizationLearnFromPerformance',
-      label: string,
-    ) => {
-      const on = !config[field];
-      setConfig((c) => ({ ...c, [field]: on }));
-      void writeStore({ [field]: on });
-      addEntry({ kind: 'note', content: `${label} → ${on ? 'on' : 'off'}` });
-    };
-    switch (key) {
-      case 'enabled': toggle('personalizationEnabled', 'personalization'); break;
-      case 'include_prompt': toggle('personalizationIncludeInPrompt', 'personalization in prompt'); break;
-      case 'allow_cloud': toggle('personalizationAllowCloudPrompt', 'personalization in cloud prompts'); break;
-      case 'learn_projects': toggle('personalizationLearnFromProjects', 'learn from projects'); break;
-      case 'learn_performance': toggle('personalizationLearnFromPerformance', 'learn from performance'); break;
-      case 'reset':
-        profileRef.current = resetProfile();
-        refreshPersonalizationBlock();
-        addEntry({ kind: 'note', content: 'personalization profile cleared (previous version backed up).' });
-        break;
-      case 'show':
-        addEntry({ kind: 'note', content: formatProfileSummary(profileRef.current) });
-        break;
-    }
-    setMode('chat');
-  }, [config, refreshPersonalizationBlock]);
+  const onPersonalizationPicked = useCallback(
+    (key: string) => {
+      const toggle = (
+        field:
+          | 'personalizationEnabled'
+          | 'personalizationIncludeInPrompt'
+          | 'personalizationAllowCloudPrompt'
+          | 'personalizationLearnFromProjects'
+          | 'personalizationLearnFromPerformance',
+        label: string,
+      ) => {
+        const on = !config[field];
+        setConfig((c) => ({ ...c, [field]: on }));
+        void writeStore({ [field]: on });
+        addEntry({ kind: 'note', content: `${label} → ${on ? 'on' : 'off'}` });
+      };
+      switch (key) {
+        case 'enabled':
+          toggle('personalizationEnabled', 'personalization');
+          break;
+        case 'include_prompt':
+          toggle('personalizationIncludeInPrompt', 'personalization in prompt');
+          break;
+        case 'allow_cloud':
+          toggle('personalizationAllowCloudPrompt', 'personalization in cloud prompts');
+          break;
+        case 'learn_projects':
+          toggle('personalizationLearnFromProjects', 'learn from projects');
+          break;
+        case 'learn_performance':
+          toggle('personalizationLearnFromPerformance', 'learn from performance');
+          break;
+        case 'reset':
+          profileRef.current = resetProfile();
+          refreshPersonalizationBlock();
+          addEntry({
+            kind: 'note',
+            content: 'personalization profile cleared (previous version backed up).',
+          });
+          break;
+        case 'show':
+          addEntry({ kind: 'note', content: formatProfileSummary(profileRef.current) });
+          break;
+      }
+      setMode('chat');
+    },
+    [config, refreshPersonalizationBlock],
+  );
 
   const onSettingsPicked = useCallback(
-    (v: 'preset' | 'personalization' | 'theme' | 'mascot' | 'performance_mode' | 'context' | 'flash_attention' | 'kv_cache' | 'router_toggle' | 'router_fast_model' | 'router_think_model' | 'router_notes') => {
+    (
+      v:
+        | 'preset'
+        | 'personalization'
+        | 'theme'
+        | 'mascot'
+        | 'performance_mode'
+        | 'context'
+        | 'flash_attention'
+        | 'kv_cache'
+        | 'router_toggle'
+        | 'router_fast_model'
+        | 'router_think_model'
+        | 'router_notes',
+    ) => {
       if (v === 'preset') {
         setMode('preset_select');
         return;
@@ -1874,7 +2090,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       setMode('chat');
       addEntry({ kind: 'note', content: `banner mascot → ${on ? 'on' : 'off'}` });
     },
-    [config.bannerAnimation, config.ollamaFlashAttention, config.modelPerformanceMode, config.routerEnabled, config.routerNotes],
+    [
+      config.bannerAnimation,
+      config.ollamaFlashAttention,
+      config.modelPerformanceMode,
+      config.routerEnabled,
+      config.routerNotes,
+    ],
   );
 
   const onContextPicked = useCallback((numCtx: number) => {
@@ -1894,21 +2116,24 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     });
   }, []);
 
-  const onModePicked = useCallback((m: Config['mode']) => {
-    setConfig((c) => ({ ...c, mode: m }));
-    void writeStore({ mode: m });
-    recordPersonalizationEvent({
-      type: 'settings_changed',
-      timestamp: new Date().toISOString(),
-      summary: `mode=${m}`,
-      metadata: { key: 'mode', value: m },
-    });
-    setMode('chat');
-    addEntry({
-      kind: 'note',
-      content: `mode → ${m === 'auto' ? 'hands-off (auto)' : 'hands-on (permissions)'}`,
-    });
-  }, [recordPersonalizationEvent]);
+  const onModePicked = useCallback(
+    (m: Config['mode']) => {
+      setConfig((c) => ({ ...c, mode: m }));
+      void writeStore({ mode: m });
+      recordPersonalizationEvent({
+        type: 'settings_changed',
+        timestamp: new Date().toISOString(),
+        summary: `mode=${m}`,
+        metadata: { key: 'mode', value: m },
+      });
+      setMode('chat');
+      addEntry({
+        kind: 'note',
+        content: `mode → ${m === 'auto' ? 'hands-off (auto)' : 'hands-on (permissions)'}`,
+      });
+    },
+    [recordPersonalizationEvent],
+  );
 
   // --- Build the exact line list for the scrollable transcript ----------
   // The banner is the first lines, so it scrolls away with the conversation.
@@ -1958,7 +2183,17 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         ...(mascotRows ? { mascotRows } : {}),
         ...(activeProject ? { project: activeProject.title } : {}),
       }),
-    [config.backend, config.modelId, config.mode, theme, width, toolCount, focus, activeProject, mascotRows],
+    [
+      config.backend,
+      config.modelId,
+      config.mode,
+      theme,
+      width,
+      toolCount,
+      focus,
+      activeProject,
+      mascotRows,
+    ],
   );
 
   // The transcript body — stable across animation frames, so it isn't rebuilt
@@ -2186,10 +2421,22 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     }
 
     // Move the caret within the prompt (this is what "arrows won't move back" was).
-    if (key.leftArrow) { setCursor(clampC(cursor - 1)); return; }
-    if (key.rightArrow) { setCursor(clampC(cursor + 1)); return; }
-    if (key.ctrl && char === 'a') { setCursor(0); return; }            // line start
-    if (key.ctrl && char === 'e') { setCursor(input.length); return; } // line end
+    if (key.leftArrow) {
+      setCursor(clampC(cursor - 1));
+      return;
+    }
+    if (key.rightArrow) {
+      setCursor(clampC(cursor + 1));
+      return;
+    }
+    if (key.ctrl && char === 'a') {
+      setCursor(0);
+      return;
+    } // line start
+    if (key.ctrl && char === 'e') {
+      setCursor(input.length);
+      return;
+    } // line end
     // Readline kill keys. Editing exits history browsing.
     if (key.ctrl && char === 'u') {
       const r = killToStart(input, at);
@@ -2346,9 +2593,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         ? 'esc to interrupt · PgUp/PgDn scroll'
         : 'PgUp/PgDn scroll · enter send';
 
-  const gapLines = Array.from({ length: INPUT_GAP }, (_, i) => (
-    <Text key={`gap${i}`}> </Text>
-  ));
+  const gapLines = Array.from({ length: INPUT_GAP }, (_, i) => <Text key={`gap${i}`}> </Text>);
 
   return (
     <Box flexDirection="column">
@@ -2405,7 +2650,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
             return (
               <Box key={c.name}>
                 <Text color={color} dimColor={!active}>
-                  {active ? '❯ ' : '  '}{c.name.padEnd(maxMenuNameLen)}{'  '}
+                  {active ? '❯ ' : '  '}
+                  {c.name.padEnd(maxMenuNameLen)}
+                  {'  '}
                 </Text>
                 <Box width={menuDescWidth}>
                   <Text color={color} dimColor={!active} wrap="wrap">

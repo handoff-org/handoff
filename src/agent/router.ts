@@ -11,9 +11,21 @@ export interface RouterContext {
 }
 
 const THINK_KEYWORDS = [
-  'abstract', 'introduction', 'related work', 'methodology', 'literature',
-  'paper', 'draft', 'outline', 'synthesize', 'analyze', 'evaluate',
-  'reasoning', 'hypothesis', 'results', 'conclusion',
+  'abstract',
+  'introduction',
+  'related work',
+  'methodology',
+  'literature',
+  'paper',
+  'draft',
+  'outline',
+  'synthesize',
+  'analyze',
+  'evaluate',
+  'reasoning',
+  'hypothesis',
+  'results',
+  'conclusion',
 ];
 
 function hasThinkKeywords(message: string): boolean {
@@ -44,10 +56,7 @@ export function classifyTurn(message: string, ctx: RouterContext): RouteTier {
 
   // 4. Project context signals paper work → think (checked before short-message
   //    heuristic so a brief question in paper context still uses the think model).
-  if (
-    ctx.focus === 'research' &&
-    (ctx.activeTask === 'paper' || ctx.activeTask === 'literature')
-  ) {
+  if (ctx.focus === 'research' && (ctx.activeTask === 'paper' || ctx.activeTask === 'literature')) {
     return 'think';
   }
 

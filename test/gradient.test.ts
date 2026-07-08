@@ -47,6 +47,10 @@ test('themePalette yields at least three distinct colours for every theme', () =
   for (const name of Object.keys(THEMES)) {
     const pal = themePalette(getTheme(name));
     assert.ok(pal.length >= 3, `${name} palette too short`);
-    assert.equal(new Set(pal.map((c) => c.toLowerCase())).size, pal.length, `${name} palette has dupes`);
+    assert.equal(
+      new Set(pal.map((c) => c.toLowerCase())).size,
+      pal.length,
+      `${name} palette has dupes`,
+    );
   }
 });

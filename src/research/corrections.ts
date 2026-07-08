@@ -11,7 +11,7 @@ export function correctionsDirective(claim: string): string {
     '- search_papers(query): find peer-reviewed work. Search for BOTH supporting evidence AND',
     '  disconfirming evidence — also try terms like "no effect", "fails to replicate",',
     '  "contradicts", "limitations", "null result".',
-    '- get_paper(id): read a paper\'s full abstract before you rely on or cite it.',
+    "- get_paper(id): read a paper's full abstract before you rely on or cite it.",
     '',
     'Then answer with:',
     '1. The claim split into 1–3 atomic, checkable sub-claims.',

@@ -21,7 +21,12 @@ test('no-op when the whole history is already under budget', () => {
 });
 
 test('system message is kept byte-identical', () => {
-  const msgs: Message[] = [sys, ...exchange('t1', 4000), ...exchange('t2', 4000), ...exchange('t3', 40)];
+  const msgs: Message[] = [
+    sys,
+    ...exchange('t1', 4000),
+    ...exchange('t2', 4000),
+    ...exchange('t3', 40),
+  ];
   const out = compactHistory(msgs, { maxPromptTokens: 500 });
   assert.equal(out[0]!.role, 'system');
   assert.equal(out[0]!.content, 'SYSTEM PROMPT');
@@ -49,14 +54,18 @@ test('the digest captures dropped tool calls and respects its cap', () => {
     {
       role: 'assistant',
       content: '',
-      tool_calls: [{ id: '1', type: 'function', function: { name: 'write_file', arguments: '{}' } }],
+      tool_calls: [
+        { id: '1', type: 'function', function: { name: 'write_file', arguments: '{}' } },
+      ],
     },
     { role: 'tool', content: 'ok', tool_call_id: '1' },
     // A large current turn that is always kept and pushes the older turns out.
     { role: 'user', content: 'X'.repeat(4000) },
   ];
   const out = compactHistory(msgs, { maxPromptTokens: 300, summaryCapChars: 400 });
-  const digest = out.find((m) => m.role === 'system' && m.content.includes('earlier conversation summary'));
+  const digest = out.find(
+    (m) => m.role === 'system' && m.content.includes('earlier conversation summary'),
+  );
   assert.ok(digest, 'a digest system message should be inserted');
   assert.match(digest!.content, /you: add authentication/);
   assert.match(digest!.content, /ran: write_file/); // the dropped tool call is named
@@ -124,7 +133,8 @@ test('tool_call ↔ tool_result pairing is preserved (no orphan tool messages)',
     if (m.role === 'assistant' && m.tool_calls) for (const c of m.tool_calls) callIds.add(c.id);
   }
   for (const m of out) {
-    if (m.role === 'tool') assert.ok(callIds.has(m.tool_call_id!), `orphan tool result ${m.tool_call_id}`);
+    if (m.role === 'tool')
+      assert.ok(callIds.has(m.tool_call_id!), `orphan tool result ${m.tool_call_id}`);
   }
   // And an assistant tool_call must have its result present.
   const resultIds = new Set(out.filter((m) => m.role === 'tool').map((m) => m.tool_call_id));
@@ -132,10 +142,18 @@ test('tool_call ↔ tool_result pairing is preserved (no orphan tool messages)',
 });
 
 test('result stays within budget when head + last block allow it', () => {
-  const msgs: Message[] = [sys, ...exchange('a', 6000), ...exchange('b', 6000), ...exchange('c', 40)];
+  const msgs: Message[] = [
+    sys,
+    ...exchange('a', 6000),
+    ...exchange('b', 6000),
+    ...exchange('c', 40),
+  ];
   const budget = 600;
   const out = compactHistory(msgs, { maxPromptTokens: budget });
-  assert.ok(estimateMessagesTokens(out) <= budget, `over budget: ${estimateMessagesTokens(out)} > ${budget}`);
+  assert.ok(
+    estimateMessagesTokens(out) <= budget,
+    `over budget: ${estimateMessagesTokens(out)} > ${budget}`,
+  );
 });
 
 test('history with no system message still compacts safely', () => {

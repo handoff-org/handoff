@@ -14,5 +14,3 @@ export async function cachePaper(paper: Paper): Promise<void> {
     // Caching is best-effort; never fail a lookup over it.
   }
 }
-
-

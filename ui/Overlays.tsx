@@ -51,8 +51,16 @@ const MODE_OPTIONS = [
 ];
 
 const KV_CACHE_OPTIONS = [
-  { label: 'q8_0  (recommended)', value: 'q8_0' as const, hint: '~half the KV memory · needs flash attention' },
-  { label: 'q4_0', value: 'q4_0' as const, hint: '~quarter the memory · lower quality · needs flash attention' },
+  {
+    label: 'q8_0  (recommended)',
+    value: 'q8_0' as const,
+    hint: '~half the KV memory · needs flash attention',
+  },
+  {
+    label: 'q4_0',
+    value: 'q4_0' as const,
+    hint: '~quarter the memory · lower quality · needs flash attention',
+  },
   { label: 'f16  (full)', value: 'f16' as const, hint: 'no quantization · most memory' },
 ];
 
@@ -258,9 +266,15 @@ export function Overlays({
         currentModelId={config.modelId}
         performanceMode={config.modelPerformanceMode}
         cloudConsent={config.hfConsent}
-        {...(modelPersonalization?.preferredModels ? { preferredModels: modelPersonalization.preferredModels } : {})}
-        {...(modelPersonalization?.rejectedModels ? { rejectedModels: modelPersonalization.rejectedModels } : {})}
-        {...(modelPersonalization?.slowModels ? { slowModels: modelPersonalization.slowModels } : {})}
+        {...(modelPersonalization?.preferredModels
+          ? { preferredModels: modelPersonalization.preferredModels }
+          : {})}
+        {...(modelPersonalization?.rejectedModels
+          ? { rejectedModels: modelPersonalization.rejectedModels }
+          : {})}
+        {...(modelPersonalization?.slowModels
+          ? { slowModels: modelPersonalization.slowModels }
+          : {})}
         {...(modelPersonalization?.prefersFastSmallModels ? { prefersFastSmallModels: true } : {})}
         onSelect={onModelPicked}
         onToggleFavourite={onToggleFavourite}
@@ -274,7 +288,9 @@ export function Overlays({
       ...listTemplates().map((t) => ({
         label: t.label,
         value: t.key,
-        hint: t.hasFolder ? 'full venue template (styles, .bst, checklist)' : 'minimal LaTeX skeleton',
+        hint: t.hasFolder
+          ? 'full venue template (styles, .bst, checklist)'
+          : 'minimal LaTeX skeleton',
       })),
       { label: 'Set up later', value: '', hint: 'skip — add a template anytime' },
     ];
@@ -385,8 +401,16 @@ export function Overlays({
             value: 'learn_performance',
             hint: 'remember which models ran well or hot on this machine',
           },
-          { label: 'Reset profile…', value: 'reset', hint: 'clear everything learned (backs up first)' },
-          { label: 'View profile  (/profile show)', value: 'show', hint: 'print what has been learned' },
+          {
+            label: 'Reset profile…',
+            value: 'reset',
+            hint: 'clear everything learned (backs up first)',
+          },
+          {
+            label: 'View profile  (/profile show)',
+            value: 'show',
+            hint: 'print what has been learned',
+          },
         ]}
         onSelect={onPersonalizationPicked}
         onCancel={onCancel}
@@ -414,15 +438,25 @@ export function Overlays({
           Send your data to the HuggingFace cloud?
         </Text>
         <Box flexDirection="column">
-          <Text>The HuggingFace backend runs models on HuggingFace&apos;s servers. Your prompts,</Text>
+          <Text>
+            The HuggingFace backend runs models on HuggingFace&apos;s servers. Your prompts,
+          </Text>
           <Text>project context, and tool output will leave this machine. It is the only</Text>
           <Text>backend that is not fully local.</Text>
         </Box>
         <Select
           title="Proceed?"
           options={[
-            { label: 'Yes — send to HuggingFace cloud', value: 'yes', hint: 'remembered for future sessions' },
-            { label: 'No — keep everything local', value: 'no', hint: 'cancel; pick a local backend with /model' },
+            {
+              label: 'Yes — send to HuggingFace cloud',
+              value: 'yes',
+              hint: 'remembered for future sessions',
+            },
+            {
+              label: 'No — keep everything local',
+              value: 'no',
+              hint: 'cancel; pick a local backend with /model',
+            },
           ]}
           onSelect={(v) => onHfConsent(v === 'yes')}
           onCancel={() => onHfConsent(false)}

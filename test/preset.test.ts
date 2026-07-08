@@ -37,7 +37,10 @@ test('cool bundles a tight context/output/keep-alive/budget', () => {
   assert.equal(r.ollamaNumCtx, 8192); // 16GB Mac, cool
   // Budget is the preset nominal (5000) clamped to the safe ceiling: the window
   // minus the reasoning-output reserve, times the 0.85 estimate margin.
-  assert.equal(r.maxPromptTokens, Math.min(5000, Math.floor((8192 - reasoningOutputReserve(8192)) * 0.85)));
+  assert.equal(
+    r.maxPromptTokens,
+    Math.min(5000, Math.floor((8192 - reasoningOutputReserve(8192)) * 0.85)),
+  );
   assert.equal(r.warning, undefined);
 });
 
@@ -45,7 +48,10 @@ test('fast clamps context to 4096', () => {
   const r = applyPreset('fast', mac())!;
   assert.equal(r.modelPerformanceMode, 'cool');
   assert.equal(r.ollamaNumCtx, 4096);
-  assert.equal(r.maxPromptTokens, Math.min(4000, Math.floor((4096 - reasoningOutputReserve(4096)) * 0.85)));
+  assert.equal(
+    r.maxPromptTokens,
+    Math.min(4000, Math.floor((4096 - reasoningOutputReserve(4096)) * 0.85)),
+  );
 });
 
 test('balanced uses balanced mode and roomier output', () => {

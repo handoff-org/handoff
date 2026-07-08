@@ -25,7 +25,10 @@ test('collapses far-apart context into a gap marker', () => {
   const oldText = Array.from({ length: 40 }, (_, i) => `line${i}`).join('\n');
   const newText = oldText.replace('line0', 'CHANGED0').replace('line39', 'CHANGED39');
   const d = summarizeDiff(oldText, newText, 1);
-  assert.ok(d.rows.some((r) => r.sign === '~'), 'expected a collapsed gap row');
+  assert.ok(
+    d.rows.some((r) => r.sign === '~'),
+    'expected a collapsed gap row',
+  );
 });
 
 test('caps the number of rows and reports the remainder as truncated', () => {

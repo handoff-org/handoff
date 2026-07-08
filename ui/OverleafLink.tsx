@@ -60,7 +60,11 @@ export function OverleafLink({ theme, onSubmit, onCancel }: Props) {
       <Text color={active ? theme.user : undefined} dimColor={!active}>
         {label}
       </Text>
-      <Box borderStyle="round" borderColor={active ? theme.borderActive : theme.border} paddingX={1}>
+      <Box
+        borderStyle="round"
+        borderColor={active ? theme.borderActive : theme.border}
+        paddingX={1}
+      >
         <Text>{masked ? value.replace(/./g, '•') : value || ' '}</Text>
         {active && <Text color={theme.user}>▏</Text>}
       </Box>
@@ -74,12 +78,16 @@ export function OverleafLink({ theme, onSubmit, onCancel }: Props) {
       </Text>
       <Box flexDirection="column">
         <Text dimColor>1. In Overleaf, open your project and copy its web link.</Text>
-        <Text dimColor>2. Account Settings → Git Integration → Create Token, and paste it below.</Text>
+        <Text dimColor>
+          2. Account Settings → Git Integration → Create Token, and paste it below.
+        </Text>
       </Box>
       {field('Overleaf project link', url, focus === 0)}
       {field('Git authentication token', token, focus === 1, true)}
       {error ? <Text color={theme.error}>{error}</Text> : null}
-      <Text dimColor>Tab to switch · Enter to {focus === 0 ? 'continue' : 'connect'} · Esc to cancel</Text>
+      <Text dimColor>
+        Tab to switch · Enter to {focus === 0 ? 'continue' : 'connect'} · Esc to cancel
+      </Text>
     </Box>
   );
 }

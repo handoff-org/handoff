@@ -35,7 +35,6 @@ const USER_NAME = ((): string => {
   }
 })();
 
-
 export interface BannerInfo {
   backend: string;
   modelId: string;
@@ -120,7 +119,7 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
   };
 
   // The one-line status of where you're working right now.
-  const focusText = focus === 'general' ? 'off-work · general' : project ?? 'no project open';
+  const focusText = focus === 'general' ? 'off-work · general' : (project ?? 'no project open');
 
   // Left column: the `h>` logo canvas + a label beneath it. When no animation
   // frame is supplied (disabled / reduced-motion / non-tty), render a calm static
@@ -142,7 +141,10 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
   // shortcuts. Generous blank gaps between the four groups let the panel
   // breathe and fill the height of the taller mascot canvas beside it.
   const cmd = (c: string, desc: string): PanelRow => ({
-    segs: [{ text: c.padEnd(15), color: accent }, { text: desc, dim: true }],
+    segs: [
+      { text: c.padEnd(15), color: accent },
+      { text: desc, dim: true },
+    ],
   });
   const blank: PanelRow = { segs: [] };
   const infoRows: PanelRow[] = [
@@ -171,9 +173,24 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
     blank,
     blank,
     { segs: [{ text: 'Shortcuts', color: accent, bold: true }] },
-    { segs: [{ text: 'esc', color: accent }, { text: '   interrupt', dim: true }] },
-    { segs: [{ text: '⇧Tab', color: accent }, { text: '  hands-on / off', dim: true }] },
-    { segs: [{ text: '~', color: accent }, { text: '     toggle focus', dim: true }] },
+    {
+      segs: [
+        { text: 'esc', color: accent },
+        { text: '   interrupt', dim: true },
+      ],
+    },
+    {
+      segs: [
+        { text: '⇧Tab', color: accent },
+        { text: '  hands-on / off', dim: true },
+      ],
+    },
+    {
+      segs: [
+        { text: '~', color: accent },
+        { text: '     toggle focus', dim: true },
+      ],
+    },
   ];
   void toolCount;
 
@@ -274,4 +291,3 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
   );
   return out;
 }
-

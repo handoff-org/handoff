@@ -138,7 +138,8 @@ export function parseMetrics(stdout: string, resultsDir: string): Record<string,
 export function parseSeeds(stdout: string, env: Record<string, string>): Record<string, string> {
   const seeds: Record<string, string> = {};
   if (env.PYTHONHASHSEED) seeds.PYTHONHASHSEED = env.PYTHONHASHSEED;
-  for (const m of stdout.matchAll(/^\s*SEED\s+([\w.\-]+)\s*[=:]\s*(\S+)\s*$/gim)) seeds[m[1]!] = m[2]!;
+  for (const m of stdout.matchAll(/^\s*SEED\s+([\w.\-]+)\s*[=:]\s*(\S+)\s*$/gim))
+    seeds[m[1]!] = m[2]!;
   return seeds;
 }
 
@@ -170,7 +171,8 @@ export function generateReproSh(c: Capsule): string {
     lines.push('');
   }
   for (const [k, v] of Object.entries(c.env)) lines.push(`export ${k}=${shellQuote(v)}`);
-  for (const [k, v] of Object.entries(c.seeds)) if (!(k in c.env)) lines.push(`export ${k}=${shellQuote(v)}`);
+  for (const [k, v] of Object.entries(c.seeds))
+    if (!(k in c.env)) lines.push(`export ${k}=${shellQuote(v)}`);
   if (Object.keys(c.env).length || Object.keys(c.seeds).length) lines.push('');
   if (c.uvExpDir) {
     lines.push(
@@ -271,7 +273,9 @@ function fmtMetrics(m: Record<string, number>): string {
 }
 
 export function formatCapsule(c: Capsule, promoted = false): string {
-  const gitLine = c.git ? `${c.git.commit.slice(0, 8)}${c.git.dirty ? ' (dirty)' : ''}` : 'no git repo';
+  const gitLine = c.git
+    ? `${c.git.commit.slice(0, 8)}${c.git.dirty ? ' (dirty)' : ''}`
+    : 'no git repo';
   return [
     `run ${c.id}${promoted ? ' ★ canonical' : ''}  ·  ${c.language}  ·  exit ${c.exitCode}  ·  ${c.durationMs}ms`,
     `  when:    ${c.startedAt}`,

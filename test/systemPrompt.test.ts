@@ -43,7 +43,10 @@ test('overleaf project keeps the bib inside paper/, never literature/', () => {
   updateProject(meta.slug, { paperMode: 'overleaf' });
   const paper = projectPaths(meta.slug).paper;
   // Give it a real main file + bib so the guidance references concrete paths.
-  writeFileSync(join(paper, 'main.tex'), '\\documentclass{article}\\begin{document}\\end{document}');
+  writeFileSync(
+    join(paper, 'main.tex'),
+    '\\documentclass{article}\\begin{document}\\end{document}',
+  );
   writeFileSync(join(paper, 'references.bib'), '% bib\n');
 
   const ctx = projectContext({ ...meta, paperMode: 'overleaf' });

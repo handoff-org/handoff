@@ -9,11 +9,7 @@ function projectDir(slug: string): string {
 }
 
 export type NotebookEntryType =
-  | 'experiment-run'
-  | 'literature-find'
-  | 'insight'
-  | 'draft-section'
-  | 'note';
+  'experiment-run' | 'literature-find' | 'insight' | 'draft-section' | 'note';
 
 export interface NotebookEntry {
   type: NotebookEntryType;

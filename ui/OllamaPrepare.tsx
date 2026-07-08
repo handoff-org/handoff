@@ -28,7 +28,14 @@ function pct(p: PullProgress): string {
   return '';
 }
 
-export function OllamaPrepare({ baseUrl, model, flashAttention, kvCacheType, onReady, onCancel }: Props) {
+export function OllamaPrepare({
+  baseUrl,
+  model,
+  flashAttention,
+  kvCacheType,
+  onReady,
+  onCancel,
+}: Props) {
   const [phase, setPhase] = useState<Phase>('checking');
   const [progress, setProgress] = useState<PullProgress | null>(null);
   const [error, setError] = useState('');
@@ -47,7 +54,10 @@ export function OllamaPrepare({ baseUrl, model, flashAttention, kvCacheType, onR
         for (let i = 0; i < 20; i++) {
           await new Promise((r) => setTimeout(r, 500));
           if (cancelled) return;
-          if (await isOllamaRunning(baseUrl)) { ready = true; break; }
+          if (await isOllamaRunning(baseUrl)) {
+            ready = true;
+            break;
+          }
         }
         if (!ready) {
           if (!cancelled) setPhase('not_running');
@@ -117,11 +127,16 @@ export function OllamaPrepare({ baseUrl, model, flashAttention, kvCacheType, onR
   // downloading
   return (
     <Box flexDirection="column" padding={1}>
-      <Text color="yellow" bold>Downloading {model}…</Text>
-      <Text>{progress?.status ?? 'starting'}{progress ? pct(progress) : ''}</Text>
+      <Text color="yellow" bold>
+        Downloading {model}…
+      </Text>
+      <Text>
+        {progress?.status ?? 'starting'}
+        {progress ? pct(progress) : ''}
+      </Text>
       <Box marginTop={1} flexDirection="column">
         <Text dimColor>Models are stored in:</Text>
-        <Text color="cyan">  {ollamaModelsDir()}</Text>
+        <Text color="cyan"> {ollamaModelsDir()}</Text>
       </Box>
       {onCancel && <Text dimColor>Esc to go back</Text>}
     </Box>

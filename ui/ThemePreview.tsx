@@ -12,7 +12,14 @@ interface Props {
   onCancel: () => void;
 }
 
-export function ThemePreview({ current, backend, modelId, mode = 'permissions', onSelect, onCancel }: Props) {
+export function ThemePreview({
+  current,
+  backend,
+  modelId,
+  mode = 'permissions',
+  onSelect,
+  onCancel,
+}: Props) {
   const { stdout } = useStdout();
   const initial = Math.max(
     0,
@@ -38,7 +45,14 @@ export function ThemePreview({ current, backend, modelId, mode = 'permissions', 
   return (
     <Box flexDirection="column">
       <Box flexDirection="column">
-        {bannerLines({ backend, modelId, theme: focusedTheme, width: stdout.columns ?? 80, mode, toolCount: 0 })}
+        {bannerLines({
+          backend,
+          modelId,
+          theme: focusedTheme,
+          width: stdout.columns ?? 80,
+          mode,
+          toolCount: 0,
+        })}
       </Box>
 
       <Box paddingX={1} marginTop={1} flexWrap="wrap">

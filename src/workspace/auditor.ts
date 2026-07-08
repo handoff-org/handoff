@@ -31,10 +31,10 @@ const LITERATURE_RE =
 /** Strip LaTeX commands and environments for cleaner pattern matching. */
 function stripLatex(line: string): string {
   return line
-    .replace(/(?<!\d)%.*$/, '')          // remove % comments — but not % after a digit (e.g. 91.3%)
+    .replace(/(?<!\d)%.*$/, '') // remove % comments — but not % after a digit (e.g. 91.3%)
     .replace(/\\[a-zA-Z]+\*?\{[^}]*\}/g, '') // \cmd{arg}
-    .replace(/\\[a-zA-Z]+/g, ' ')       // remaining \commands
-    .replace(/\$[^$]*\$/g, 'MATH')      // inline math
+    .replace(/\\[a-zA-Z]+/g, ' ') // remaining \commands
+    .replace(/\$[^$]*\$/g, 'MATH') // inline math
     .replace(/[{}]/g, '')
     .trim();
 }
@@ -64,15 +64,22 @@ function extractSentences(content: string, filePath: string): TexSentence[] {
   function flushPara() {
     if (paraLines.length === 0) return;
     const paraText = paraLines.map(stripLatex).join(' ').replace(/\s+/g, ' ').trim();
-    if (!paraText) { paraLines = []; return; }
+    if (!paraText) {
+      paraLines = [];
+      return;
+    }
     // Split on sentence boundaries: ". " or "? " or "! "
     const raw = paraText.split(/(?<=[.?!])\s+(?=[A-Z])/);
     let offset = 0;
     for (const s of raw) {
       const t = s.trim();
-      if (t.length < 20) { offset += s.length + 1; continue; } // skip very short fragments
+      if (t.length < 20) {
+        offset += s.length + 1;
+        continue;
+      } // skip very short fragments
       // Approximate line: count words in leading text, map to lines.
-      const approxLine = paraStart + Math.floor((offset / (paraText.length || 1)) * paraLines.length);
+      const approxLine =
+        paraStart + Math.floor((offset / (paraText.length || 1)) * paraLines.length);
       sentences.push({ text: t, line: Math.max(1, approxLine + 1) });
       offset += s.length + 1;
     }
@@ -85,8 +92,14 @@ function extractSentences(content: string, filePath: string): TexSentence[] {
     const raw = lines[i] ?? '';
     const trimmed = raw.trim();
 
-    if (/\\begin\{(verbatim|lstlisting|minted|code)\}/.test(trimmed)) { inVerbatim = true; continue; }
-    if (/\\end\{(verbatim|lstlisting|minted|code)\}/.test(trimmed)) { inVerbatim = false; continue; }
+    if (/\\begin\{(verbatim|lstlisting|minted|code)\}/.test(trimmed)) {
+      inVerbatim = true;
+      continue;
+    }
+    if (/\\end\{(verbatim|lstlisting|minted|code)\}/.test(trimmed)) {
+      inVerbatim = false;
+      continue;
+    }
     if (inVerbatim) continue;
     if (isStructural(trimmed)) continue;
 
@@ -140,7 +153,7 @@ function scan(sentences: TexSentence[], filePath: string): Finding[] {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface AuditResult {
-  scanned: string[];        // relative paths scanned
+  scanned: string[]; // relative paths scanned
   newCount: number;
   existingCount: number;
   newClaims: Claim[];
@@ -169,7 +182,11 @@ export function auditPaper(slug: string): AuditResult {
     scanned.push(rel);
 
     let content = '';
-    try { content = readFileSync(abs, 'utf-8'); } catch { continue; }
+    try {
+      content = readFileSync(abs, 'utf-8');
+    } catch {
+      continue;
+    }
 
     const sentences = extractSentences(content, rel);
     const findings = scan(sentences, rel);
@@ -211,7 +228,9 @@ function findTexFiles(dir: string): string[] {
     for (const name of readdirSync(dir)) {
       if (name.endsWith('.tex')) out.push(join(dir, name));
     }
-  } catch { /* empty dir */ }
+  } catch {
+    /* empty dir */
+  }
   return out.sort();
 }
 
@@ -235,7 +254,12 @@ export function formatAuditReport(result: AuditResult, projectTitle: string): st
   lines.push('');
 
   if (newCount === 0 && existingCount === 0) {
-    lines.push('No claims found. The scanner looks for:', '  • numerical results (%, F1, EM, BLEU…)', '  • comparison claims (outperforms, better than…)', '  • literature sweeps (prior work ignored…)');
+    lines.push(
+      'No claims found. The scanner looks for:',
+      '  • numerical results (%, F1, EM, BLEU…)',
+      '  • comparison claims (outperforms, better than…)',
+      '  • literature sweeps (prior work ignored…)',
+    );
     return lines.join('\n');
   }
 

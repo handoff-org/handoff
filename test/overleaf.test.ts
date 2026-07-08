@@ -8,13 +8,8 @@ import { freshHome, makeBareRemote, git, hasGit } from './helpers.js';
 
 const home = freshHome();
 const { createProject, updateProject, projectPaths } = await import('../src/workspace/project.js');
-const {
-  bibFileIn,
-  overleafWriteGuard,
-  isOverleafLinked,
-  autoSyncOverleaf,
-  autoPullOverleaf,
-} = await import('../src/workspace/overleaf.js');
+const { bibFileIn, overleafWriteGuard, isOverleafLinked, autoSyncOverleaf, autoPullOverleaf } =
+  await import('../src/workspace/overleaf.js');
 
 const gitAvailable = hasGit();
 
@@ -27,7 +22,10 @@ function linkPaperTo(slug: string, remote: string): string {
   const paper = projectPaths(slug).paper;
   git(paper, 'init');
   git(paper, 'branch', '-M', 'main');
-  writeFileSync(join(paper, 'main.tex'), '\\documentclass{article}\\begin{document}hi\\end{document}');
+  writeFileSync(
+    join(paper, 'main.tex'),
+    '\\documentclass{article}\\begin{document}hi\\end{document}',
+  );
   git(paper, 'add', '-A');
   git(paper, 'commit', '-m', 'init');
   git(paper, 'remote', 'add', 'origin', remote);
@@ -59,36 +57,40 @@ test('write guard redirects a .bib written outside paper/ (the sync bug)', () =>
   assert.equal(overleafWriteGuard(join(paper, 'references.bib'), '@article{x}'), null);
 });
 
-test('autoSync pushes local paper edits and autoPull brings down remote edits', { skip: !gitAvailable }, () => {
-  const remote = makeBareRemote();
-  const meta = createProject({ title: 'Round Trip' });
-  updateProject(meta.slug, { paperMode: 'overleaf' });
-  const paper = linkPaperTo(meta.slug, remote);
+test(
+  'autoSync pushes local paper edits and autoPull brings down remote edits',
+  { skip: !gitAvailable },
+  () => {
+    const remote = makeBareRemote();
+    const meta = createProject({ title: 'Round Trip' });
+    updateProject(meta.slug, { paperMode: 'overleaf' });
+    const paper = linkPaperTo(meta.slug, remote);
 
-  assert.equal(isOverleafLinked(), true);
+    assert.equal(isOverleafLinked(), true);
 
-  // Local edit → autoSync should commit + push and name the file.
-  writeFileSync(join(paper, 'references.bib'), '@article{key, title={T}}\n');
-  const sync = autoSyncOverleaf();
-  assert.ok(sync, 'expected a sync note');
-  assert.match(sync!, /synced to Overleaf/);
-  assert.match(sync!, /references\.bib/);
+    // Local edit → autoSync should commit + push and name the file.
+    writeFileSync(join(paper, 'references.bib'), '@article{key, title={T}}\n');
+    const sync = autoSyncOverleaf();
+    assert.ok(sync, 'expected a sync note');
+    assert.match(sync!, /synced to Overleaf/);
+    assert.match(sync!, /references\.bib/);
 
-  // A separate clone simulates an Overleaf web edit pushed by someone else.
-  const other = mkdtempSync(join(tmpdir(), 'handoff-other-'));
-  spawnSync('git', ['clone', remote, other]);
-  assert.ok(existsSync(join(other, 'references.bib')), 'push did not reach the remote');
-  writeFileSync(join(other, 'web-edit.tex'), 'from the web');
-  git(other, 'add', '-A');
-  git(other, 'commit', '-m', 'web edit');
-  git(other, 'push');
+    // A separate clone simulates an Overleaf web edit pushed by someone else.
+    const other = mkdtempSync(join(tmpdir(), 'handoff-other-'));
+    spawnSync('git', ['clone', remote, other]);
+    assert.ok(existsSync(join(other, 'references.bib')), 'push did not reach the remote');
+    writeFileSync(join(other, 'web-edit.tex'), 'from the web');
+    git(other, 'add', '-A');
+    git(other, 'commit', '-m', 'web edit');
+    git(other, 'push');
 
-  // autoPull should fast-forward the remote change into paper/.
-  const pulled = autoPullOverleaf();
-  assert.ok(pulled, 'expected a pulled note');
-  assert.match(pulled!, /pulled the latest/i);
-  assert.ok(existsSync(join(paper, 'web-edit.tex')), 'pull did not land the web edit');
-});
+    // autoPull should fast-forward the remote change into paper/.
+    const pulled = autoPullOverleaf();
+    assert.ok(pulled, 'expected a pulled note');
+    assert.match(pulled!, /pulled the latest/i);
+    assert.ok(existsSync(join(paper, 'web-edit.tex')), 'pull did not land the web edit');
+  },
+);
 
 test('autoSync is a no-op (null) when nothing changed', { skip: !gitAvailable }, () => {
   const remote = makeBareRemote();

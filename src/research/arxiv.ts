@@ -2,12 +2,12 @@
 // endpoint: https://export.arxiv.org/api/query?id_list=<id>
 
 export interface ArxivPaper {
-  id: string;        // e.g. "2301.07041"
+  id: string; // e.g. "2301.07041"
   title: string;
   abstract: string;
   authors: string[];
   published: string; // "YYYY-MM-DD"
-  updated: string;   // "YYYY-MM-DD"
+  updated: string; // "YYYY-MM-DD"
   categories: string[];
   pdfUrl: string;
   absUrl: string;
@@ -33,13 +33,13 @@ function parseEntry(entry: string): ArxivPaper {
   const published = tag(entry, 'published').slice(0, 10);
   const updated = tag(entry, 'updated').slice(0, 10);
 
-  const authorMatches = [...entry.matchAll(/<author>[\s\S]*?<name>(.*?)<\/name>[\s\S]*?<\/author>/g)];
+  const authorMatches = [
+    ...entry.matchAll(/<author>[\s\S]*?<name>(.*?)<\/name>[\s\S]*?<\/author>/g),
+  ];
   const authors = authorMatches.map((m) => m[1]!.trim());
 
   const catMatches = [...entry.matchAll(/term="([^"]+)"/g)];
-  const categories = catMatches
-    .map((m) => m[1]!)
-    .filter((c) => /^\w+\.\w+$/.test(c)); // e.g. "cs.LG"
+  const categories = catMatches.map((m) => m[1]!).filter((c) => /^\w+\.\w+$/.test(c)); // e.g. "cs.LG"
 
   return {
     id,
@@ -78,7 +78,9 @@ export async function fetchArxivPaper(rawId: string): Promise<ArxivPaper> {
   const xml = await res.text();
   const totalMatch = xml.match(/<opensearch:totalResults[^>]*>(\d+)<\/opensearch:totalResults>/);
   if (totalMatch && totalMatch[1] === '0') {
-    throw new Error(`arXiv paper "${normalized}" not found — check the ID format (e.g. 2301.07041)`);
+    throw new Error(
+      `arXiv paper "${normalized}" not found — check the ID format (e.g. 2301.07041)`,
+    );
   }
 
   const entryMatch = xml.match(/<entry>([\s\S]*?)<\/entry>/);
@@ -109,7 +111,8 @@ export async function searchArxiv(
   // or a boolean operator), pass it through. Otherwise wrap a plain query as a
   // phrase over all fields so multi-word terms stay together.
   const trimmed = query.trim();
-  const isFieldQuery = /\b(all|ti|abs|au|cat|co|jr|rn|id):/i.test(trimmed) || /\b(AND|OR|ANDNOT)\b/.test(trimmed);
+  const isFieldQuery =
+    /\b(all|ti|abs|au|cat|co|jr|rn|id):/i.test(trimmed) || /\b(AND|OR|ANDNOT)\b/.test(trimmed);
   const searchQuery = isFieldQuery ? trimmed : `all:"${trimmed.replace(/"/g, '')}"`;
 
   const params = new URLSearchParams({

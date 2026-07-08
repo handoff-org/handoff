@@ -36,7 +36,10 @@ test('detects "never use cloud models"', () => {
 
 test('detects a default model and a rejected model', () => {
   assert.equal(detectExplicitPreference('use qwen3:8b by default')?.key, 'preferred-model');
-  assert.equal(detectExplicitPreference("don't use ornith:35b, it overheats my mac")?.key, 'rejected-model');
+  assert.equal(
+    detectExplicitPreference("don't use ornith:35b, it overheats my mac")?.key,
+    'rejected-model',
+  );
 });
 
 test('a triggered-but-unclassified statement becomes a generic note', () => {
@@ -55,9 +58,19 @@ test('applyExplicit records the pref at 0.9 and sets the structured field', () =
 });
 
 test('preferring a model removes it from rejected and vice-versa', () => {
-  let p = applyExplicit(fresh(), { key: 'rejected-model', phrase: 'avoid model qwen3:8b' }, 'avoid model qwen3:8b', NOW);
+  let p = applyExplicit(
+    fresh(),
+    { key: 'rejected-model', phrase: 'avoid model qwen3:8b' },
+    'avoid model qwen3:8b',
+    NOW,
+  );
   assert.deepEqual(p.modelAndPerformance.rejectedModels?.value, ['qwen3:8b']);
-  p = applyExplicit(p, { key: 'preferred-model', phrase: 'prefers model qwen3:8b' }, 'prefers model qwen3:8b', NOW);
+  p = applyExplicit(
+    p,
+    { key: 'preferred-model', phrase: 'prefers model qwen3:8b' },
+    'prefers model qwen3:8b',
+    NOW,
+  );
   assert.deepEqual(p.modelAndPerformance.preferredModels?.value, ['qwen3:8b']);
   assert.deepEqual(p.modelAndPerformance.rejectedModels?.value, []);
 });
@@ -66,7 +79,10 @@ test('forgetPreference removes an explicit key', () => {
   const d = detectExplicitPreference('from now on I prefer short answers')!;
   const p = applyExplicit(fresh(), d, 'prefers concise answers', NOW);
   const after = forgetPreference(p, 'verbosity');
-  assert.equal(after.explicitPreferences.find((x) => x.key === 'verbosity'), undefined);
+  assert.equal(
+    after.explicitPreferences.find((x) => x.key === 'verbosity'),
+    undefined,
+  );
 });
 
 // ── Inferred habits (thresholds) ────────────────────────────────────────────────
@@ -80,7 +96,12 @@ test('confFor: no inference below 3 evidence, rises after', () => {
 });
 
 test('one command_used event does not create an inferred habit; three do', () => {
-  const cmd = (): PersonalizationEvent => ({ type: 'command_used', timestamp: NOW, summary: '/research', metadata: { command: '/research' } });
+  const cmd = (): PersonalizationEvent => ({
+    type: 'command_used',
+    timestamp: NOW,
+    summary: '/research',
+    metadata: { command: '/research' },
+  });
   let p = recordEvent(fresh(), cmd(), NOW);
   assert.equal(p.toolHabits.oftenUsesResearch, undefined);
   p = recordEvent(p, cmd(), NOW);
@@ -90,7 +111,12 @@ test('one command_used event does not create an inferred habit; three do', () =>
 });
 
 test('preferredMode inference flips toward the dominant choice', () => {
-  const ev = (value: string): PersonalizationEvent => ({ type: 'settings_changed', timestamp: NOW, summary: `mode=${value}`, metadata: { key: 'mode', value } });
+  const ev = (value: string): PersonalizationEvent => ({
+    type: 'settings_changed',
+    timestamp: NOW,
+    summary: `mode=${value}`,
+    metadata: { key: 'mode', value },
+  });
   let p = fresh();
   for (let i = 0; i < 4; i++) p = recordEvent(p, ev('auto'), NOW);
   assert.equal(p.toolHabits.preferredMode?.value, 'auto');
@@ -98,7 +124,9 @@ test('preferredMode inference flips toward the dominant choice', () => {
 
 test('a slow benchmark is remembered as a performance note', () => {
   const ev: PersonalizationEvent = {
-    type: 'model_benchmark', timestamp: NOW, summary: 'x',
+    type: 'model_benchmark',
+    timestamp: NOW,
+    summary: 'x',
     metadata: { modelId: 'ornith:35b', tier: 'slow', fullGpu: true },
   };
   const p = recordEvent(fresh(), ev, NOW);

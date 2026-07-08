@@ -54,7 +54,10 @@ export function buildDoctorReport(d: DoctorInput): string {
   // Installed models (Ollama).
   if (d.backend === 'ollama' && d.installedModels) {
     lines.push('');
-    L('Installed', d.installedModels.length ? d.installedModels.slice(0, 12).join(', ') : '(none found)');
+    L(
+      'Installed',
+      d.installedModels.length ? d.installedModels.slice(0, 12).join(', ') : '(none found)',
+    );
   }
 
   // Live `ollama ps` — the first-class spill check.
@@ -68,7 +71,9 @@ export function buildDoctorReport(d: DoctorInput): string {
     if (!row.fullGpu) {
       lines.push('');
       lines.push('  ⚠ Ollama reports this model is NOT fully on GPU (CPU spill).');
-      lines.push('    Choose a smaller model or a lower quantization, or reduce the context window.');
+      lines.push(
+        '    Choose a smaller model or a lower quantization, or reduce the context window.',
+      );
     }
   }
 
@@ -76,7 +81,10 @@ export function buildDoctorReport(d: DoctorInput): string {
   const bench = d.benchmarks?.find((b) => b.backend === d.backend && b.modelId === d.modelId);
   if (bench) {
     lines.push('');
-    L('Last benchmark', `${bench.tokensPerSec} tok/s${bench.fullGpu ? '' : ' · CPU spill'}${bench.toolCallOk ? '' : ' · tool-call FAILED'}`);
+    L(
+      'Last benchmark',
+      `${bench.tokensPerSec} tok/s${bench.fullGpu ? '' : ' · CPU spill'}${bench.toolCallOk ? '' : ' · tool-call FAILED'}`,
+    );
   }
 
   // Advisor risk + suggestion.
@@ -89,7 +97,9 @@ export function buildDoctorReport(d: DoctorInput): string {
       lines.push('');
       lines.push(`  ➜ ${d.advice.explanation}`);
       for (const alt of d.advice.alternatives) {
-        lines.push(`     · for ${alt.role}: ${alt.model.entry.label} (${alt.model.quant}, ctx ${alt.model.contextTokens})`);
+        lines.push(
+          `     · for ${alt.role}: ${alt.model.entry.label} (${alt.model.quant}, ctx ${alt.model.contextTokens})`,
+        );
       }
     }
   }

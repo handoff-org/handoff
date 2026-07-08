@@ -43,8 +43,11 @@ export function detectExplicitPreference(msg: string): Detected | null {
   // Model rejections are a standing signal even without a "from now on" trigger —
   // the strict model-id shape (contains ':' or a digit) keeps false positives low.
   const reject = low.match(/(?:don'?t|never|stop)\s+us\w*\s+([\w.:\-]+)/);
-  const hot = low.match(/([\w.:]+:[\w.\-]+|[\w.\-]+:\d+\w*)\s+(?:overheats|runs hot|is too (?:slow|hot)|too slow|too hot)/);
-  if (reject && /[:\d]/.test(reject[1]!)) return { key: 'rejected-model', phrase: `avoid model ${reject[1]}` };
+  const hot = low.match(
+    /([\w.:]+:[\w.\-]+|[\w.\-]+:\d+\w*)\s+(?:overheats|runs hot|is too (?:slow|hot)|too slow|too hot)/,
+  );
+  if (reject && /[:\d]/.test(reject[1]!))
+    return { key: 'rejected-model', phrase: `avoid model ${reject[1]}` };
   if (hot) return { key: 'rejected-model', phrase: `avoid model ${hot[1]}` };
 
   // Everything else must be signalled explicitly as a standing preference, so a
@@ -52,7 +55,10 @@ export function detectExplicitPreference(msg: string): Detected | null {
   if (!hasPreferenceTrigger(m)) return null;
 
   // Verbosity
-  if (/\b(short|concise|brief|terse)\b/.test(low) && /\b(answer|response|repl|explanation)/.test(low)) {
+  if (
+    /\b(short|concise|brief|terse)\b/.test(low) &&
+    /\b(answer|response|repl|explanation)/.test(low)
+  ) {
     return { key: 'verbosity', phrase: 'prefers concise answers' };
   }
   if (/\b(detailed|thorough|in[- ]depth|verbose|elaborate)\b/.test(low)) {
@@ -60,7 +66,11 @@ export function detectExplicitPreference(msg: string): Detected | null {
   }
 
   // Local-only / no cloud
-  if (/\b(no cloud|don'?t use cloud|never use cloud|keep (everything )?local|local[- ]only)\b/.test(low)) {
+  if (
+    /\b(no cloud|don'?t use cloud|never use cloud|keep (everything )?local|local[- ]only)\b/.test(
+      low,
+    )
+  ) {
     return { key: 'avoid-cloud', phrase: 'prefers local-only models (no cloud)' };
   }
 
@@ -83,22 +93,33 @@ export function detectExplicitPreference(msg: string): Detected | null {
   }
 
   // Prefer a specific model ("use X by default")
-  const useDefault = low.match(/\buse\s+([\w.:\-]+)\s+by default\b/) ?? low.match(/\bdefault(?:\s+model)?\s+(?:to|is)\s+([\w.:\-]+)/);
+  const useDefault =
+    low.match(/\buse\s+([\w.:\-]+)\s+by default\b/) ??
+    low.match(/\bdefault(?:\s+model)?\s+(?:to|is)\s+([\w.:\-]+)/);
   if (useDefault && /[:\d]/.test(useDefault[1]!)) {
     return { key: 'preferred-model', phrase: `prefers model ${useDefault[1]}` };
   }
 
   // Fast/small models for laptop comfort
-  if (/\b(small|fast|light|smaller|quantiz)\w*\b/.test(low) && /\b(model|laptop|heat|hot|battery)\b/.test(low)) {
+  if (
+    /\b(small|fast|light|smaller|quantiz)\w*\b/.test(low) &&
+    /\b(model|laptop|heat|hot|battery)\b/.test(low)
+  ) {
     return { key: 'fast-small-models', phrase: 'prefers small/fast models for laptop comfort' };
   }
 
   // Interaction style toggles
   if (/\bbullet/.test(low)) return { key: 'bullets', phrase: 'prefers bulleted answers' };
-  if (/\bcode (first|immediately)\b/.test(low) || /\bjust (write|give me) (the )?code\b/.test(low)) {
+  if (
+    /\bcode (first|immediately)\b/.test(low) ||
+    /\bjust (write|give me) (the )?code\b/.test(low)
+  ) {
     return { key: 'code-first', phrase: 'prefers code first, prose after' };
   }
-  if (/\b(explain|plan)\b.*\b(before|first)\b/.test(low) && /\b(edit|chang|code|implement)/.test(low)) {
+  if (
+    /\b(explain|plan)\b.*\b(before|first)\b/.test(low) &&
+    /\b(edit|chang|code|implement)/.test(low)
+  ) {
     return { key: 'explain-first', phrase: 'prefers an explanation/plan before edits' };
   }
   const tone = low.match(/\b(direct|blunt|academic|technical|friendly)\b/);
@@ -109,17 +130,27 @@ export function detectExplicitPreference(msg: string): Detected | null {
 
   // Generic capture: a triggered statement we couldn't classify. Keep the clause
   // itself (sanitized at the call site) so "remember that ..." is never lost.
-  const clause = m.replace(/^.*?\b(remember(?: that)?|from now on|going forward)\b[:,]?\s*/i, '').trim();
+  const clause = m
+    .replace(/^.*?\b(remember(?: that)?|from now on|going forward)\b[:,]?\s*/i, '')
+    .trim();
   return { key: `note-${slug(clause).slice(0, 24) || 'pref'}`, phrase: clause || m };
 }
 
 function slug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 // ── Applying explicit preferences ──────────────────────────────────────────────
 
-function scored<T>(value: T, confidence: number, now: string, prev?: ScoredValue<T>): ScoredValue<T> {
+function scored<T>(
+  value: T,
+  confidence: number,
+  now: string,
+  prev?: ScoredValue<T>,
+): ScoredValue<T> {
   return {
     value,
     confidence: Math.max(confidence, prev?.confidence ?? 0),
@@ -140,7 +171,12 @@ function mergeUnique(prev: string[] | undefined, add: string, drop?: string): st
  * explicitPreferences (confidence 0.9) and set the mapped structured field.
  * `phrase` is the already-sanitized value to store. Returns a new profile.
  */
-export function applyExplicit(profile: AdaptiveProfile, d: Detected, phrase: string, now: string): AdaptiveProfile {
+export function applyExplicit(
+  profile: AdaptiveProfile,
+  d: Detected,
+  phrase: string,
+  now: string,
+): AdaptiveProfile {
   const p: AdaptiveProfile = structuredClone(profile);
 
   // 1. The explicit preference record (source of truth for /profile show/why).
@@ -171,7 +207,9 @@ export function applyExplicit(profile: AdaptiveProfile, d: Detected, phrase: str
     case 'verbosity':
       p.interactionStyle.verbosity = scored(
         /detailed/.test(phrase) ? 'detailed' : 'concise',
-        0.9, now, prevOf(p.interactionStyle.verbosity),
+        0.9,
+        now,
+        prevOf(p.interactionStyle.verbosity),
       );
       break;
     case 'avoid-cloud':
@@ -180,29 +218,54 @@ export function applyExplicit(profile: AdaptiveProfile, d: Detected, phrase: str
     case 'paper-template': {
       const v = phrase.match(VENUE)?.[1]?.toUpperCase() ?? phrase;
       p.researchStyle.preferredPaperTemplates = scored(
-        mergeUnique(p.researchStyle.preferredPaperTemplates?.value, v), 0.9, now,
+        mergeUnique(p.researchStyle.preferredPaperTemplates?.value, v),
+        0.9,
+        now,
         p.researchStyle.preferredPaperTemplates,
       );
-      p.projectDefaults.defaultPaperTemplate = scored(v, 0.9, now, p.projectDefaults.defaultPaperTemplate);
+      p.projectDefaults.defaultPaperTemplate = scored(
+        v,
+        0.9,
+        now,
+        p.projectDefaults.defaultPaperTemplate,
+      );
       break;
     }
     case 'citation-style': {
-      const v = phrase.match(/\b(APA|MLA|IEEE|CHICAGO|NATBIB|BIBTEX)\b/i)?.[1]?.toUpperCase() ?? phrase;
-      p.researchStyle.preferredCitationStyle = scored(v, 0.9, now, p.researchStyle.preferredCitationStyle);
+      const v =
+        phrase.match(/\b(APA|MLA|IEEE|CHICAGO|NATBIB|BIBTEX)\b/i)?.[1]?.toUpperCase() ?? phrase;
+      p.researchStyle.preferredCitationStyle = scored(
+        v,
+        0.9,
+        now,
+        p.researchStyle.preferredCitationStyle,
+      );
       break;
     }
     case 'experiment-language': {
-      const v = phrase.match(/\b(python|r|julia|typescript|javascript|rust|go)\b/i)?.[1]?.toLowerCase() ?? phrase;
-      p.projectDefaults.defaultExperimentLanguage = scored(v, 0.9, now, p.projectDefaults.defaultExperimentLanguage);
+      const v =
+        phrase.match(/\b(python|r|julia|typescript|javascript|rust|go)\b/i)?.[1]?.toLowerCase() ??
+        phrase;
+      p.projectDefaults.defaultExperimentLanguage = scored(
+        v,
+        0.9,
+        now,
+        p.projectDefaults.defaultExperimentLanguage,
+      );
       p.codingStyle.preferredLanguages = scored(
-        mergeUnique(p.codingStyle.preferredLanguages?.value, v), 0.9, now, p.codingStyle.preferredLanguages,
+        mergeUnique(p.codingStyle.preferredLanguages?.value, v),
+        0.9,
+        now,
+        p.codingStyle.preferredLanguages,
       );
       break;
     }
     case 'preferred-model': {
       const v = phrase.match(/model\s+([\w.:\-]+)/)?.[1] ?? phrase;
       p.modelAndPerformance.preferredModels = scored(
-        mergeUnique(p.modelAndPerformance.preferredModels?.value, v), 0.9, now,
+        mergeUnique(p.modelAndPerformance.preferredModels?.value, v),
+        0.9,
+        now,
         p.modelAndPerformance.preferredModels,
       );
       // A newly preferred model is no longer rejected.
@@ -215,7 +278,9 @@ export function applyExplicit(profile: AdaptiveProfile, d: Detected, phrase: str
     case 'rejected-model': {
       const v = phrase.match(/model\s+([\w.:\-]+)/)?.[1] ?? phrase;
       p.modelAndPerformance.rejectedModels = scored(
-        mergeUnique(p.modelAndPerformance.rejectedModels?.value, v), 0.9, now,
+        mergeUnique(p.modelAndPerformance.rejectedModels?.value, v),
+        0.9,
+        now,
         p.modelAndPerformance.rejectedModels,
       );
       if (p.modelAndPerformance.preferredModels) {
@@ -225,16 +290,31 @@ export function applyExplicit(profile: AdaptiveProfile, d: Detected, phrase: str
       break;
     }
     case 'fast-small-models':
-      p.modelAndPerformance.prefersFastSmallModels = scored(true, 0.9, now, p.modelAndPerformance.prefersFastSmallModels);
+      p.modelAndPerformance.prefersFastSmallModels = scored(
+        true,
+        0.9,
+        now,
+        p.modelAndPerformance.prefersFastSmallModels,
+      );
       break;
     case 'bullets':
       p.interactionStyle.prefersBullets = scored(true, 0.9, now, p.interactionStyle.prefersBullets);
       break;
     case 'code-first':
-      p.interactionStyle.prefersCodeFirst = scored(true, 0.9, now, p.interactionStyle.prefersCodeFirst);
+      p.interactionStyle.prefersCodeFirst = scored(
+        true,
+        0.9,
+        now,
+        p.interactionStyle.prefersCodeFirst,
+      );
       break;
     case 'explain-first':
-      p.interactionStyle.prefersExplanationsBeforeEdits = scored(true, 0.9, now, p.interactionStyle.prefersExplanationsBeforeEdits);
+      p.interactionStyle.prefersExplanationsBeforeEdits = scored(
+        true,
+        0.9,
+        now,
+        p.interactionStyle.prefersExplanationsBeforeEdits,
+      );
       break;
     case 'tone': {
       const t = (phrase.match(/\b(direct|academic|technical|friendly)\b/)?.[1] ?? 'direct') as
@@ -303,17 +383,28 @@ function topByPrefix(counters: Record<string, number>, prefix: string, min = 3, 
  * a competing choice damps confidence and can overtake). Never touches explicit
  * (0.9) fields with weaker inferred values. Returns a new profile.
  */
-export function recordEvent(profile: AdaptiveProfile, e: PersonalizationEvent, now: string): AdaptiveProfile {
+export function recordEvent(
+  profile: AdaptiveProfile,
+  e: PersonalizationEvent,
+  now: string,
+): AdaptiveProfile {
   const p: AdaptiveProfile = structuredClone(profile);
   const c = p.counters;
   const md = e.metadata ?? {};
 
   const setInferredScored = <T>(
-    cur: ScoredValue<T> | undefined, value: T, conf: number,
+    cur: ScoredValue<T> | undefined,
+    value: T,
+    conf: number,
   ): ScoredValue<T> | undefined => {
     if (conf <= 0) return cur;
     if (cur && cur.confidence > conf) return cur; // don't weaken a stronger (e.g. explicit) value
-    return { value, confidence: conf, evidenceCount: (cur?.evidenceCount ?? 0) + 1, updatedAt: now };
+    return {
+      value,
+      confidence: conf,
+      evidenceCount: (cur?.evidenceCount ?? 0) + 1,
+      updatedAt: now,
+    };
   };
 
   switch (e.type) {
@@ -324,13 +415,25 @@ export function recordEvent(profile: AdaptiveProfile, e: PersonalizationEvent, n
         const freq = topByPrefix(c, 'cmd:');
         if (freq.length) {
           const top = c[`cmd:${freq[0]}`] ?? 0;
-          p.toolHabits.frequentCommands = setInferredScored(p.toolHabits.frequentCommands, freq, confFor(top));
+          p.toolHabits.frequentCommands = setInferredScored(
+            p.toolHabits.frequentCommands,
+            freq,
+            confFor(top),
+          );
         }
         if ((c['cmd:/research'] ?? 0) >= 3) {
-          p.toolHabits.oftenUsesResearch = setInferredScored(p.toolHabits.oftenUsesResearch, true, confFor(c['cmd:/research']!));
+          p.toolHabits.oftenUsesResearch = setInferredScored(
+            p.toolHabits.oftenUsesResearch,
+            true,
+            confFor(c['cmd:/research']!),
+          );
         }
         if ((c['cmd:/overleaf'] ?? 0) >= 3) {
-          p.toolHabits.oftenUsesOverleaf = setInferredScored(p.toolHabits.oftenUsesOverleaf, true, confFor(c['cmd:/overleaf']!));
+          p.toolHabits.oftenUsesOverleaf = setInferredScored(
+            p.toolHabits.oftenUsesOverleaf,
+            true,
+            confFor(c['cmd:/overleaf']!),
+          );
         }
       }
       break;
@@ -344,13 +447,18 @@ export function recordEvent(profile: AdaptiveProfile, e: PersonalizationEvent, n
         if (n >= 3 && !rejected.includes(id)) {
           p.modelAndPerformance.preferredModels = setInferredScored(
             p.modelAndPerformance.preferredModels,
-            mergeUnique(p.modelAndPerformance.preferredModels?.value, id), confFor(n),
+            mergeUnique(p.modelAndPerformance.preferredModels?.value, id),
+            confFor(n),
           );
         }
       }
       if (backend) {
         const n = bump(c, `backend:${backend}`);
-        p.modelAndPerformance.preferredBackend = setInferredScored(p.modelAndPerformance.preferredBackend, backend, confFor(n));
+        p.modelAndPerformance.preferredBackend = setInferredScored(
+          p.modelAndPerformance.preferredBackend,
+          backend,
+          confFor(n),
+        );
       }
       break;
     }
@@ -374,11 +482,19 @@ export function recordEvent(profile: AdaptiveProfile, e: PersonalizationEvent, n
       if (key === 'mode' && (value === 'auto' || value === 'permissions')) {
         const n = bump(c, `mode:${value}`);
         const other = value === 'auto' ? (c['mode:permissions'] ?? 0) : (c['mode:auto'] ?? 0);
-        p.toolHabits.preferredMode = setInferredScored(p.toolHabits.preferredMode, value, confFor(n, other));
+        p.toolHabits.preferredMode = setInferredScored(
+          p.toolHabits.preferredMode,
+          value,
+          confFor(n, other),
+        );
       }
       if (key === 'performanceMode' && value === 'cool') {
         const n = bump(c, 'perf:cool');
-        p.modelAndPerformance.prefersCoolMode = setInferredScored(p.modelAndPerformance.prefersCoolMode, true, confFor(n));
+        p.modelAndPerformance.prefersCoolMode = setInferredScored(
+          p.modelAndPerformance.prefersCoolMode,
+          true,
+          confFor(n),
+        );
       }
       break;
     }
@@ -390,7 +506,11 @@ export function recordEvent(profile: AdaptiveProfile, e: PersonalizationEvent, n
         // Templates recur less often; use a lower threshold (2+).
         if (n >= 2) {
           const conf = Math.min(0.8, 0.5 + 0.1 * (n - 2));
-          p.projectDefaults.defaultPaperTemplate = setInferredScored(p.projectDefaults.defaultPaperTemplate, t, conf);
+          p.projectDefaults.defaultPaperTemplate = setInferredScored(
+            p.projectDefaults.defaultPaperTemplate,
+            t,
+            conf,
+          );
         }
       }
       break;

@@ -1,11 +1,4 @@
-import {
-  mkdirSync,
-  writeFileSync,
-  readFileSync,
-  readdirSync,
-  existsSync,
-  rmSync,
-} from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from 'fs';
 import { join, isAbsolute, resolve } from 'path';
 import { homedir } from 'os';
 
@@ -13,13 +6,7 @@ import { homedir } from 'os';
 export const PROJECTS_DIR = join(homedir(), '.handoff', 'projects');
 
 /** Subdirectories scaffolded inside every research project. */
-export const WORKSPACE_SUBDIRS = [
-  'literature',
-  'experiments',
-  'runs',
-  'results',
-  'paper',
-] as const;
+export const WORKSPACE_SUBDIRS = ['literature', 'experiments', 'runs', 'results', 'paper'] as const;
 
 /** How the paper pillar writes: a paid Overleaf git bridge, or local LaTeX. */
 export type PaperMode = 'overleaf' | 'local';
@@ -50,10 +37,9 @@ export function projectDir(slug: string): string {
 }
 
 /** Absolute paths for a project's root, every subdir, and its metadata file. */
-export function projectPaths(slug: string): Record<
-  (typeof WORKSPACE_SUBDIRS)[number] | 'root' | 'meta',
-  string
-> {
+export function projectPaths(
+  slug: string,
+): Record<(typeof WORKSPACE_SUBDIRS)[number] | 'root' | 'meta', string> {
   const root = projectDir(slug);
   const out = { root, meta: join(root, META_FILE) } as Record<string, string>;
   for (const sub of WORKSPACE_SUBDIRS) out[sub] = join(root, sub);

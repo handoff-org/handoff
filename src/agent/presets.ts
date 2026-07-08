@@ -78,7 +78,10 @@ export const PRESET_LABELS: Record<InferencePreset, { label: string; hint: strin
   fast: { label: 'Fast', hint: 'lowest latency · 4K context, short output' },
   balanced: { label: 'Balanced', hint: 'the everyday laptop default' },
   deep: { label: 'Deep', hint: 'longer reasoning · bigger context/output · prefer plugged in' },
-  long_context: { label: 'Long context', hint: '≥32K context · costly prefill & heat · not on battery' },
+  long_context: {
+    label: 'Long context',
+    hint: '≥32K context · costly prefill & heat · not on battery',
+  },
   manual: { label: 'Manual', hint: "leave context/output/keep-alive exactly as you've set them" },
 };
 
@@ -100,7 +103,9 @@ export function applyPreset(preset: InferencePreset, hw: HardwareProfile): Prese
     );
   }
   if (onBattery && (preset === 'deep' || preset === 'long_context')) {
-    warnings.push('On battery: keep-alive shortened, and this preset is heavy — consider plugging in.');
+    warnings.push(
+      'On battery: keep-alive shortened, and this preset is heavy — consider plugging in.',
+    );
   }
 
   return {

@@ -61,8 +61,13 @@ test('Overleaf project with existing main .tex enforces single-document edit-in-
   const meta = createProject({ title: 'Solo Doc' });
   updateProject(meta.slug, { paperMode: 'overleaf' });
   const paper = projectPaths(meta.slug).paper;
-  writeFileSync(join(paper, 'main.tex'), '\\documentclass{article}\\begin{document}\\end{document}');
-  const sys = buildSystem('BASE', { ...meta, paperMode: 'overleaf' } as never, { promptProfile: 'strict_paper' });
+  writeFileSync(
+    join(paper, 'main.tex'),
+    '\\documentclass{article}\\begin{document}\\end{document}',
+  );
+  const sys = buildSystem('BASE', { ...meta, paperMode: 'overleaf' } as never, {
+    promptProfile: 'strict_paper',
+  });
   assert.match(sys, /ONE document/);
   assert.match(sys, /auto-syncs to Overleaf/);
 });
@@ -91,7 +96,10 @@ test('compact profile is materially shorter than strict_paper while keeping safe
   const meta = createProject({ title: 'Len Check' });
   const compact = buildSystem('BASE', meta, { promptProfile: 'compact' });
   const strict = buildSystem('BASE', meta, { promptProfile: 'strict_paper' });
-  assert.ok(compact.length < strict.length, `compact ${compact.length} should be < strict ${strict.length}`);
+  assert.ok(
+    compact.length < strict.length,
+    `compact ${compact.length} should be < strict ${strict.length}`,
+  );
   for (const must of [/write_file/, /ask_user/, /Untrusted content/, /priority order/i]) {
     assert.match(compact, must);
   }
@@ -101,8 +109,13 @@ test('prompt does not repeat the bibliography-style instruction excessively', ()
   const meta = createProject({ title: 'No Repeat' });
   updateProject(meta.slug, { paperMode: 'overleaf' });
   const paper = projectPaths(meta.slug).paper;
-  writeFileSync(join(paper, 'main.tex'), '\\documentclass{article}\\begin{document}\\end{document}');
-  const sys = buildSystem('BASE', { ...meta, paperMode: 'overleaf' } as never, { promptProfile: 'strict_paper' });
+  writeFileSync(
+    join(paper, 'main.tex'),
+    '\\documentclass{article}\\begin{document}\\end{document}',
+  );
+  const sys = buildSystem('BASE', { ...meta, paperMode: 'overleaf' } as never, {
+    promptProfile: 'strict_paper',
+  });
   const count = (sys.match(/bibliographystyle\{plainnat\}/g) ?? []).length;
   assert.ok(count <= 2, `bibliographystyle repeated ${count} times`);
 });
@@ -131,7 +144,8 @@ test('prompt advertises append mode only because write_file supports it', () => 
   const schema = reg.getSchemas().find((s) => s.function.name === 'write_file');
   const hasAppendParam = !!schema && 'append' in schema.function.parameters.properties;
   // If the prompt mentions append, the tool must support it.
-  if (mentionsAppend) assert.ok(hasAppendParam, 'prompt mentions append but write_file has no append param');
+  if (mentionsAppend)
+    assert.ok(hasAppendParam, 'prompt mentions append but write_file has no append param');
 });
 
 // ── model-family hints ────────────────────────────────────────────────────────

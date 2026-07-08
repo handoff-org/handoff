@@ -23,7 +23,10 @@ export function initPaper(meta: ProjectMeta, templateKey: string): InitPaperResu
   const p = projectPaths(meta.slug);
   const mainPath = join(p.paper, 'main.tex');
   if (existsSync(mainPath)) {
-    return { ok: false, message: 'paper/main.tex already exists — edit it directly with write_file.' };
+    return {
+      ok: false,
+      message: 'paper/main.tex already exists — edit it directly with write_file.',
+    };
   }
 
   const key = String(templateKey);

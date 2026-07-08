@@ -23,13 +23,7 @@ import { ALT_SCREEN_ON, ALT_SCREEN_OFF } from '../ui/terminalControl.js';
 
 const RESUME = process.argv.includes('--resume') || process.argv.includes('-r');
 
-function Root({
-  initialConfig,
-  autoResume,
-}: {
-  initialConfig: Config;
-  autoResume: boolean;
-}) {
+function Root({ initialConfig, autoResume }: { initialConfig: Config; autoResume: boolean }) {
   // When resuming we already know the config, so skip the setup wizard.
   const [config, setConfig] = useState<Config | null>(autoResume ? initialConfig : null);
 
@@ -98,7 +92,7 @@ function logFatal(label: string, err: unknown): void {
   try {
     const dir = join(homedir(), '.handoff', 'logs');
     mkdirSync(dir, { recursive: true });
-    const detail = err instanceof Error ? err.stack ?? err.message : String(err);
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err);
     appendFileSync(
       join(dir, 'handoff.log'),
       `${new Date().toISOString()} ${label}: ${redactSecrets(detail)}\n`,

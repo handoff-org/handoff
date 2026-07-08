@@ -1,7 +1,7 @@
 name: Bug report
 description: Something in handoff isn't working as expected.
-title: "[bug]: "
-labels: ["bug"]
+title: '[bug]: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:
@@ -80,7 +80,7 @@ body:
     attributes:
       label: handoff & Node versions
       description: Output of `handoff --version` (if available) and `node -v`.
-      placeholder: "handoff 0.1.0 · node v20.11.0"
+      placeholder: 'handoff 0.1.0 · node v20.11.0'
 
   - type: textarea
     id: logs

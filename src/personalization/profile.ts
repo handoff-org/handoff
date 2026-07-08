@@ -155,7 +155,11 @@ export function defaultProfile(now: string): AdaptiveProfile {
  * the original file first). Returns null when the input can't be salvaged.
  */
 export function migrate(raw: unknown, now: string): AdaptiveProfile | null {
-  if (raw && typeof raw === 'object' && (raw as { version?: unknown }).version === PROFILE_VERSION) {
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    (raw as { version?: unknown }).version === PROFILE_VERSION
+  ) {
     const parsed = AdaptiveProfileSchema.safeParse(raw);
     if (parsed.success) return parsed.data;
   }
@@ -235,7 +239,10 @@ export function formatProfileSummary(p: AdaptiveProfile): string {
   if (lines.length <= 2) {
     lines.push('(nothing learned yet — state a preference like "from now on, always use NeurIPS")');
   }
-  lines.push('', 'Manage: /profile disable · /profile forget <key> · /profile reset · /profile export');
+  lines.push(
+    '',
+    'Manage: /profile disable · /profile forget <key> · /profile reset · /profile export',
+  );
   return lines.join('\n');
 }
 

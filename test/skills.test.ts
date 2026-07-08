@@ -11,7 +11,9 @@ const { loadSkills, findSkill } = await import('../src/skills/store.js');
 const SKILLS_DIR = join(homedir(), '.handoff', 'skills');
 
 test('built-in folder skills load (skills/<name>/<name>.md)', () => {
-  const names = loadSkills().map((s) => s.name).sort();
+  const names = loadSkills()
+    .map((s) => s.name)
+    .sort();
   // The three built-in skills shipped in the repo's skills/ directory.
   assert.ok(names.includes('overleaf'), 'overleaf not loaded');
   assert.ok(names.includes('apple-notes'), 'apple-notes not loaded');
@@ -44,7 +46,10 @@ test('flat user skills still load, and override a built-in by slug', () => {
   );
 
   const skills = loadSkills();
-  assert.ok(skills.some((s) => s.name === 'my-flat'), 'flat user skill not loaded');
+  assert.ok(
+    skills.some((s) => s.name === 'my-flat'),
+    'flat user skill not loaded',
+  );
 
   const overleaf = findSkill('overleaf')!;
   assert.equal(overleaf.description, 'my override', 'user skill should override built-in by slug');

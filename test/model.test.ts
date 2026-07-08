@@ -96,8 +96,7 @@ test('returns nothing for plain prose', () => {
 });
 
 test('recovers a Llama-style <function=name><parameter=key>value</parameter></function>', () => {
-  const content =
-    '<function=start_paper>\n<parameter=template>\nacl\n</parameter>\n</function>';
+  const content = '<function=start_paper>\n<parameter=template>\nacl\n</parameter>\n</function>';
   const calls = parseInlineToolCalls(content);
   assert.equal(calls.length, 1);
   assert.equal(calls[0]!.function.name, 'start_paper');
@@ -154,7 +153,9 @@ test('still recovers a bare, JSON-only object', () => {
 
 test('cleanBackendError turns a tool-call parse 500 into an actionable line', () => {
   // The real payload is huge (the model's entire malformed .bib inline).
-  const payload = '@article{levine2020,\\n title={x}, author={Levine, S. and J\\\'erome}}'.repeat(20);
+  const payload = "@article{levine2020,\\n title={x}, author={Levine, S. and J\\'erome}}".repeat(
+    20,
+  );
   const raw =
     `error parsing tool call: raw='{"content":"${payload}"}', ` +
     "err=invalid character '\\'' in string escape code";
@@ -276,7 +277,9 @@ test('OllamaModel sends keep_alive and options to /api/chat', async (t) => {
     captured = { url, init };
     return fakeRes({ body: streamOf(['{"message":{"content":"x"},"done":true}\n']) });
   });
-  await collect(new OllamaModel({ ...CFG, ollamaNumCtx: 8192, ollamaKeepAlive: '30m', maxNewTokens: 256 }));
+  await collect(
+    new OllamaModel({ ...CFG, ollamaNumCtx: 8192, ollamaKeepAlive: '30m', maxNewTokens: 256 }),
+  );
   assert.match(captured.url, /\/api\/chat$/);
   const sent = JSON.parse(captured.init.body);
   assert.equal(sent.stream, true);
@@ -299,7 +302,9 @@ test('OllamaModel forwards a think:false override to /api/chat (retry path)', as
   });
   const model = new OllamaModel(CFG);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, { think: false })) {
+  for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, {
+    think: false,
+  })) {
     void _;
   }
   assert.equal(JSON.parse(captured.init.body).think, false);
@@ -329,9 +334,15 @@ test('OllamaModel strips a think block split across NDJSON chunks, emits reasoni
   t.mock.method(globalThis, 'fetch', async () => fakeRes({ body }));
   const parts = await collect(new OllamaModel(CFG));
   // No delta ever leaks the tags or the reasoning text.
-  const deltas = parts.filter((p) => p.type === 'delta').map((p) => p.text).join('');
+  const deltas = parts
+    .filter((p) => p.type === 'delta')
+    .map((p) => p.text)
+    .join('');
   assert.equal(deltas, 'Hello!');
-  assert.ok(parts.some((p) => p.type === 'reasoning'), 'should emit at least one reasoning part');
+  assert.ok(
+    parts.some((p) => p.type === 'reasoning'),
+    'should emit at least one reasoning part',
+  );
   const final = parts.at(-1);
   assert.equal(final.content, 'Hello!');
 });
@@ -346,9 +357,15 @@ test('OllamaModel keeps the native thinking field out of content and emits reaso
   ]);
   t.mock.method(globalThis, 'fetch', async () => fakeRes({ body }));
   const parts = await collect(new OllamaModel(CFG));
-  const deltas = parts.filter((p) => p.type === 'delta').map((p) => p.text).join('');
+  const deltas = parts
+    .filter((p) => p.type === 'delta')
+    .map((p) => p.text)
+    .join('');
   assert.equal(deltas, 'Hey! How can I help?');
-  assert.ok(parts.some((p) => p.type === 'reasoning'), 'thinking field should emit reasoning');
+  assert.ok(
+    parts.some((p) => p.type === 'reasoning'),
+    'thinking field should emit reasoning',
+  );
   const final = parts.at(-1);
   assert.equal(final.content, 'Hey! How can I help?');
   assert.ok(!final.content.includes('user said hi'));
@@ -441,7 +458,9 @@ test('OllamaModel replays tool-call arguments as an OBJECT, not a string (native
   ] as any;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for await (const _p of new OllamaModel(CFG).chatStream(history, undefined)) { void _p; }
+  for await (const _p of new OllamaModel(CFG).chatStream(history, undefined)) {
+    void _p;
+  }
 
   const sent = JSON.parse(captured.body);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -464,7 +483,8 @@ const VLLM_CFG = {
 async function collectModel(model: { chatStream: Function }): Promise<any[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parts: any[] = [];
-  for await (const p of model.chatStream([{ role: 'user', content: 'hi' }], undefined)) parts.push(p);
+  for await (const p of model.chatStream([{ role: 'user', content: 'hi' }], undefined))
+    parts.push(p);
   return parts;
 }
 
@@ -476,7 +496,10 @@ test('VLLMModel (OpenAI-compat SSE) streams deltas then a final', async (t) => {
   ]);
   t.mock.method(globalThis, 'fetch', async () => fakeRes({ body }));
   const parts = await collectModel(new VLLMModel(VLLM_CFG));
-  assert.deepEqual(parts.filter((p) => p.type === 'delta').map((p) => p.text), ['he', 'llo']);
+  assert.deepEqual(
+    parts.filter((p) => p.type === 'delta').map((p) => p.text),
+    ['he', 'llo'],
+  );
   assert.equal(parts.at(-1).content, 'hello');
 });
 

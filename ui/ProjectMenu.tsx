@@ -21,14 +21,7 @@ interface Props {
  * highlighted project after a confirmation. Always opens, even with no projects
  * yet, so creating one is discoverable.
  */
-export function ProjectMenu({
-  theme,
-  activeSlug,
-  onSwitch,
-  onCreate,
-  onDelete,
-  onCancel,
-}: Props) {
+export function ProjectMenu({ theme, activeSlug, onSwitch, onCreate, onDelete, onCancel }: Props) {
   const [projects, setProjects] = useState<ProjectMeta[]>(() => listProjects());
   const [view, setView] = useState<View>('list');
   const [index, setIndex] = useState(0);
@@ -118,8 +111,8 @@ export function ProjectMenu({
           Delete “{current?.slug}”?
         </Text>
         <Text dimColor>
-          This permanently removes the project folder and everything in it —
-          literature, experiments, runs, results, and the paper.
+          This permanently removes the project folder and everything in it — literature,
+          experiments, runs, results, and the paper.
         </Text>
         <Text>
           <Text color={theme.error}>[y]</Text> delete{'   '}
@@ -144,18 +137,22 @@ export function ProjectMenu({
                 {p.slug}
                 {p.slug === activeSlug ? '  (active)' : ''}
               </Text>
-              {p.description ? <Text dimColor>{'  '}{p.description}</Text> : null}
+              {p.description ? (
+                <Text dimColor>
+                  {'  '}
+                  {p.description}
+                </Text>
+              ) : null}
             </Box>
           );
         })}
         <Text color={onNewRow ? theme.user : undefined} dimColor={!onNewRow}>
-          {onNewRow ? '❯ ' : '  '}
-          ➕ New project…
+          {onNewRow ? '❯ ' : '  '}➕ New project…
         </Text>
       </Box>
       <Text dimColor>
-        {'\n'}↑/↓ navigate · Enter {onNewRow ? 'create' : 'open'} ·{' '}
-        {current ? 'd delete · ' : ''}Esc close
+        {'\n'}↑/↓ navigate · Enter {onNewRow ? 'create' : 'open'} · {current ? 'd delete · ' : ''}
+        Esc close
       </Text>
     </Box>
   );

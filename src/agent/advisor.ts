@@ -143,10 +143,7 @@ export function defaultContextForHardware(hw: HardwareProfile, mode: Performance
 
 // ── Quantization preference ─────────────────────────────────────────────────
 
-export function preferredQuant(
-  entry: HandoffModelEntry,
-  mode: PerformanceMode,
-): QuantId {
+export function preferredQuant(entry: HandoffModelEntry, mode: PerformanceMode): QuantId {
   const has = (id: QuantId) => entry.quantOptions.some((q) => q.id === id);
   if (entry.backend === 'hf' || entry.backend === 'vllm') return 'server_selected';
   if (entry.backend === 'mlx') return mode === 'max' && has('mlx_8bit') ? 'mlx_8bit' : 'mlx_4bit';
@@ -161,24 +158,42 @@ export function preferredQuant(
 
 // ── Scoring ─────────────────────────────────────────────────────────────────
 
-const MAC_TIER_RANK: Record<string, number> = { any: 0, apple_silicon: 1, pro: 2, max: 3, ultra: 4, server: 5 };
+const MAC_TIER_RANK: Record<string, number> = {
+  any: 0,
+  apple_silicon: 1,
+  pro: 2,
+  max: 3,
+  ultra: 4,
+  server: 5,
+};
 const HW_TIER_RANK: Record<string, number> = { base: 1, unknown: 1, pro: 2, max: 3, ultra: 4 };
 
-function benchmarkFor(input: AdvisorInput, entry: HandoffModelEntry, ctx: number): BenchmarkRecord | undefined {
+function benchmarkFor(
+  input: AdvisorInput,
+  entry: HandoffModelEntry,
+  ctx: number,
+): BenchmarkRecord | undefined {
   const fp = hwFp(input.hardware);
   return input.benchmarks?.find(
-    (b) => b.backend === entry.backend && b.modelId === entry.id && b.hardwareFingerprint === fp && Math.abs(b.contextTokens - ctx) <= 2048,
+    (b) =>
+      b.backend === entry.backend &&
+      b.modelId === entry.id &&
+      b.hardwareFingerprint === fp &&
+      Math.abs(b.contextTokens - ctx) <= 2048,
   );
 }
 
 // Local import to avoid a cycle at module top.
 function hwFp(hw: HardwareProfile): string {
-  return [hw.os, hw.arch, hw.chipName ?? 'cpu', `${hw.totalMemoryGb}gb`].join('|').replace(/\s+/g, '');
+  return [hw.os, hw.arch, hw.chipName ?? 'cpu', `${hw.totalMemoryGb}gb`]
+    .join('|')
+    .replace(/\s+/g, '');
 }
 
 export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): ScoredModel {
   const { hardware: hw, performanceMode: mode } = input;
-  const isLocal = entry.backend === 'ollama' || entry.backend === 'llama_cpp' || entry.backend === 'mlx';
+  const isLocal =
+    entry.backend === 'ollama' || entry.backend === 'llama_cpp' || entry.backend === 'mlx';
 
   let quantOpt =
     entry.quantOptions.find((q) => q.id === preferredQuant(entry, mode)) ?? entry.quantOptions[0]!;
@@ -210,7 +225,8 @@ export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): Score
   if (isLocal) {
     if (headroom >= budget * 0.25) fit = 30;
     else if (headroom >= 0) fit = 12;
-    else if (headroom >= -budget * 0.15) fit = -25; // borderline: likely spill
+    else if (headroom >= -budget * 0.15)
+      fit = -25; // borderline: likely spill
     else fit = -80; // will not fit / heavy spill
   } else {
     fit = 20; // remote: memory not the local constraint
@@ -263,12 +279,12 @@ export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): Score
   if (input.goalRole === 'coding_agent') role += (entry.codingScore - 3) * 4;
   if (input.goalRole === 'tool_use' || !input.goalRole) role += (entry.toolUseScore - 3) * 4;
   if (input.goalRole === 'research_writing') role += (entry.writingScore - 3) * 3;
-  if (input.goalRole === 'reasoning_verifier' || input.goalRole === 'reviewer') role += (entry.reasoningScore - 3) * 3;
+  if (input.goalRole === 'reasoning_verifier' || input.goalRole === 'reviewer')
+    role += (entry.reasoningScore - 3) * 3;
   breakdown['role'] = role;
 
   // maturity: recommended > advanced > experimental/server/cloud.
-  const maturity =
-    entry.maturity === 'recommended' ? 16 : entry.maturity === 'advanced' ? -4 : -30;
+  const maturity = entry.maturity === 'recommended' ? 16 : entry.maturity === 'advanced' ? -4 : -30;
   breakdown['maturity'] = maturity;
 
   // Mac-tier gating: model needs a higher chip class than we have → big penalty.
@@ -276,7 +292,10 @@ export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): Score
   let tierPenalty = 0;
   if (isLocal && hw.os === 'darwin' && entry.minimumMacTier) {
     const needRank = MAC_TIER_RANK[entry.minimumMacTier] ?? 0;
-    const haveRank = hw.perfTier === 'workstation' || hw.perfTier === 'server' ? 5 : (HW_TIER_RANK[hw.macTier] ?? 1);
+    const haveRank =
+      hw.perfTier === 'workstation' || hw.perfTier === 'server'
+        ? 5
+        : (HW_TIER_RANK[hw.macTier] ?? 1);
     if (needRank > haveRank + 1) tierPenalty = -40;
     else if (needRank > haveRank) tierPenalty = -14;
   }
@@ -287,7 +306,8 @@ export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): Score
   const rec = benchmarkFor(input, entry, ctx);
   if (rec) {
     const t = classifyThroughput(rec.tokensPerSec, rec.fullGpu);
-    bench += t === 'excellent' ? 28 : t === 'good' ? 16 : t === 'usable' ? 2 : t === 'slow' ? -30 : -70;
+    bench +=
+      t === 'excellent' ? 28 : t === 'good' ? 16 : t === 'usable' ? 2 : t === 'slow' ? -30 : -70;
     if (!rec.fullGpu) bench -= 40; // CPU spill observed
     if (!rec.toolCallOk) bench -= 20; // fast but can't tool-call → not a good default
   }
@@ -334,7 +354,8 @@ function eligible(input: AdvisorInput, entry: HandoffModelEntry): boolean {
   }
   // Server-only models are never a *default* local suggestion.
   if (entry.maturity === 'server_only' && input.performanceMode !== 'max') {
-    if (input.hardware.perfTier !== 'workstation' && input.hardware.perfTier !== 'server') return false;
+    if (input.hardware.perfTier !== 'workstation' && input.hardware.perfTier !== 'server')
+      return false;
   }
   return true;
 }
@@ -392,20 +413,31 @@ export function advise(input: AdvisorInput): Advice {
               ? `${cur.label} may run hot or spill to CPU on this Mac.`
               : `${cur.label} may be too large for this machine and spill to CPU.`;
         warnings.push(
-          `${lead} ` + (recommended ? `Try ${recommended.entry.label} ${labelQuant(recommended)} instead.` : ''),
+          `${lead} ` +
+            (recommended
+              ? `Try ${recommended.entry.label} ${labelQuant(recommended)} instead.`
+              : ''),
         );
       }
       const bench = input.benchmarks?.find(
         (b) => b.modelId === cur.id && b.hardwareFingerprint === hwFp(input.hardware),
       );
       if (bench && !bench.fullGpu) {
-        warnings.push('Ollama reports this model is not fully on GPU. Choose a smaller model or lower quantization.');
+        warnings.push(
+          'Ollama reports this model is not fully on GPU. Choose a smaller model or lower quantization.',
+        );
       }
     }
     if (isAmbiguousTag(input.currentModelId)) {
-      warnings.push('Use an explicit tag (e.g. ornith:9b or ornith:35b) so recommendations stay stable.');
+      warnings.push(
+        'Use an explicit tag (e.g. ornith:9b or ornith:35b) so recommendations stay stable.',
+      );
     }
-    if (input.currentContextTokens && recommended && input.currentContextTokens > recommended.contextTokens * 2) {
+    if (
+      input.currentContextTokens &&
+      recommended &&
+      input.currentContextTokens > recommended.contextTokens * 2
+    ) {
       warnings.push(
         `Your context window (${input.currentContextTokens}) is large and may force CPU offload. Try ${recommended.contextTokens}.`,
       );
@@ -417,13 +449,21 @@ export function advise(input: AdvisorInput): Advice {
       riskSentence(recommended, input.hardware)
     : 'No suitable model found for this backend and hardware.';
 
-  const confidence: Advice['confidence'] = input.benchmarks?.length ? 'high' : recommended ? 'medium' : 'low';
+  const confidence: Advice['confidence'] = input.benchmarks?.length
+    ? 'high'
+    : recommended
+      ? 'medium'
+      : 'low';
 
   return { recommended, alternatives, warnings, explanation, confidence };
 }
 
 function labelQuant(s: ScoredModel): string {
-  return s.quant === 'server_selected' ? 'server-selected' : s.quant === 'default' ? 'default tag' : s.quant;
+  return s.quant === 'server_selected'
+    ? 'server-selected'
+    : s.quant === 'default'
+      ? 'default tag'
+      : s.quant;
 }
 
 /** Hardware-appropriate noun for the recommendation sentence. */

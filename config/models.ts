@@ -73,7 +73,9 @@ function toModelEntry(e: HandoffModelEntry): ModelEntry {
     tier: tierForEntry(e),
     vramGb,
     hasQuant: false,
-    recommended: e.maturity === 'recommended' && (e.roles.includes('default') || e.roles.includes('fast_cool')),
+    recommended:
+      e.maturity === 'recommended' &&
+      (e.roles.includes('default') || e.roles.includes('fast_cool')),
     family: e.family,
     maturity: e.maturity,
     heatRisk: e.heatRisk,
@@ -123,9 +125,9 @@ export const BACKEND_OPTIONS: SelectOption<Backend>[] = [
 export const QUANT_OPTIONS: SelectOption<string>[] = [
   { label: 'q4_K_M', value: 'q4_K_M', hint: '~50% size · Cool/Fast — best for MacBooks' },
   { label: 'q5_K_M', value: 'q5_K_M', hint: '~62% size · Balanced quality / speed' },
-  { label: 'q8_0',   value: 'q8_0',   hint: '~83% size · Quality · needs more RAM' },
-  { label: 'fp16',   value: 'fp16',   hint: 'full size · Max/Hot · needs most RAM' },
-  { label: 'default', value: '',      hint: "Ollama's default build for this model" },
+  { label: 'q8_0', value: 'q8_0', hint: '~83% size · Quality · needs more RAM' },
+  { label: 'fp16', value: 'fp16', hint: 'full size · Max/Hot · needs most RAM' },
+  { label: 'default', value: '', hint: "Ollama's default build for this model" },
 ];
 
 /** Combine a base Ollama model tag with an optional quant suffix. */

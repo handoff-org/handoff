@@ -51,7 +51,14 @@ test('note renders as a borderless full-width block', () => {
 
 test('banner renders the masthead and getting-started panel', () => {
   const frame = frameFor(
-    bannerLines({ backend: 'ollama', modelId: 'qwen2.5', theme, width: 90, mode: 'auto', toolCount: 7 }),
+    bannerLines({
+      backend: 'ollama',
+      modelId: 'qwen2.5',
+      theme,
+      width: 90,
+      mode: 'auto',
+      toolCount: 7,
+    }),
   );
   assert.match(frame, /handoff v/);
   assert.match(frame, /Getting started/);

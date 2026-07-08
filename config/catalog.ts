@@ -38,10 +38,7 @@ export function catalogForBackend(backend: BackendId): HandoffModelEntry[] {
  */
 export function findCatalogEntry(backend: BackendId, id: string): HandoffModelEntry | undefined {
   const list = catalogForBackend(backend);
-  return (
-    list.find((e) => e.id === id) ??
-    list.find((e) => e.aliases?.includes(id))
-  );
+  return list.find((e) => e.id === id) ?? list.find((e) => e.aliases?.includes(id));
 }
 
 /**
@@ -71,7 +68,13 @@ export function resolveOllamaTag(entry: HandoffModelEntry, quant: QuantId): stri
 export function isValidCatalogEntry(e: unknown): e is HandoffModelEntry {
   if (!e || typeof e !== 'object') return false;
   const m = e as Record<string, unknown>;
-  const scores = ['toolUseScore', 'codingScore', 'reasoningScore', 'writingScore', 'speedScore'] as const;
+  const scores = [
+    'toolUseScore',
+    'codingScore',
+    'reasoningScore',
+    'writingScore',
+    'speedScore',
+  ] as const;
   return (
     typeof m['id'] === 'string' &&
     typeof m['backend'] === 'string' &&

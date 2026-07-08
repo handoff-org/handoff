@@ -9,14 +9,7 @@ import type { BackendId as Backend } from '../src/system/types.js';
 export type PrivacyLevel = 'local' | 'self_hosted' | 'cloud_opt_in';
 
 export type ModelFamily =
-  | 'qwen'
-  | 'gemma'
-  | 'deepseek'
-  | 'gpt_oss'
-  | 'glm'
-  | 'kimi'
-  | 'ornith'
-  | 'legacy';
+  'qwen' | 'gemma' | 'deepseek' | 'gpt_oss' | 'glm' | 'kimi' | 'ornith' | 'legacy';
 
 export type ModelRole =
   | 'default'
@@ -34,14 +27,7 @@ export type ModelRole =
   | 'experimental';
 
 export type QuantId =
-  | 'q4_K_M'
-  | 'q5_K_M'
-  | 'q8_0'
-  | 'fp16'
-  | 'default'
-  | 'mlx_4bit'
-  | 'mlx_8bit'
-  | 'server_selected';
+  'q4_K_M' | 'q5_K_M' | 'q8_0' | 'fp16' | 'default' | 'mlx_4bit' | 'mlx_8bit' | 'server_selected';
 
 export interface QuantOption {
   id: QuantId;
@@ -136,7 +122,7 @@ export const DEFAULT_QUANT: QuantOption = {
   speed: 'medium',
   heat: 'warm',
   estimatedBytesPerParam: 0.6,
-  notes: "Ollama picks the tag; usually a Q4 build.",
+  notes: 'Ollama picks the tag; usually a Q4 build.',
 };
 export const MLX4: QuantOption = {
   id: 'mlx_4bit',

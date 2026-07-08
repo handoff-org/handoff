@@ -63,7 +63,6 @@ export interface StoredConfig {
   routerNotes?: 'off' | 'changes' | 'always';
 }
 
-
 export async function readStore(): Promise<StoredConfig> {
   try {
     const content = await readFile(CONFIG_FILE, 'utf-8');

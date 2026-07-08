@@ -54,7 +54,10 @@ export function registerResearchTools(registry: ToolRegistry): void {
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Search terms or a research question' },
-        year_from: { type: 'string', description: 'Only papers published from this year onward (optional)' },
+        year_from: {
+          type: 'string',
+          description: 'Only papers published from this year onward (optional)',
+        },
         sort: {
           type: 'string',
           enum: ['relevance', 'date'],
@@ -111,7 +114,8 @@ export function registerResearchTools(registry: ToolRegistry): void {
         sort: sort === 'relevance' ? 'relevance' : 'submittedDate',
         limit: limit ? Number(limit) : 8,
       });
-      if (papers.length === 0) return 'No arXiv preprints found. Try broader terms or a category (e.g. cat:cs.LG).';
+      if (papers.length === 0)
+        return 'No arXiv preprints found. Try broader terms or a category (e.g. cat:cs.LG).';
       return papers.map(formatArxivResult).join('\n\n');
     },
   });
@@ -156,7 +160,8 @@ export function registerResearchTools(registry: ToolRegistry): void {
       properties: {
         id: {
           type: 'string',
-          description: 'arXiv paper ID or URL, e.g. "2301.07041" or "https://arxiv.org/abs/2301.07041"',
+          description:
+            'arXiv paper ID or URL, e.g. "2301.07041" or "https://arxiv.org/abs/2301.07041"',
         },
       },
       required: ['id'],

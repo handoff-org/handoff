@@ -36,4 +36,3 @@ export function renderInline(text: string, theme: Theme): React.ReactNode[] {
   if (last < text.length) parts.push(<Text key={k++}>{text.slice(last)}</Text>);
   return parts.length ? parts : [<Text key={0}> </Text>];
 }
-

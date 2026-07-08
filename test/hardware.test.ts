@@ -14,16 +14,44 @@ import {
 } from '../src/system/hardware.js';
 
 test('parseAppleChip reads M1/M2 Pro/M3 Max/M4', () => {
-  assert.deepEqual(parseAppleChip('Apple M1'), { chipName: 'Apple M1', tier: 'base', generation: 'M1' });
-  assert.deepEqual(parseAppleChip('Apple M2 Pro'), { chipName: 'Apple M2 Pro', tier: 'pro', generation: 'M2' });
-  assert.deepEqual(parseAppleChip('Apple M3 Max'), { chipName: 'Apple M3 Max', tier: 'max', generation: 'M3' });
-  assert.deepEqual(parseAppleChip('Apple M4'), { chipName: 'Apple M4', tier: 'base', generation: 'M4' });
-  assert.deepEqual(parseAppleChip('Apple M2 Ultra'), { chipName: 'Apple M2 Ultra', tier: 'ultra', generation: 'M2' });
+  assert.deepEqual(parseAppleChip('Apple M1'), {
+    chipName: 'Apple M1',
+    tier: 'base',
+    generation: 'M1',
+  });
+  assert.deepEqual(parseAppleChip('Apple M2 Pro'), {
+    chipName: 'Apple M2 Pro',
+    tier: 'pro',
+    generation: 'M2',
+  });
+  assert.deepEqual(parseAppleChip('Apple M3 Max'), {
+    chipName: 'Apple M3 Max',
+    tier: 'max',
+    generation: 'M3',
+  });
+  assert.deepEqual(parseAppleChip('Apple M4'), {
+    chipName: 'Apple M4',
+    tier: 'base',
+    generation: 'M4',
+  });
+  assert.deepEqual(parseAppleChip('Apple M2 Ultra'), {
+    chipName: 'Apple M2 Ultra',
+    tier: 'ultra',
+    generation: 'M2',
+  });
 });
 
 test('parseAppleChip degrades gracefully on unknown', () => {
-  assert.deepEqual(parseAppleChip('Intel(R) Core(TM) i7'), { chipName: null, tier: 'unknown', generation: 'unknown' });
-  assert.deepEqual(parseAppleChip(null), { chipName: null, tier: 'unknown', generation: 'unknown' });
+  assert.deepEqual(parseAppleChip('Intel(R) Core(TM) i7'), {
+    chipName: null,
+    tier: 'unknown',
+    generation: 'unknown',
+  });
+  assert.deepEqual(parseAppleChip(null), {
+    chipName: null,
+    tier: 'unknown',
+    generation: 'unknown',
+  });
 });
 
 const M2_PRO_MBP = `Hardware:
@@ -103,7 +131,12 @@ test('parseHardwareProfilerText: unknown machine degrades', () => {
 
 test('parsePmsetBatt', () => {
   assert.equal(parsePmsetBatt("Now drawing from 'AC Power'"), 'plugged');
-  assert.equal(parsePmsetBatt("Now drawing from 'Battery Power'\n -InternalBattery-0 (id=...)  82%; discharging"), 'battery');
+  assert.equal(
+    parsePmsetBatt(
+      "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=...)  82%; discharging",
+    ),
+    'battery',
+  );
   assert.equal(parsePmsetBatt(null), 'unknown');
   assert.equal(parsePmsetBatt('garbage'), 'unknown');
 });
@@ -114,23 +147,70 @@ test('parseGpuCores', () => {
 });
 
 test('computePerfTier: 16 GB MacBook is cool, 8 GB is tiny', () => {
-  assert.equal(computePerfTier({ os: 'darwin', appleSilicon: true, totalMemoryGb: 16, macTier: 'base', isMacBook: true }), 'cool');
-  assert.equal(computePerfTier({ os: 'darwin', appleSilicon: true, totalMemoryGb: 8, macTier: 'base', isMacBook: true }), 'tiny');
+  assert.equal(
+    computePerfTier({
+      os: 'darwin',
+      appleSilicon: true,
+      totalMemoryGb: 16,
+      macTier: 'base',
+      isMacBook: true,
+    }),
+    'cool',
+  );
+  assert.equal(
+    computePerfTier({
+      os: 'darwin',
+      appleSilicon: true,
+      totalMemoryGb: 8,
+      macTier: 'base',
+      isMacBook: true,
+    }),
+    'tiny',
+  );
 });
 
 test('computePerfTier: 64 GB MacBook stays high_end, not workstation', () => {
-  assert.equal(computePerfTier({ os: 'darwin', appleSilicon: true, totalMemoryGb: 64, macTier: 'max', isMacBook: true }), 'high_end');
+  assert.equal(
+    computePerfTier({
+      os: 'darwin',
+      appleSilicon: true,
+      totalMemoryGb: 64,
+      macTier: 'max',
+      isMacBook: true,
+    }),
+    'high_end',
+  );
 });
 
 test('computePerfTier: Ultra desktop is workstation', () => {
-  assert.equal(computePerfTier({ os: 'darwin', appleSilicon: true, totalMemoryGb: 128, macTier: 'ultra', isMacBook: false }), 'workstation');
+  assert.equal(
+    computePerfTier({
+      os: 'darwin',
+      appleSilicon: true,
+      totalMemoryGb: 128,
+      macTier: 'ultra',
+      isMacBook: false,
+    }),
+    'workstation',
+  );
 });
 
 test('describeHardware produces a readable one-liner', () => {
   const s = describeHardware({
-    os: 'darwin', arch: 'arm64', appleSilicon: true, totalMemoryGb: 16,
-    chipName: 'Apple M2 Pro', macTier: 'pro', macGeneration: 'M2', isMacBook: true, power: 'battery', gpuCores: 16,
-    gpuVendor: 'apple', vramGb: null, gpuName: 'Apple M2 Pro', perfTier: 'cool',
+    os: 'darwin',
+    arch: 'arm64',
+    appleSilicon: true,
+    totalMemoryGb: 16,
+    chipName: 'Apple M2 Pro',
+    macTier: 'pro',
+    macGeneration: 'M2',
+    isMacBook: true,
+    power: 'battery',
+    gpuCores: 16,
+    gpuVendor: 'apple',
+    vramGb: null,
+    gpuName: 'Apple M2 Pro',
+    perfTier: 'cool',
   });
   assert.match(s, /Apple M2 Pro MacBook, 16 GB, on battery/);
 });
@@ -147,9 +227,15 @@ test('detectHardware never throws and returns a valid shape', () => {
 
 test('parseNvidiaSmi reads memory + name, picking the largest GPU', () => {
   // nounits form (memory.total is MiB by default)
-  assert.deepEqual(parseNvidiaSmi('12227, NVIDIA GeForce RTX 5070'), { vramGb: 12, name: 'NVIDIA GeForce RTX 5070' });
+  assert.deepEqual(parseNvidiaSmi('12227, NVIDIA GeForce RTX 5070'), {
+    vramGb: 12,
+    name: 'NVIDIA GeForce RTX 5070',
+  });
   // with unit
-  assert.deepEqual(parseNvidiaSmi('24564 MiB, NVIDIA GeForce RTX 4090'), { vramGb: 24, name: 'NVIDIA GeForce RTX 4090' });
+  assert.deepEqual(parseNvidiaSmi('24564 MiB, NVIDIA GeForce RTX 4090'), {
+    vramGb: 24,
+    name: 'NVIDIA GeForce RTX 4090',
+  });
   // multiple GPUs → largest wins
   const multi = '8188 MiB, NVIDIA A2000\n24564 MiB, NVIDIA RTX 4090';
   assert.deepEqual(parseNvidiaSmi(multi), { vramGb: 24, name: 'NVIDIA RTX 4090' });
@@ -171,37 +257,88 @@ test('parseAmdVramBytes takes the largest card and ignores iGPU-sized noise', ()
 test('computePerfTier: discrete GPU is tiered by VRAM, not system RAM', () => {
   // 12 GB card on a 64 GB box → high_end (not "server" off the 64 GB RAM)
   assert.equal(
-    computePerfTier({ os: 'linux', appleSilicon: false, totalMemoryGb: 64, macTier: 'unknown', isMacBook: null, gpuVendor: 'nvidia', vramGb: 12 }),
+    computePerfTier({
+      os: 'linux',
+      appleSilicon: false,
+      totalMemoryGb: 64,
+      macTier: 'unknown',
+      isMacBook: null,
+      gpuVendor: 'nvidia',
+      vramGb: 12,
+    }),
     'high_end',
   );
   // 24 GB card → workstation
   assert.equal(
-    computePerfTier({ os: 'linux', appleSilicon: false, totalMemoryGb: 32, macTier: 'unknown', isMacBook: null, gpuVendor: 'nvidia', vramGb: 24 }),
+    computePerfTier({
+      os: 'linux',
+      appleSilicon: false,
+      totalMemoryGb: 32,
+      macTier: 'unknown',
+      isMacBook: null,
+      gpuVendor: 'nvidia',
+      vramGb: 24,
+    }),
     'workstation',
   );
   // 8 GB card → capable
   assert.equal(
-    computePerfTier({ os: 'linux', appleSilicon: false, totalMemoryGb: 32, macTier: 'unknown', isMacBook: null, gpuVendor: 'nvidia', vramGb: 8 }),
+    computePerfTier({
+      os: 'linux',
+      appleSilicon: false,
+      totalMemoryGb: 32,
+      macTier: 'unknown',
+      isMacBook: null,
+      gpuVendor: 'nvidia',
+      vramGb: 8,
+    }),
     'capable',
   );
 });
 
 test('computePerfTier: no discrete GPU falls back to RAM buckets', () => {
   assert.equal(
-    computePerfTier({ os: 'linux', appleSilicon: false, totalMemoryGb: 64, macTier: 'unknown', isMacBook: null, gpuVendor: 'none', vramGb: null }),
+    computePerfTier({
+      os: 'linux',
+      appleSilicon: false,
+      totalMemoryGb: 64,
+      macTier: 'unknown',
+      isMacBook: null,
+      gpuVendor: 'none',
+      vramGb: null,
+    }),
     'server',
   );
   assert.equal(
-    computePerfTier({ os: 'linux', appleSilicon: false, totalMemoryGb: 16, macTier: 'unknown', isMacBook: null, gpuVendor: 'none', vramGb: null }),
+    computePerfTier({
+      os: 'linux',
+      appleSilicon: false,
+      totalMemoryGb: 16,
+      macTier: 'unknown',
+      isMacBook: null,
+      gpuVendor: 'none',
+      vramGb: null,
+    }),
     'balanced',
   );
 });
 
 test('describeHardware names the GPU + VRAM on a non-Mac', () => {
   const s = describeHardware({
-    os: 'linux', arch: 'x64', appleSilicon: false, totalMemoryGb: 61,
-    chipName: null, macTier: 'unknown', macGeneration: 'unknown', isMacBook: null, power: 'unknown',
-    gpuCores: null, gpuVendor: 'nvidia', vramGb: 12, gpuName: 'NVIDIA GeForce RTX 5070', perfTier: 'high_end',
+    os: 'linux',
+    arch: 'x64',
+    appleSilicon: false,
+    totalMemoryGb: 61,
+    chipName: null,
+    macTier: 'unknown',
+    macGeneration: 'unknown',
+    isMacBook: null,
+    power: 'unknown',
+    gpuCores: null,
+    gpuVendor: 'nvidia',
+    vramGb: 12,
+    gpuName: 'NVIDIA GeForce RTX 5070',
+    perfTier: 'high_end',
   });
   assert.match(s, /Linux x64, 61 GB RAM, NVIDIA GeForce RTX 5070 \(12 GB VRAM\)/);
 });

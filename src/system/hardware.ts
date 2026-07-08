@@ -81,11 +81,22 @@ export function parseAppleChip(brand: string | null): {
 } {
   if (!brand) return { chipName: null, tier: 'unknown', generation: 'unknown' };
   const m = brand.match(/Apple\s+(M[1-5])(?:\s+(Pro|Max|Ultra))?/i);
-  if (!m) return { chipName: brand.includes('Apple') ? brand : null, tier: 'unknown', generation: 'unknown' };
+  if (!m)
+    return {
+      chipName: brand.includes('Apple') ? brand : null,
+      tier: 'unknown',
+      generation: 'unknown',
+    };
   const gen = (m[1]!.toUpperCase() as MacGeneration) ?? 'unknown';
   const tierWord = m[2]?.toLowerCase();
   const tier: MacTier =
-    tierWord === 'pro' ? 'pro' : tierWord === 'max' ? 'max' : tierWord === 'ultra' ? 'ultra' : 'base';
+    tierWord === 'pro'
+      ? 'pro'
+      : tierWord === 'max'
+        ? 'max'
+        : tierWord === 'ultra'
+          ? 'ultra'
+          : 'base';
   const chipName = `Apple ${m[1]}${m[2] ? ' ' + m[2] : ''}`;
   return { chipName, tier, generation: gen };
 }
@@ -110,7 +121,8 @@ export function parseHardwareProfilerText(text: string): {
   let isMacBook: boolean | null = null;
   const modelHay = `${modelLine ?? ''} ${modelId ?? ''}`;
   if (/MacBook/i.test(modelHay)) isMacBook = true;
-  else if (/(iMac|Mac\s?Studio|Mac\s?Pro|Mac\s?mini|Macmini|MacPro|iMacPro)/i.test(modelHay)) isMacBook = false;
+  else if (/(iMac|Mac\s?Studio|Mac\s?Pro|Mac\s?mini|Macmini|MacPro|iMacPro)/i.test(modelHay))
+    isMacBook = false;
 
   const memMatch = text.match(/^\s*Memory:\s*(\d+)\s*GB/im);
   const memoryGb = memMatch ? Number(memMatch[1]) : null;
@@ -230,7 +242,9 @@ let cached: HardwareProfile | null = null;
 export function detectHardware(force = false): HardwareProfile {
   if (cached && !force) return cached;
 
-  const os = (['darwin', 'linux', 'win32'].includes(platform()) ? platform() : 'other') as HardwareProfile['os'];
+  const os = (
+    ['darwin', 'linux', 'win32'].includes(platform()) ? platform() : 'other'
+  ) as HardwareProfile['os'];
   const architecture = arch();
   const appleSilicon = os === 'darwin' && architecture === 'arm64';
 
@@ -273,7 +287,8 @@ export function detectHardware(force = false): HardwareProfile {
 
     // If system_profiler didn't resolve MacBook vs desktop, guess from power:
     // a battery means a laptop.
-    if (isMacBook === null && power !== 'unknown') isMacBook = power === 'battery' || power === 'plugged' ? true : null;
+    if (isMacBook === null && power !== 'unknown')
+      isMacBook = power === 'battery' || power === 'plugged' ? true : null;
   }
 
   // GPU / VRAM. Apple Silicon shares memory with the CPU, so the RAM budget
@@ -294,7 +309,10 @@ export function detectHardware(force = false): HardwareProfile {
       gpuName = smi.name;
     } else if (os === 'linux') {
       // AMD discrete GPUs (ROCm) expose total VRAM in sysfs, in bytes.
-      const raw = safeExec('sh', ['-c', 'cat /sys/class/drm/card*/device/mem_info_vram_total 2>/dev/null']);
+      const raw = safeExec('sh', [
+        '-c',
+        'cat /sys/class/drm/card*/device/mem_info_vram_total 2>/dev/null',
+      ]);
       const amd = parseAmdVramBytes(raw ? raw.split('\n') : []);
       // Integrated GPUs carve out <2 GB; only count a real discrete card.
       if (amd != null && amd >= 2) {
@@ -310,7 +328,15 @@ export function detectHardware(force = false): HardwareProfile {
     }
   }
 
-  const perfTier = computePerfTier({ os, appleSilicon, totalMemoryGb, macTier, isMacBook, gpuVendor, vramGb });
+  const perfTier = computePerfTier({
+    os,
+    appleSilicon,
+    totalMemoryGb,
+    macTier,
+    isMacBook,
+    gpuVendor,
+    vramGb,
+  });
 
   cached = {
     os,
@@ -353,7 +379,8 @@ export function describeHardware(p: HardwareProfile): string {
   }
   const chip = p.chipName ?? (p.appleSilicon ? 'Apple Silicon' : 'Intel Mac');
   const form = p.isMacBook === true ? 'MacBook' : p.isMacBook === false ? 'desktop Mac' : 'Mac';
-  const power = p.power === 'battery' ? ', on battery' : p.power === 'plugged' ? ', plugged in' : '';
+  const power =
+    p.power === 'battery' ? ', on battery' : p.power === 'plugged' ? ', plugged in' : '';
   return `${chip} ${form}, ${p.totalMemoryGb} GB${power}`;
 }
 
