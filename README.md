@@ -1,8 +1,4 @@
-# handoff
-
-**Own your research.** A local-first research companion that lives in your terminal —
-reads the literature, runs your experiments, and helps write your paper, powered by
-models on *your* machine. Nothing leaves your computer unless you say so.
+**Own your research.** A local-first research companion that lives in your terminal reads the literature, runs your experiments, and helps write your paper, powered by models on *your* machine. Nothing leaves your computer unless you say so.
 
 | | |
 |---|---|
@@ -26,8 +22,6 @@ irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/inst
 # Any OS — CLI only (model backends not included)
 npm install -g ownhandoff
 ```
-
-Package: **`ownhandoff`** · Command: **`handoff`**
 
 ---
 

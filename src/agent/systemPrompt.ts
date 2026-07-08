@@ -46,13 +46,25 @@ function priorityGuidance(): string {
 function toolUseGuidance(): string {
   return (
     'Tools:\n' +
-    '- To find things, use search_files (regex over file contents) and find_files (glob over paths) instead of reading whole files or repeated list_dir — they are far cheaper.\n' +
+    '- To search academic papers or literature: use search_arxiv (freshest preprints, best for "latest on X") or search_papers (broad peer-reviewed literature). NEVER use search_files for this — search_files is only for regex over LOCAL project files.\n' +
+    '- To find things in local project files: use search_files (regex over file contents) and find_files (glob over paths) instead of reading whole files or repeated list_dir — they are far cheaper.\n' +
     '- For a file change, your first output is the tool call — no "I will now…"/"Let me…" preamble.\n' +
     '- Changing PART of an existing file? Use edit_file (exact old_string→new_string). Use write_file only to create a file or replace it wholesale.\n' +
     '- Editing an existing file whose contents you do not know? read_file first (read-before-edit).\n' +
     '- Append to a file (e.g. NOTEBOOK.md) with write_file and append="true"; otherwise it overwrites.\n' +
     '- Never paste file contents, code blocks, or before/after previews into chat — the user sees a compact diff automatically.\n' +
     '- After a successful write, reply with ONE short sentence on what changed.'
+  );
+}
+
+function researchToolGuidance(): string {
+  return (
+    'Literature search tools (use these when the user asks to find, search for, or look up papers):\n' +
+    '- search_arxiv(query) — newest preprints on arXiv; best for "latest results on X", "what came out recently on Y". Sort by submittedDate (default) for recency.\n' +
+    '- search_papers(query) — broader scholarly literature via OpenAlex; good for established work and citation counts. Use sort="date" for recent papers.\n' +
+    '- get_paper(id) — full abstract for a result from search_papers.\n' +
+    '- fetch_arxiv(id) — full metadata and source links for an arXiv paper.\n' +
+    'Workflow: call search_arxiv or search_papers first, read the snippets, then use get_paper/fetch_arxiv only if the user needs the full abstract.'
   );
 }
 
@@ -259,9 +271,11 @@ export function buildSystem(systemPrompt: string, meta: ProjectMeta | null, opts
     // Minimal: only add the template rule when a paper is plausibly in play.
     if (effectiveMeta) sections.push(paperTemplateGuidance(templateLabels));
   } else if (profile === 'standard') {
+    sections.push(researchToolGuidance());
     if (effectiveMeta) sections.push(paperTemplateGuidance(templateLabels));
   } else if (profile === 'strict_paper') {
     sections.push(
+      researchToolGuidance(),
       paperTemplateGuidance(templateLabels),
       paperCitationChecklist()
     );
