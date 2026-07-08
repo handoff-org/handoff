@@ -1137,6 +1137,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       const turnStart = Date.now();
       let ttftMs: number | undefined;
       let outChars = 0;
+      let hadReasoning = false;
 
       for await (const event of runAgentLoop(modelInput, turnHistory, model, registry, {
         signal: controller.signal,
@@ -1151,6 +1152,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           setReasoning(false);
           setScrollOffset(0);
         } else if (event.type === 'reasoning') {
+          hadReasoning = true;
           setReasoning(true);
         } else if (event.type === 'message_delta') {
           if (ttftMs === undefined) ttftMs = Date.now() - turnStart;
@@ -1247,6 +1249,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
             outputTokens: Math.ceil(outChars / 4),
             budget: budgetTokens,
             cpuSpill,
+            hadReasoning,
           });
           if (a.slow && a.message && a.message !== lastPerfNoteRef.current) {
             lastPerfNoteRef.current = a.message;

@@ -66,7 +66,7 @@ function settingsOptions(
   perfMode: string,
   preset: string,
   personalizationOn: boolean,
-): Array<{ label: string; value: SettingsValue; hint: string }> {
+): Array<{ label: string; value: SettingsValue; hint: string; separator?: boolean }> {
   return [
     {
       label: `Inference preset  (currently ${preset})`,
@@ -78,12 +78,16 @@ function settingsOptions(
       value: 'personalization',
       hint: 'local, editable profile of your preferences — nothing leaves this machine',
     },
+
+    { label: 'Appearance', value: 'theme', hint: '', separator: true },
     { label: 'Change theme', value: 'theme', hint: 'pick a color scheme for the terminal' },
     {
       label: `Toggle mascot  (currently ${mascotOn ? 'on' : 'off'})`,
       value: 'mascot',
       hint: 'animated banner character',
     },
+
+    { label: 'Performance', value: 'performance_mode', hint: '', separator: true },
     {
       label: `Performance mode  (currently ${perfMode})`,
       value: 'performance_mode',

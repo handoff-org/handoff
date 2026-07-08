@@ -6,6 +6,8 @@ export interface SelectOption<T> {
   label: string;
   value: T;
   hint?: string;
+  /** When true, renders as a non-selectable section heading; value is ignored. */
+  separator?: boolean;
 }
 
 interface Props<T> {
@@ -23,42 +25,75 @@ interface Props<T> {
  * background color.)
  */
 export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T>) {
-  const [index, setIndex] = useState(0);
+  const selectables = options.map((o, i) => (o.separator ? -1 : i)).filter((i) => i >= 0);
+  const [index, setIndex] = useState(selectables[0] ?? 0);
+
+  const move = (dir: 1 | -1) => {
+    setIndex((cur) => {
+      const pos = selectables.indexOf(cur);
+      const next = selectables[(pos + dir + selectables.length) % selectables.length];
+      return next ?? cur;
+    });
+  };
 
   useInput((_input, key) => {
     if (key.escape && onCancel) {
       onCancel();
     } else if (key.upArrow) {
-      setIndex((i) => (i - 1 + options.length) % options.length);
+      move(-1);
     } else if (key.downArrow) {
-      setIndex((i) => (i + 1) % options.length);
+      move(1);
     } else if (key.return) {
       const opt = options[index];
-      if (opt) onSelect(opt.value);
+      if (opt && !opt.separator) onSelect(opt.value);
     }
   });
 
   const accent = theme?.user ?? 'green';
   const heading = theme?.assistant ?? 'cyan';
-
-  const blank = (key: string) => <Text key={key}> </Text>;
+  const section = theme?.border ?? 'cyan';
 
   const rows: React.ReactNode[] = [
-    blank('top'),
+    <Text key="top"> </Text>,
     <Text key="title" bold color={heading}>
       {'  '}
       {title}
     </Text>,
-    blank('gap'),
+    <Text key="title-rule" color={heading} dimColor>
+      {'  '}{'─'.repeat(title.length)}
+    </Text>,
+    <Text key="gap"> </Text>,
   ];
 
   options.forEach((opt, i) => {
+    if (opt.separator) {
+      // Section headings get a blank line above (unless very first), an accent
+      // colored label, and a subtle rule — no dashes in the data.
+      if (i > 0) rows.push(<Text key={`sep-pre-${i}`}> </Text>);
+      rows.push(
+        <Text key={`sep-${i}`} color={section} bold>
+          {'  '}
+          {opt.label.toUpperCase()}
+        </Text>,
+      );
+      rows.push(
+        <Text key={`sep-rule-${i}`} color={section} dimColor>
+          {'  '}{'─'.repeat(opt.label.length)}
+        </Text>,
+      );
+      rows.push(<Text key={`sep-post-${i}`}> </Text>);
+      return;
+    }
+
     const active = i === index;
-    const marker = active ? '  ❯ ' : '    ';
     rows.push(
-      <Text key={`opt-${i}`} color={active ? accent : undefined} bold={active} dimColor={!active}>
-        {marker}
-        {opt.label}
+      <Text key={`opt-${i}`}>
+        <Text color={active ? accent : undefined} bold={active}>
+          {active ? '  ❯ ' : '    '}
+        </Text>
+        <Text color={active ? accent : undefined} bold={active} dimColor={!active}>
+          {opt.label}
+        </Text>
       </Text>,
     );
     if (opt.hint) {
@@ -69,14 +104,15 @@ export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T
         </Text>,
       );
     }
-    rows.push(blank(`optgap-${i}`));
+    rows.push(<Text key={`gap-${i}`}> </Text>);
   });
 
   rows.push(
     <Text key="footer" dimColor>
-      {`  ↑/↓ navigate · Enter select${onCancel ? ' · Esc cancel' : ''}`}
+      {'  ↑↓ move  ·  ↵ select'}
+      {onCancel ? '  ·  esc cancel' : ''}
     </Text>,
-    blank('bottom'),
+    <Text key="bottom"> </Text>,
   );
 
   return <Box flexDirection="column">{rows}</Box>;
