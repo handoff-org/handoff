@@ -60,9 +60,12 @@ export function approxTokens(text: string): number {
   return Math.max(1, Math.round(text.length / 4));
 }
 
-const GREETING_PROMPT: Message[] = [
-  { role: 'system', content: 'You are concise. Reply in one short sentence.' },
-  { role: 'user', content: 'Say hello in exactly one short sentence.' },
+// Enough output tokens (~60-80) to get a reliable generation-speed reading.
+// A single sentence produces 3-5 tokens and TTFT dominates, giving a misleadingly
+// low tok/s on fast hardware. List prompts reliably produce 60-80 tokens.
+const THROUGHPUT_PROMPT: Message[] = [
+  { role: 'system', content: 'You are helpful and concise.' },
+  { role: 'user', content: 'List 5 programming languages and write one sentence about each.' },
 ];
 
 // A harmless synthetic tool so the tool-call test never touches project data.
@@ -106,7 +109,9 @@ export async function benchmarkModel(opts: {
   // the caller injects `now`, and we use a monotonic-ish delta via performance.
   const t0 = performanceNow();
   try {
-    for await (const part of opts.model.chatStream(GREETING_PROMPT, undefined)) {
+    // Disable thinking so the throughput number reflects raw generation speed.
+    // Reasoning models (Qwen3, DeepSeek-R1) would otherwise report near-zero tok/s.
+    for await (const part of opts.model.chatStream(THROUGHPUT_PROMPT, undefined, undefined, { think: false })) {
       if (part.type === 'delta') {
         if (firstChunkAt === null) {
           firstChunkAt = performanceNow();
@@ -122,7 +127,11 @@ export async function benchmarkModel(opts: {
   }
   const totalMs = Math.max(1, Math.round(performanceNow() - t0));
   const outputTokensApprox = approxTokens(text);
-  const tokensPerSec = error ? 0 : (outputTokensApprox / totalMs) * 1000;
+  // Subtract TTFT so we measure decode throughput, not prefill+decode.
+  // A short response on fast hardware would otherwise be dominated by the
+  // 400-600ms prefill phase and report 10× lower tok/s than the true rate.
+  const decodeMs = Math.max(1, totalMs - (ttftMs ?? 0));
+  const tokensPerSec = error ? 0 : (outputTokensApprox / decodeMs) * 1000;
 
   // Optional tool-call compliance test.
   let toolCallOk = false;

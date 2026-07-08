@@ -76,6 +76,8 @@ export interface TurnStats {
   budget: number;
   /** Ollama reported the model is not fully GPU-resident (CPU spill). */
   cpuSpill?: boolean;
+  /** The model emitted at least one reasoning (thinking) event this turn. */
+  hadReasoning?: boolean;
 }
 
 export interface TurnAssessment {
@@ -112,11 +114,24 @@ export function assessTurn(s: TurnStats): TurnAssessment {
     };
   }
 
-  // Sluggish output throughput, but only judge it once there's enough output to
-  // be meaningful and the turn actually took a while.
-  const secs = s.totalMs / 1000;
-  const tps = secs > 0 ? s.outputTokens / secs : Infinity;
-  if (s.outputTokens >= 40 && secs >= 8 && tps < 5) {
+  // Sluggish decode throughput — measure only the generation phase (after TTFT)
+  // so thinking time doesn't inflate the denominator. Reasoning models appear
+  // fine once TTFT is subtracted; truly slow hardware still shows up.
+  const decodeMs = Math.max(1, s.totalMs - (s.ttftMs ?? 0));
+  const decodeSecs = decodeMs / 1000;
+  const tps = s.outputTokens / decodeSecs;
+  if (s.outputTokens >= 40 && decodeSecs >= 4 && tps < 5) {
+    // If the model was thinking, the slowness is expected — give a different,
+    // non-alarmist message that points at the root cause.
+    if (s.hadReasoning) {
+      return {
+        slow: true,
+        message:
+          `Model thought for ~${Math.round((s.ttftMs ?? 0) / 1000)}s before replying ` +
+          `(${tps.toFixed(1)} tok/s decode). For faster conversational replies, switch to a ` +
+          'non-thinking model: /model → change model.',
+      };
+    }
     return {
       slow: true,
       message:

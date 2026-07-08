@@ -55,6 +55,10 @@ export interface StoredConfig {
   modelBenchmarkCachePath?: string;
   /** True once the hardware-aware context migration has run (so we set num_ctx once). */
   contextMigrated?: boolean;
+  /** Two-tier model routing. */
+  routerEnabled?: boolean;
+  routerFastModelId?: string;
+  routerThinkModelId?: string;
 }
 
 

@@ -71,6 +71,11 @@ export const ConfigSchema = z.object({
         'Use tools when needed. Be concise.',
     ),
   toolDirs: z.array(z.string()).default([]),
+  // Two-tier model routing: auto-select a fast or think model per turn.
+  routerEnabled: z.boolean().default(false),
+  routerFastModelId: z.string().default('qwen3:4b'),
+  // undefined → falls back to config.modelId (zero extra setup to activate).
+  routerThinkModelId: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -145,6 +150,9 @@ export async function loadConfig(): Promise<Config> {
     modelQuantizationPreference: store.modelQuantizationPreference,
     modelAdvisorDismissedWarnings: store.modelAdvisorDismissedWarnings,
     modelBenchmarkCachePath: store.modelBenchmarkCachePath,
+    routerEnabled: store.routerEnabled,
+    routerFastModelId: store.routerFastModelId,
+    routerThinkModelId: store.routerThinkModelId,
   };
   // A corrupt or hand-edited config.json (e.g. a wrong-typed value that survives
   // JSON.parse) must never brick startup. safeParse + fall back to all-defaults.

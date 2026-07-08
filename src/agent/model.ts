@@ -717,6 +717,28 @@ export class LlamaCppModel implements ChatModel {
   }
 }
 
+/**
+ * mlx_lm.server rejects `{ role: 'system' }` messages with a 404. Merge all
+ * system messages into the first user message so the conversation is valid.
+ */
+function mergeSystemMessages(messages: Message[]): Message[] {
+  const systemParts: string[] = [];
+  const rest: Message[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') systemParts.push(m.content);
+    else rest.push(m);
+  }
+  if (systemParts.length === 0) return messages;
+  const prefix = systemParts.join('\n\n');
+  const firstUser = rest.findIndex((m) => m.role === 'user');
+  if (firstUser < 0) {
+    return [{ role: 'user', content: prefix }, ...rest];
+  }
+  return rest.map((m, i) =>
+    i === firstUser ? { ...m, content: `${prefix}\n\n${m.content}` } : m,
+  );
+}
+
 /** Apple Silicon MLX backend (mlx_lm.server) — OpenAI-compatible endpoint. */
 export class MlxModel implements ChatModel {
   private config: Config;
@@ -734,7 +756,7 @@ export class MlxModel implements ChatModel {
     yield* streamOpenAICompat(
       url,
       this.config,
-      messages,
+      mergeSystemMessages(messages),
       tools,
       signal,
       'MLX server',
