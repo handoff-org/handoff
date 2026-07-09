@@ -17,6 +17,13 @@ autocomplete menu of the slash commands; `/help` shows the same list in-app.
 | `/research <claim>` | Fact-check a claim (or survey a topic) against scholarly sources via OpenAlex. Returns a SUPPORTED / CONTESTED / REFUTED / UNCLEAR verdict with citations. |
 | `/overleaf` | Link the active project's `paper/` to an Overleaf project and sync both ways. Run again on a linked project to force a sync. |
 
+Beyond the slash commands, handoff drives the literature through **tools** it calls for you:
+`search_papers` / `search_arxiv` to find work, `get_paper` / `fetch_arxiv` / `read_pdf` to read
+it, and `cite_paper <id>` to add a paper to `paper/refs.bib` — it generates a stable BibTeX key,
+returns the `\cite{key}` to place with `edit_file`, and is idempotent (citing the same paper
+twice never duplicates the entry). Accepts an OpenAlex id (`W…`), an arXiv id (`2301.07041`), or a
+DOI. Requires an initialized paper (ask handoff to start one first).
+
 ## Experiments & reproducibility
 
 `run_code` runs Python/R/Julia/shell. Each Python experiment gets its own isolated

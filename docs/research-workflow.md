@@ -33,8 +33,9 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
   submission. Accepts plain phrases or arXiv syntax (`cat:cs.LG`, `au:Vaswani`).
 - ✅ **Read PDFs** — `read_pdf` extracts text from a local file or URL
   (`brew install poppler` required).
-- ✅ **Bibliography** — ask it to add found papers to `paper/refs.bib` so they compile
-  and (when Overleaf-linked) sync online.
+- ✅ **Cite** — `cite_paper <id>` adds a paper (OpenAlex `W…`, arXiv id, or DOI) to
+  `paper/refs.bib` with a stable key and hands back the `\cite{key}` to drop in. Idempotent
+  — citing the same paper twice never duplicates it — and it syncs to Overleaf with the paper.
 - ⭐ Structured lit notes, citation-graph snowballing, lit-review synthesis.
 
 ## Pillar 2 — Run experiments
@@ -67,7 +68,9 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
   the paper a single compilable document. See [Overleaf sync](overleaf.md).
 - ✅ **Frictionless edits** — `write_file` and `edit_file` both show a diff box; the
   model never pastes the full file back.
-- ⭐ Section co-writing, citation insertion from the literature cache, compile/fix loop.
+- ✅ **Citation insertion** — `cite_paper` pulls a cite key + BibTeX entry straight from
+  the literature into `paper/refs.bib`; you then place the `\cite{key}` with `edit_file`.
+- ⭐ Section co-writing, compile/fix loop.
 
 ## Claims & transfer packets
 

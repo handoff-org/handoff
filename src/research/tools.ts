@@ -1,9 +1,21 @@
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import type { ToolRegistry } from '../tools/registry.js';
 import { searchWorks, getWork, type Paper } from './openalex.js';
-import { cachePaper } from './cache.js';
+import { cachePaper, loadCachedPaper } from './cache.js';
 import { fetchArxivPaper, searchArxiv, type ArxivPaper } from './arxiv.js';
 import { appendNotebook } from './notebook.js';
-import { getActiveProject } from '../workspace/project.js';
+import { getActiveProject, projectPaths } from '../workspace/project.js';
+import { bibFileIn, mainTexFile } from '../workspace/overleaf.js';
+import { starterBib } from '../workspace/templates.js';
+import {
+  citeKey,
+  disambiguateKey,
+  toBibEntry,
+  parseBibKeys,
+  mergeBibEntry,
+  findExistingKey,
+} from './bibtex.js';
 
 function snippet(text: string, n: number): string {
   if (!text) return '(no abstract available)';
@@ -35,6 +47,58 @@ function formatArxivResult(p: ArxivPaper): string {
     .filter(Boolean)
     .join(' · ');
   return `[arxiv:${p.id}] ${p.title} (${meta})\n  ${snippet(p.abstract, 220)}`;
+}
+
+/** Map an arXiv paper into the unified Paper shape used across the research pipeline. */
+function arxivToPaper(a: ArxivPaper): Paper {
+  return {
+    id: `arxiv:${a.id}`,
+    title: a.title,
+    abstract: a.abstract,
+    authors: a.authors,
+    year: Number(a.published.slice(0, 4)) || 0,
+    venue: 'arXiv',
+    doi: '',
+    oaUrl: a.absUrl,
+    citations: 0,
+  };
+}
+
+/** Which source an id points at, plus the canonical cache id to look it up under. */
+function classifyPaperId(raw: string): { kind: 'arxiv' | 'doi' | 'openalex'; cacheId: string } {
+  const id = raw.trim();
+  if (/^arxiv:/i.test(id) || /arxiv\.org/i.test(id) || /^\d{4}\.\d{4,5}(v\d+)?$/.test(id)) {
+    const bare = id
+      .replace(/^arxiv:/i, '')
+      .replace(/^https?:\/\/arxiv\.org\/(?:abs|pdf|src)\//i, '')
+      .replace(/v\d+$/, '')
+      .trim();
+    return { kind: 'arxiv', cacheId: `arxiv:${bare}` };
+  }
+  if (/^10\.\d{4,}\//.test(id) || /doi\.org/i.test(id)) {
+    return { kind: 'doi', cacheId: '' }; // only known after it resolves to a W-id
+  }
+  return { kind: 'openalex', cacheId: id.replace('https://openalex.org/', '') };
+}
+
+/** Resolve a paper by id for citing: cache first, then a live fetch (which caches). */
+async function resolvePaperForCite(rawId: string): Promise<Paper> {
+  const { kind, cacheId } = classifyPaperId(rawId);
+  if (cacheId) {
+    const cached = await loadCachedPaper(cacheId);
+    if (cached) return cached;
+  }
+  if (kind === 'arxiv') {
+    const paper = arxivToPaper(await fetchArxivPaper(rawId));
+    await cachePaper(paper);
+    return paper;
+  }
+  // OpenAlex accepts a W-id directly or a doi.org URL as the work path.
+  const lookup =
+    kind === 'doi' && !/^https?:/i.test(rawId) ? `https://doi.org/${rawId.trim()}` : rawId;
+  const paper = await getWork(lookup);
+  await cachePaper(paper);
+  return paper;
 }
 
 /** Register the broad-literature research tools (OpenAlex-backed, read-only). */
@@ -170,17 +234,7 @@ export function registerResearchTools(registry: ToolRegistry): void {
       const paper = await fetchArxivPaper(String(id));
 
       // Cache as a Paper so the rest of the research pipeline can use it.
-      await cachePaper({
-        id: `arxiv:${paper.id}`,
-        title: paper.title,
-        abstract: paper.abstract,
-        authors: paper.authors,
-        year: Number(paper.published.slice(0, 4)) || 0,
-        venue: 'arXiv',
-        doi: '',
-        oaUrl: paper.absUrl,
-        citations: 0,
-      });
+      await cachePaper(arxivToPaper(paper));
 
       // Journal.
       const meta = getActiveProject();
@@ -212,6 +266,74 @@ export function registerResearchTools(registry: ToolRegistry): void {
         `Abstract:`,
         paper.abstract,
       ].join('\n');
+    },
+  });
+
+  registry.register({
+    name: 'cite_paper',
+    description:
+      "Add a paper to the current project's bibliography and get back the \\cite{} command to " +
+      'drop into the prose. Give it an OpenAlex id (e.g. W2741809807), an arXiv id ' +
+      '(2301.07041 or arxiv:2301.07041), or a DOI (10.1234/...). It generates a valid BibTeX ' +
+      'entry with a stable cite key, appends it to paper/refs.bib (creating it if needed), and ' +
+      'keeps it in sync — calling it twice for the same paper is a no-op, never a duplicate. ' +
+      'In an Overleaf-linked project the .bib syncs automatically on the next turn. ' +
+      'Requires an initialized paper (run start_paper first). After this, insert the returned ' +
+      '\\cite{key} into main.tex with edit_file.',
+    sensitive: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description:
+            'OpenAlex work id (W…), arXiv id (2301.07041 / arxiv:2301.07041), or DOI (10.…/…)',
+        },
+      },
+      required: ['id'],
+    },
+    async execute({ id }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project. Use create_project and start_paper before citing.';
+
+      const paperDir = projectPaths(meta.slug).paper;
+      if (!mainTexFile(paperDir)) {
+        return 'No paper yet in this project. Run start_paper to create paper/main.tex before adding citations.';
+      }
+
+      let paper: Paper;
+      try {
+        paper = await resolvePaperForCite(String(id));
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return `Could not resolve "${id}": ${msg}. Look it up first with get_paper or fetch_arxiv, then cite by that id.`;
+      }
+
+      // Target the .bib the paper already loads, or seed refs.bib (matches the
+      // blank template's \bibliography{refs}). The .bib stays inside paper/ so
+      // an Overleaf-linked project syncs it.
+      const bibPath = bibFileIn(paperDir) ?? join(paperDir, 'refs.bib');
+      const bibText = existsSync(bibPath) ? readFileSync(bibPath, 'utf-8') : starterBib(meta.title);
+
+      // Already cited? Reuse its key — idempotent, no duplicate entry.
+      const existingKey = findExistingKey(bibText, paper);
+      if (existingKey) {
+        return `Already in ${bibPath} as \\cite{${existingKey}}. Insert it with edit_file — no bibliography change needed.`;
+      }
+
+      const key = disambiguateKey(citeKey(paper), parseBibKeys(bibText));
+      const { text } = mergeBibEntry(bibText, key, toBibEntry(paper, key));
+      writeFileSync(bibPath, text, 'utf-8');
+
+      appendNotebook(meta.slug, {
+        type: 'literature-find',
+        summary: `Added citation \\cite{${key}} — **${paper.title}**`,
+      });
+
+      return (
+        `Added \\cite{${key}} to ${bibPath}.\n\n` +
+        `Insert it where the paper is discussed, e.g. edit_file main.tex to add "\\cite{${key}}".`
+      );
     },
   });
 }
