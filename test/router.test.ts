@@ -112,6 +112,33 @@ test('short follow-up with keywords does not keep — routes to think', () => {
   assert.equal(classifyTurn('draft it', ctx), 'think');
 });
 
+// ── Research-focus default (rule 8) ─────────────────────────────────────────
+// In research focus, classifyTurn defaults to 'think' instead of 'fast' so the
+// session stays on the capable model between keyword-free turns (e.g. "run it",
+// "what's in the project?"). Hysteresis (app.tsx) then prevents a rapid switch
+// back to fast on the first navigational message.
+
+test('research focus + no keywords + short message → think (not fast)', () => {
+  // A short navigational question in research mode should stay on think.
+  const ctx: RouterContext = { ...base, focus: 'research' };
+  assert.equal(classifyTurn('what files are in the project?', ctx), 'think');
+});
+
+test('research focus + no keywords + medium message → think', () => {
+  const ctx: RouterContext = { ...base, focus: 'research' };
+  assert.equal(classifyTurn('run the experiment again', ctx), 'think');
+});
+
+test('general focus + no keywords + short message → fast (unchanged)', () => {
+  const ctx: RouterContext = { ...base, focus: 'general' };
+  assert.equal(classifyTurn('what time is it', ctx), 'fast');
+});
+
+test('general focus + 280-char message + no keywords → fast (boundary unchanged)', () => {
+  const ctx: RouterContext = { ...base, focus: 'general' };
+  assert.equal(classifyTurn('a'.repeat(280), ctx), 'fast');
+});
+
 // ── shouldShowTierNote (P2.3) ────────────────────────────────────────────────
 
 test('shouldShowTierNote off never shows', () => {

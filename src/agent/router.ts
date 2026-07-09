@@ -60,8 +60,12 @@ export function classifyTurn(message: string, ctx: RouterContext): RouteTier {
     return 'think';
   }
 
-  // 5. Very short message with no research keywords → fast.
-  if (message.trim().length <= 30 && !hasThinkKeywords(message)) return 'fast';
+  // 5. Very short message with no research keywords → fast (general focus only).
+  //    In research focus the default is think (rule 8), so skip this shortcut there
+  //    to avoid silently routing brief navigational questions to the weaker model.
+  if (ctx.focus !== 'research' && message.trim().length <= 30 && !hasThinkKeywords(message)) {
+    return 'fast';
+  }
 
   // 6. Explicit research/paper keywords → think.
   if (hasThinkKeywords(message)) return 'think';
@@ -69,7 +73,14 @@ export function classifyTurn(message: string, ctx: RouterContext): RouteTier {
   // 7. Long message → think (likely a detailed research prompt).
   if (message.length > 280) return 'think';
 
-  // 8. Default → fast.
+  // 8. Research focus default → think.
+  //    In research mode, use the capable model unless a prior rule already
+  //    returned fast/keep. This avoids silently downgrading turns that have no
+  //    keywords but are still part of a research session (e.g. "what's in the
+  //    project?", "run it"). Hysteresis (app.tsx) prevents unnecessary switches.
+  if (ctx.focus === 'research') return 'think';
+
+  // 9. General focus default → fast.
   return 'fast';
 }
 
