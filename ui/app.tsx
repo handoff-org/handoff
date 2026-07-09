@@ -148,6 +148,13 @@ const SCROLL_STEP = 3;
 // long response doesn't re-render + re-layout the transcript per token.
 const STREAM_FLUSH_MS = 33;
 
+// Consecutive fast-eligible turns required before downgrading from think→fast.
+// Switching models mid-session evicts the KV cache and forces a full re-prefill
+// of the conversation history. Two consecutive fast signals (e.g. two short
+// navigational turns) is enough to justify the switch; a single one usually
+// means the user is momentarily pausing between research turns.
+const FAST_HYSTERESIS = 2;
+
 /**
  * Renders the prompt buffer with a block caret at `cursor`. The character under
  * the caret is shown inverse (a solid block when the caret sits at end-of-line),
@@ -263,6 +270,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // The tier last *announced* to the user, so a 'changes'-mode note only fires
   // when the tier actually switches (see shouldShowTierNote).
   const lastShownTierRef = useRef<'fast' | 'think' | null>(null);
+  // Hysteresis: count consecutive turns where the raw classification wanted 'fast'
+  // while the session was on 'think'. We only actually downgrade after
+  // FAST_HYSTERESIS consecutive signals, keeping the think model (and its KV
+  // cache) loaded during brief navigational turns between research turns.
+  const consecutiveFastSignalsRef = useRef(0);
   // Submitted-input history (oldest→newest) and the live browse cursor. The
   // cursor is created on the first Ctrl-P and cleared whenever the user edits
   // the box or submits, so browsing never fights with typing.
@@ -1359,7 +1371,22 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
             hadToolCalls: hadToolCallsRef.current,
             historyLength: turnHistory.length,
           } satisfies RouterContext);
-        activeTier = resolveModel(rawTier, lastTierRef.current);
+
+        // Hysteresis: suppress think→fast switches until FAST_HYSTERESIS consecutive
+        // fast signals. This keeps the think model loaded (and its KV cache warm)
+        // across brief navigational turns, avoiding expensive model-reload + re-prefill
+        // every time the user asks a short question between research turns.
+        let effectiveTier = rawTier;
+        if (!tierForced && rawTier === 'fast' && lastTierRef.current === 'think') {
+          consecutiveFastSignalsRef.current += 1;
+          if (consecutiveFastSignalsRef.current < FAST_HYSTERESIS) {
+            effectiveTier = 'keep'; // not enough consecutive fast signals — stay on think
+          }
+        } else {
+          consecutiveFastSignalsRef.current = 0;
+        }
+
+        activeTier = resolveModel(effectiveTier, lastTierRef.current);
         activeModel = activeTier === 'fast' ? (fastModel ?? model) : (thinkModel ?? model);
       }
       // hadToolCallsRef scope: it reflects whether the PREVIOUS turn ran a tool,
@@ -1392,9 +1419,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         askUser,
         preset: config.inferencePreset,
         ...(compaction ? { budget: { maxPromptTokens: budgetTokens } } : {}),
-        // Fast tier: no thinking (non-reasoning models error on think:true) and
-        // no tools (small models misfire tools on simple greetings/follow-ups).
-        ...(config.routerEnabled && activeTier === 'fast' ? { think: false, noTools: true } : {}),
+        // Fast tier: disable extended thinking (non-reasoning models error on
+        // think:true). Tools are kept enabled — small models handle simple tool
+        // calls (list_dir, read_file) correctly; noTools would silently break
+        // navigational turns that are the main reason to use the fast model.
+        ...(config.routerEnabled && activeTier === 'fast' ? { think: false } : {}),
       })) {
         if (event.type === 'message_start') {
           acc = '';
