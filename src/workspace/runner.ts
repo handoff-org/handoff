@@ -40,7 +40,13 @@ function uvAvailable(): boolean {
 }
 
 function toSlug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'experiment';
+  return (
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 50) || 'experiment'
+  );
 }
 
 /**
@@ -60,7 +66,9 @@ function ensureUvProject(
   if (!existsSync(expDir)) {
     mkdirSync(experimentsDir, { recursive: true });
     const r = spawnSync('uv', ['init', expName], {
-      encoding: 'utf-8', timeout: 30_000, cwd: experimentsDir,
+      encoding: 'utf-8',
+      timeout: 30_000,
+      cwd: experimentsDir,
     });
     if (r.status !== 0) {
       throw new Error(`uv init ${expName} failed: ${(r.stderr ?? '').slice(0, 300)}`);
@@ -69,7 +77,9 @@ function ensureUvProject(
 
   if (deps.length > 0) {
     spawnSync('uv', ['add', ...deps], {
-      encoding: 'utf-8', timeout: 120_000, cwd: expDir,
+      encoding: 'utf-8',
+      timeout: 120_000,
+      cwd: expDir,
     });
   }
 
@@ -88,9 +98,10 @@ function ensurePlainVenv(projectSlug: string): PythonEnv {
   const root = projectDir(projectSlug);
   const expDir = join(root, 'experiments');
   const venvDir = join(expDir, '.venv');
-  const python = process.platform === 'win32'
-    ? join(venvDir, 'Scripts', 'python.exe')
-    : join(venvDir, 'bin', 'python');
+  const python =
+    process.platform === 'win32'
+      ? join(venvDir, 'Scripts', 'python.exe')
+      : join(venvDir, 'bin', 'python');
 
   if (existsSync(python)) return { python, expDir };
 
@@ -140,10 +151,14 @@ interface Runner {
 
 function resolveRunner(lang: Language): Runner {
   switch (lang) {
-    case 'r':     return { cmd: 'Rscript', args: ['-e'] };
-    case 'julia': return { cmd: 'julia', args: ['-e'] };
-    case 'shell': return { cmd: 'sh', args: ['-c'] };
-    default:      return { cmd: 'sh', args: ['-c'] };
+    case 'r':
+      return { cmd: 'Rscript', args: ['-e'] };
+    case 'julia':
+      return { cmd: 'julia', args: ['-e'] };
+    case 'shell':
+      return { cmd: 'sh', args: ['-c'] };
+    default:
+      return { cmd: 'sh', args: ['-c'] };
   }
 }
 
@@ -302,12 +317,15 @@ export function executeRun(slug: string, req: RunRequest): RunResult {
 
   const status = exitCode === 0 ? '✓ success' : `✗ exit ${exitCode}`;
   const metricNote = Object.keys(metrics).length
-    ? `\n\nmetrics: ${Object.entries(metrics).map(([k, v]) => `${k}=${v}`).join('  ')}`
+    ? `\n\nmetrics: ${Object.entries(metrics)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('  ')}`
     : '';
   appendNotebook(slug, {
     type: 'experiment-run',
     summary: `\`${lang}\` — ${desc} — ${status} (${durationMs}ms) · run ${id}`,
-    details: (stdout.trim() ? `\`\`\`\n${truncate(stdout, 600)}\n\`\`\`` : '') + metricNote || undefined,
+    details:
+      (stdout.trim() ? `\`\`\`\n${truncate(stdout, 600)}\n\`\`\`` : '') + metricNote || undefined,
   });
 
   return {
@@ -402,7 +420,11 @@ export function registerRunnerTools(registry: ToolRegistry): void {
       const header = `[${res.language}${res.setupNote}] run ${res.capsuleId} · exit ${res.exitCode} · ${res.durationMs}ms`;
       const parts: string[] = [header];
       if (Object.keys(res.metrics).length) {
-        parts.push(`metrics: ${Object.entries(res.metrics).map(([k, v]) => `${k}=${v}`).join('  ')}`);
+        parts.push(
+          `metrics: ${Object.entries(res.metrics)
+            .map(([k, v]) => `${k}=${v}`)
+            .join('  ')}`,
+        );
       }
       if (res.stdout.trim()) parts.push(`stdout:\n${truncate(res.stdout, 600)}`);
       if (res.stderr.trim()) parts.push(`stderr:\n${truncate(res.stderr, 300)}`);

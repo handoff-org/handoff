@@ -9,12 +9,7 @@ import {
 } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import {
-  AdaptiveProfileSchema,
-  defaultProfile,
-  migrate,
-  type AdaptiveProfile,
-} from './profile.js';
+import { AdaptiveProfileSchema, defaultProfile, migrate, type AdaptiveProfile } from './profile.js';
 
 /**
  * Persistence for the local adaptive profile. Everything is best-effort and
@@ -31,8 +26,9 @@ function stamp(): string {
   return new Date().toISOString();
 }
 
+let _bakSeq = 0;
 function fileStamp(): string {
-  return stamp().replace(/[:.]/g, '-');
+  return `${stamp().replace(/[:.]/g, '-')}-${++_bakSeq}`;
 }
 
 /**
@@ -114,7 +110,11 @@ export function exportProfile(profile: AdaptiveProfile): string | null {
  * Append one compact, already-sanitized event line for transparency
  * (`/profile why`). Bounded by design: callers pass short summaries only.
  */
-export function appendProfileEvent(entry: { type: string; timestamp: string; summary: string }): void {
+export function appendProfileEvent(entry: {
+  type: string;
+  timestamp: string;
+  summary: string;
+}): void {
   try {
     mkdirSync(HANDOFF_DIR, { recursive: true });
     appendFileSync(EVENTS_PATH, JSON.stringify(entry) + '\n', 'utf-8');

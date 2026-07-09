@@ -92,7 +92,8 @@ export function registerBuiltins(registry: ToolRegistry): void {
       }
       const all = replace_all === true || replace_all === 'true';
       const count = current.split(oldStr).length - 1;
-      if (count === 0) return `old_string not found in ${target}. Read the file and copy the exact text (including whitespace).`;
+      if (count === 0)
+        return `old_string not found in ${target}. Read the file and copy the exact text (including whitespace).`;
       if (count > 1 && !all) {
         return `old_string appears ${count} times in ${target}. Add surrounding context to make it unique, or set replace_all="true".`;
       }
@@ -134,9 +135,7 @@ export function registerBuiltins(registry: ToolRegistry): void {
     async execute({ path }) {
       const target = resolveWorkspacePath(path ? String(path) : '.');
       const entries = await readdir(target, { withFileTypes: true });
-      return entries
-        .map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
-        .join('\n');
+      return entries.map((e) => (e.isDirectory() ? `${e.name}/` : e.name)).join('\n');
     },
   });
 
@@ -151,9 +150,18 @@ export function registerBuiltins(registry: ToolRegistry): void {
       type: 'object',
       properties: {
         pattern: { type: 'string', description: 'Regular expression to search for' },
-        path: { type: 'string', description: 'Subdirectory to search within (default: whole project)' },
-        glob: { type: 'string', description: 'Only search files matching this glob (e.g. "**/*.tex")' },
-        case_sensitive: { type: 'string', description: 'Set to "true" for a case-sensitive search' },
+        path: {
+          type: 'string',
+          description: 'Subdirectory to search within (default: whole project)',
+        },
+        glob: {
+          type: 'string',
+          description: 'Only search files matching this glob (e.g. "**/*.tex")',
+        },
+        case_sensitive: {
+          type: 'string',
+          description: 'Set to "true" for a case-sensitive search',
+        },
       },
       required: ['pattern'],
     },
@@ -179,7 +187,10 @@ export function registerBuiltins(registry: ToolRegistry): void {
       type: 'object',
       properties: {
         pattern: { type: 'string', description: 'Glob to match against project-relative paths' },
-        path: { type: 'string', description: 'Subdirectory to search within (default: whole project)' },
+        path: {
+          type: 'string',
+          description: 'Subdirectory to search within (default: whole project)',
+        },
       },
       required: ['pattern'],
     },
@@ -311,7 +322,7 @@ export function registerBuiltins(registry: ToolRegistry): void {
   registry.register({
     name: 'compile_paper',
     description:
-      'Compile the active project\'s paper/main.tex to PDF using latexmk (preferred) or ' +
+      "Compile the active project's paper/main.tex to PDF using latexmk (preferred) or " +
       'pdflatex. Returns the PDF path on success, or the relevant LaTeX error lines on ' +
       'failure. Use when the user asks to compile, build, render, or preview the paper.',
     parameters: {
@@ -352,9 +363,12 @@ export function registerBuiltins(registry: ToolRegistry): void {
         return `PDF compiled successfully: ${pdfPath}`;
       } catch (err: unknown) {
         // LaTeX exits non-zero on errors; extract the error lines from the log.
-        const raw = (err instanceof Error ? err.message : String(err)) +
-          '\n' + ((err as { stdout?: string }).stdout ?? '') +
-          '\n' + ((err as { stderr?: string }).stderr ?? '');
+        const raw =
+          (err instanceof Error ? err.message : String(err)) +
+          '\n' +
+          ((err as { stdout?: string }).stdout ?? '') +
+          '\n' +
+          ((err as { stderr?: string }).stderr ?? '');
         const errorLines = raw
           .split('\n')
           .filter((l) => /^!|^l\.\d|LaTeX Error|Error:|Fatal/i.test(l))

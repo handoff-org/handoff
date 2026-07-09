@@ -101,7 +101,8 @@ export function summarizeSession(session: SavedSession): { label: string; value:
 
   const out: { label: string; value: string }[] = [];
   const topic = users[0]?.content?.replace(/\s+/g, ' ').trim();
-  if (topic) out.push({ label: 'topic', value: topic.length > 64 ? topic.slice(0, 64) + '…' : topic });
+  if (topic)
+    out.push({ label: 'topic', value: topic.length > 64 ? topic.slice(0, 64) + '…' : topic });
   out.push({
     label: 'turns',
     value: `${users.length} message${users.length === 1 ? '' : 's'} · ${replies} repl${replies === 1 ? 'y' : 'ies'}`,
@@ -109,7 +110,9 @@ export function summarizeSession(session: SavedSession): { label: string; value:
   if (tally.size) {
     out.push({
       label: 'tools',
-      value: Array.from(tally.entries()).map(([n, c]) => `${n}×${c}`).join(', '),
+      value: Array.from(tally.entries())
+        .map(([n, c]) => `${n}×${c}`)
+        .join(', '),
     });
   }
   if (files.size) {

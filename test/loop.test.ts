@@ -19,7 +19,11 @@ class FakeModel implements ChatModel {
   }
   async *chatStream(): AsyncGenerator<StreamPart> {
     const turn = this.turns.shift() ?? { content: '' };
-    yield { type: 'final', content: turn.content, ...(turn.tool_calls ? { tool_calls: turn.tool_calls } : {}) };
+    yield {
+      type: 'final',
+      content: turn.content,
+      ...(turn.tool_calls ? { tool_calls: turn.tool_calls } : {}),
+    };
   }
 }
 
@@ -156,7 +160,10 @@ test('a max-iterations run ends with the "stopped after N rounds" error', async 
     approve: async () => true,
   });
   const err = events.find((e) => e.type === 'error');
-  assert.match(err && err.type === 'error' ? err.message : '', /Stopped after \d+ tool-call rounds/);
+  assert.match(
+    err && err.type === 'error' ? err.message : '',
+    /Stopped after \d+ tool-call rounds/,
+  );
 });
 
 test('budget compacts the SENT history while done.messages stays full', async () => {
@@ -192,7 +199,10 @@ test('budget compacts the SENT history while done.messages stays full', async ()
   const sent = model.seen[0]!;
   assert.equal(sent[0]!.content, 'SYS');
   const sentText = sent.map((m) => m.content).join('\n');
-  assert.ok(!sentText.includes('HUGE'.repeat(1000)), 'giant tool output should be trimmed in the sent view');
+  assert.ok(
+    !sentText.includes('HUGE'.repeat(1000)),
+    'giant tool output should be trimmed in the sent view',
+  );
 
   // But the persisted transcript keeps every message at full size.
   const done = events.find((e) => e.type === 'done');
@@ -201,7 +211,6 @@ test('budget compacts the SENT history while done.messages stays full', async ()
   const huge = full.find((m) => m.role === 'tool');
   assert.ok(huge && huge.content.length >= 16000, 'done.messages must retain the full tool output');
 });
-
 
 test('a truncated, reasoning-only empty response gives an actionable error', async () => {
   // A model that reasons, then ends truncated (num_predict hit) with no content.

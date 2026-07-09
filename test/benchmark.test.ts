@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseOllamaPs, psRowFor } from '../src/agent/ollama.js';
-import { approxTokens, loadBenchmarks, saveBenchmark, type BenchmarkResult } from '../src/agent/benchmark.js';
+import {
+  approxTokens,
+  loadBenchmarks,
+  saveBenchmark,
+  type BenchmarkResult,
+} from '../src/agent/benchmark.js';
 import { classifyThroughput } from '../src/agent/advisor.js';
 import { freshHome } from './helpers.js';
 import { join } from 'path';
@@ -57,9 +62,19 @@ test('benchmark cache round-trips and upserts by key', async () => {
   const home = freshHome();
   const path = join(home, 'bench.json');
   const rec: BenchmarkResult = {
-    backend: 'ollama', modelId: 'qwen3:8b', quant: 'q4_K_M', contextTokens: 8192,
-    hardwareFingerprint: 'fp', tokensPerSec: 22, fullGpu: true, toolCallOk: true,
-    handoffVersion: 'test', ttftMs: 120, totalMs: 1000, outputTokensApprox: 22, tier: 'excellent',
+    backend: 'ollama',
+    modelId: 'qwen3:8b',
+    quant: 'q4_K_M',
+    contextTokens: 8192,
+    hardwareFingerprint: 'fp',
+    tokensPerSec: 22,
+    fullGpu: true,
+    toolCallOk: true,
+    handoffVersion: 'test',
+    ttftMs: 120,
+    totalMs: 1000,
+    outputTokensApprox: 22,
+    tier: 'excellent',
   };
   await saveBenchmark(rec, path);
   await saveBenchmark({ ...rec, tokensPerSec: 25, tier: 'excellent' }, path); // same key → replace

@@ -45,7 +45,11 @@ test('run_shell executes inside the active project directory, not the launch dir
 test('write_file append mode adds to a file instead of overwriting', async () => {
   createProject({ title: 'Append Tool' });
   await reg.call('write_file', { path: 'NOTEBOOK.md', content: 'line 1\n' });
-  const res = await reg.call('write_file', { path: 'NOTEBOOK.md', content: 'line 2\n', append: 'true' });
+  const res = await reg.call('write_file', {
+    path: 'NOTEBOOK.md',
+    content: 'line 2\n',
+    append: 'true',
+  });
   assert.match(res, /Appended to/);
   const readBack = await reg.call('read_file', { path: 'NOTEBOOK.md' });
   assert.match(readBack, /line 1/);
@@ -55,7 +59,11 @@ test('write_file append mode adds to a file instead of overwriting', async () =>
 test('edit_file replaces an exact string in place', async () => {
   createProject({ title: 'Edit One' });
   await reg.call('write_file', { path: 'main.tex', content: 'Hello WORLD, hello there.\n' });
-  const res = await reg.call('edit_file', { path: 'main.tex', old_string: 'WORLD', new_string: 'handoff' });
+  const res = await reg.call('edit_file', {
+    path: 'main.tex',
+    old_string: 'WORLD',
+    new_string: 'handoff',
+  });
   assert.match(res, /^Edited /);
   assert.match(await reg.call('read_file', { path: 'main.tex' }), /Hello handoff, hello there\./);
 });
@@ -65,7 +73,12 @@ test('edit_file refuses an ambiguous match unless replace_all', async () => {
   await reg.call('write_file', { path: 'f.txt', content: 'x x x\n' });
   const amb = await reg.call('edit_file', { path: 'f.txt', old_string: 'x', new_string: 'y' });
   assert.match(amb, /appears 3 times/);
-  const all = await reg.call('edit_file', { path: 'f.txt', old_string: 'x', new_string: 'y', replace_all: 'true' });
+  const all = await reg.call('edit_file', {
+    path: 'f.txt',
+    old_string: 'x',
+    new_string: 'y',
+    replace_all: 'true',
+  });
   assert.match(all, /Edited/);
   assert.equal((await reg.call('read_file', { path: 'f.txt' })).trim(), 'y y y');
 });
@@ -73,8 +86,14 @@ test('edit_file refuses an ambiguous match unless replace_all', async () => {
 test('edit_file reports a missing string and a missing file', async () => {
   createProject({ title: 'Edit Miss' });
   await reg.call('write_file', { path: 'g.txt', content: 'abc\n' });
-  assert.match(await reg.call('edit_file', { path: 'g.txt', old_string: 'zzz', new_string: 'q' }), /not found/);
-  assert.match(await reg.call('edit_file', { path: 'nope.txt', old_string: 'a', new_string: 'b' }), /not found/);
+  assert.match(
+    await reg.call('edit_file', { path: 'g.txt', old_string: 'zzz', new_string: 'q' }),
+    /not found/,
+  );
+  assert.match(
+    await reg.call('edit_file', { path: 'nope.txt', old_string: 'a', new_string: 'b' }),
+    /not found/,
+  );
 });
 
 test('edit_file is gated as sensitive', () => {
@@ -114,4 +133,3 @@ test('read_pdf cleans up its downloaded temp file (no accumulation in tmp)', asy
   const after = readdirSync(tmp).filter((f) => f.startsWith('handoff-pdf-')).length;
   assert.equal(after, before, 'downloaded temp PDF should be removed after extraction');
 });
-

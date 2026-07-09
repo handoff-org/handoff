@@ -64,8 +64,26 @@ function Preview() {
   const reducedMotion = process.env['HANDOFF_REDUCED_MOTION'] != null;
   const visible = useRef(true);
 
-  const big = useLogoAnimation({ width: PREVIEW_W, height: PREVIEW_H, colors, fps: 20, color, enabled: true, reducedMotion, visible });
-  const inBanner = useLogoAnimation({ width: LEFT_INNER, height: CANVAS_H, colors, fps: 20, color, enabled: true, reducedMotion, visible });
+  const big = useLogoAnimation({
+    width: PREVIEW_W,
+    height: PREVIEW_H,
+    colors,
+    fps: 20,
+    color,
+    enabled: true,
+    reducedMotion,
+    visible,
+  });
+  const inBanner = useLogoAnimation({
+    width: LEFT_INNER,
+    height: CANVAS_H,
+    colors,
+    fps: 20,
+    color,
+    enabled: true,
+    reducedMotion,
+    visible,
+  });
 
   const banner = bannerLines({
     backend: 'ollama',

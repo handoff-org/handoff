@@ -104,9 +104,7 @@ export async function isModelInstalled(baseUrl: string, model: string): Promise<
     const res = await fetch(`${baseUrl}/api/tags`);
     if (!res.ok) return false;
     const data = (await res.json()) as { models?: { name: string }[] };
-    return (data.models ?? []).some(
-      (m) => m.name === model || m.name === `${model}:latest`,
-    );
+    return (data.models ?? []).some((m) => m.name === model || m.name === `${model}:latest`);
   } catch {
     return false;
   }
@@ -167,7 +165,14 @@ export function parseOllamaPs(text: string): OllamaPsRow[] {
     const proc = processor.toLowerCase();
     const cpuSpill = /cpu/.test(proc);
     const fullGpu = /100%\s*gpu/.test(proc) || (/gpu/.test(proc) && !cpuSpill);
-    rows.push({ name, ...(size ? { size } : {}), processor, ...(until ? { until } : {}), fullGpu, cpuSpill });
+    rows.push({
+      name,
+      ...(size ? { size } : {}),
+      processor,
+      ...(until ? { until } : {}),
+      fullGpu,
+      cpuSpill,
+    });
   }
   return rows;
 }
@@ -188,9 +193,11 @@ export function ollamaPs(): OllamaPsRow[] {
 
 /** Find the ps row for a specific model (matching bare or :latest form). */
 export function psRowFor(rows: OllamaPsRow[], model: string): OllamaPsRow | undefined {
-  return rows.find((r) => r.name === model || r.name === `${model}:latest` || r.name.replace(/:latest$/, '') === model);
+  return rows.find(
+    (r) =>
+      r.name === model || r.name === `${model}:latest` || r.name.replace(/:latest$/, '') === model,
+  );
 }
-
 
 export interface PullProgress {
   status: string;

@@ -13,8 +13,8 @@ description: >-
   Own your research. A local-first, terminal research companion that reads the
   literature, drafts and cites your paper, and helps run your experiments —
   powered by models running on your own machine.
-url: "https://handoff-org.github.io"
-baseurl: "/handoff"
+url: 'https://handoff-org.github.io'
+baseurl: '/handoff'
 
 # just-the-docs, pulled in as a remote theme (supported on GitHub Pages via the
 # jekyll-remote-theme plugin). Gives a searchable sidebar built for multi-page docs.
@@ -32,18 +32,18 @@ relative_links:
 
 # --- just-the-docs options -------------------------------------------------
 color_scheme: dark
-logo: "/assets/letter120.png"
-favicon_ico: "/assets/letter120.png"
+logo: '/assets/letter120.png'
+favicon_ico: '/assets/letter120.png'
 search_enabled: true
 heading_anchors: true
 aux_links:
-  "handoff on GitHub":
-    - "https://github.com/handoff-org/handoff"
+  'handoff on GitHub':
+    - 'https://github.com/handoff-org/handoff'
 aux_links_new_tab: true
 
 # Small footer on every page.
 back_to_top: true
-back_to_top_text: "Back to top"
+back_to_top_text: 'Back to top'
 footer_content: >-
   handoff · local-first research companion · <a href="https://github.com/handoff-org/handoff">GitHub</a>
 

@@ -60,7 +60,8 @@ export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T
       {title}
     </Text>,
     <Text key="title-rule" color={heading} dimColor>
-      {'  '}{'─'.repeat(title.length)}
+      {'  '}
+      {'─'.repeat(title.length)}
     </Text>,
     <Text key="gap"> </Text>,
   ];
@@ -78,7 +79,8 @@ export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T
       );
       rows.push(
         <Text key={`sep-rule-${i}`} color={section} dimColor>
-          {'  '}{'─'.repeat(opt.label.length)}
+          {'  '}
+          {'─'.repeat(opt.label.length)}
         </Text>,
       );
       rows.push(<Text key={`sep-post-${i}`}> </Text>);

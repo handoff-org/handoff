@@ -5,14 +5,15 @@ import { dirname } from 'path';
 import { freshHome } from './helpers.js';
 
 freshHome();
-const { loadProfile, saveProfile, resetProfile, exportProfile, PROFILE_PATH } = await import(
-  '../src/personalization/store.js'
-);
+const { loadProfile, saveProfile, resetProfile, exportProfile, PROFILE_PATH } =
+  await import('../src/personalization/store.js');
 const { PROFILE_VERSION } = await import('../src/personalization/profile.js');
 
 function bakCount(): number {
   try {
-    return readdirSync(dirname(PROFILE_PATH)).filter((f) => f.startsWith('profile.json.') && f.endsWith('.bak')).length;
+    return readdirSync(dirname(PROFILE_PATH)).filter(
+      (f) => f.startsWith('profile.json.') && f.endsWith('.bak'),
+    ).length;
   } catch {
     return 0;
   }
@@ -22,7 +23,11 @@ test('loadProfile returns a valid default when no file exists', () => {
   const p = loadProfile();
   assert.equal(p.version, PROFILE_VERSION);
   assert.deepEqual(p.explicitPreferences, []);
-  assert.equal(existsSync(PROFILE_PATH), false, 'default is not written until something is learned');
+  assert.equal(
+    existsSync(PROFILE_PATH),
+    false,
+    'default is not written until something is learned',
+  );
 });
 
 test('saveProfile then loadProfile round-trips', async () => {

@@ -21,12 +21,7 @@ interface GitResult {
  * (`-c key=val`) guarantees the commit — and therefore the push — succeeds
  * without touching the user's global git config.
  */
-const COMMIT_IDENTITY = [
-  '-c',
-  'user.name=handoff',
-  '-c',
-  'user.email=handoff@localhost',
-];
+const COMMIT_IDENTITY = ['-c', 'user.name=handoff', '-c', 'user.email=handoff@localhost'];
 
 /** Build a `git commit` argv with a guaranteed committer identity. */
 function commitArgs(message: string): string[] {
@@ -194,7 +189,9 @@ export function linkOverleaf(url: string, token: string): string {
     );
   }
   if (!token.trim()) {
-    throw new Error('A Git authentication token is required (Overleaf → Account Settings → Git Integration).');
+    throw new Error(
+      'A Git authentication token is required (Overleaf → Account Settings → Git Integration).',
+    );
   }
   if (existsSync(paper) && readdirSync(paper).length > 0) {
     throw new Error('The paper/ folder already has files. Overleaf linking needs it empty.');
@@ -243,7 +240,9 @@ export function syncOverleaf(): string {
   if (!pull.ok) {
     throw new Error(`Couldn't pull from Overleaf.\n${pull.out}`);
   }
-  return /up.to.date/i.test(pull.out) ? 'Already up to date with Overleaf.' : 'Pulled the latest from Overleaf.';
+  return /up.to.date/i.test(pull.out)
+    ? 'Already up to date with Overleaf.'
+    : 'Pulled the latest from Overleaf.';
 }
 
 /**
@@ -328,8 +327,15 @@ export function registerOverleafTools(registry: ToolRegistry): void {
     parameters: {
       type: 'object',
       properties: {
-        url: { type: 'string', description: 'Overleaf project link, e.g. https://www.overleaf.com/project/<id>' },
-        token: { type: 'string', description: 'Overleaf Git authentication token (from Account Settings → Git Integration)' },
+        url: {
+          type: 'string',
+          description: 'Overleaf project link, e.g. https://www.overleaf.com/project/<id>',
+        },
+        token: {
+          type: 'string',
+          description:
+            'Overleaf Git authentication token (from Account Settings → Git Integration)',
+        },
       },
       required: ['url', 'token'],
     },
@@ -340,7 +346,7 @@ export function registerOverleafTools(registry: ToolRegistry): void {
 
   registry.register({
     name: 'overleaf_push',
-    description: 'Save the active project\'s paper changes back to Overleaf (commit + push).',
+    description: "Save the active project's paper changes back to Overleaf (commit + push).",
     sensitive: true,
     parameters: {
       type: 'object',
@@ -365,7 +371,8 @@ export function registerOverleafTools(registry: ToolRegistry): void {
 
   registry.register({
     name: 'overleaf_status',
-    description: 'Check whether the active project is linked to Overleaf and if it has unsaved changes.',
+    description:
+      'Check whether the active project is linked to Overleaf and if it has unsaved changes.',
     parameters: { type: 'object', properties: {} },
     async execute() {
       return overleafStatus();

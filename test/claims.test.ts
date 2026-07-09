@@ -149,13 +149,17 @@ test('auditPaper returns empty when no paper/ directory', () => {
 test('auditPaper detects numerical claims', () => {
   const meta = createProject({ title: 'Numerical Claims' });
   const root = join(home, '.handoff', 'projects', meta.slug);
-  writeTex(root, 'main.tex', [
-    '\\section{Results}',
-    '',
-    'Our model achieves 84.2 F1 on the SQuAD benchmark.',
-    '',
-    'This represents a 5.1% improvement over the BM25 baseline.',
-  ].join('\n'));
+  writeTex(
+    root,
+    'main.tex',
+    [
+      '\\section{Results}',
+      '',
+      'Our model achieves 84.2 F1 on the SQuAD benchmark.',
+      '',
+      'This represents a 5.1% improvement over the BM25 baseline.',
+    ].join('\n'),
+  );
 
   const result = auditPaper(meta.slug);
   assert.ok(result.newCount >= 1, `expected at least 1 numerical claim, got ${result.newCount}`);
@@ -170,43 +174,51 @@ test('auditPaper detects numerical claims', () => {
 test('auditPaper detects comparison claims', () => {
   const meta = createProject({ title: 'Comparison Claims' });
   const root = join(home, '.handoff', 'projects', meta.slug);
-  writeTex(root, 'main.tex', [
-    '\\section{Results}',
-    '',
-    'Our method outperforms all prior approaches on both benchmarks.',
-    '',
-    'We achieve results better than the strongest baseline.',
-  ].join('\n'));
+  writeTex(
+    root,
+    'main.tex',
+    [
+      '\\section{Results}',
+      '',
+      'Our method outperforms all prior approaches on both benchmarks.',
+      '',
+      'We achieve results better than the strongest baseline.',
+    ].join('\n'),
+  );
 
   const result = auditPaper(meta.slug);
   assert.ok(result.newCount >= 1, `expected at least 1 comparison claim, got ${result.newCount}`);
-  assert.ok(
-    result.newClaims.some((c) => c.type === 'comparison_claim'),
-  );
+  assert.ok(result.newClaims.some((c) => c.type === 'comparison_claim'));
 });
 
 test('auditPaper detects literature sweep claims', () => {
   const meta = createProject({ title: 'Literature Claims' });
   const root = join(home, '.handoff', 'projects', meta.slug);
-  writeTex(root, 'related.tex', [
-    '\\section{Related Work}',
-    '',
-    'Prior work has largely ignored low-resource settings in this domain.',
-    '',
-    'No previous study has examined the effect of retrieval depth on F1.',
-  ].join('\n'));
+  writeTex(
+    root,
+    'related.tex',
+    [
+      '\\section{Related Work}',
+      '',
+      'Prior work has largely ignored low-resource settings in this domain.',
+      '',
+      'No previous study has examined the effect of retrieval depth on F1.',
+    ].join('\n'),
+  );
 
   const result = auditPaper(meta.slug);
   assert.ok(result.newCount >= 1, `expected at least 1 literature claim, got ${result.newCount}`);
-  assert.ok(
-    result.newClaims.some((c) => c.type === 'literature_claim'),
-  );
+  assert.ok(result.newClaims.some((c) => c.type === 'literature_claim'));
 });
 
 test('auditPaper deduplicates: running twice does not double-add claims', () => {
   const meta = createProject({ title: 'Dedup Claims' });
   const root = join(home, '.handoff', 'projects', meta.slug);
-  writeTex(root, 'main.tex', 'Our model achieves 84.2 F1 on the benchmark.\n\nWe outperform all prior methods.');
+  writeTex(
+    root,
+    'main.tex',
+    'Our model achieves 84.2 F1 on the benchmark.\n\nWe outperform all prior methods.',
+  );
 
   const first = auditPaper(meta.slug);
   const second = auditPaper(meta.slug);

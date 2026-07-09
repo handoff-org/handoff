@@ -26,7 +26,6 @@ export interface ToolCall {
   function: { name: string; arguments: string };
 }
 
-
 export type StreamPart =
   | { type: 'delta'; text: string }
   | { type: 'reasoning' } // model is inside a <think> block; no visible text this chunk
@@ -104,9 +103,7 @@ class ToolCallAccumulator {
 }
 
 /** Read an SSE byte stream, yielding the JSON payload of each `data:` line. */
-async function* readSSE(
-  body: ReadableStream<Uint8Array>,
-): AsyncGenerator<string> {
+async function* readSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -138,9 +135,7 @@ async function* readSSE(
  * by Ollama's native /api/chat endpoint, which streams one complete JSON object
  * per line (no `data:` prefix and no `[DONE]` sentinel, unlike SSE).
  */
-export async function* readNDJSON(
-  body: ReadableStream<Uint8Array>,
-): AsyncGenerator<string> {
+export async function* readNDJSON(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -307,7 +302,9 @@ async function* streamOpenAICompat(
       if (typeof j.error === 'string') detail = j.error;
       else if (j.error && typeof (j.error as { message?: string }).message === 'string')
         detail = (j.error as { message: string }).message;
-    } catch { /* keep raw body as fallback */ }
+    } catch {
+      /* keep raw body as fallback */
+    }
 
     // 404 "model not found" → actionable pull hint, not a misleading "cannot reach" message.
     if (res.status === 404 && /model .* not found/i.test(detail)) {
@@ -315,7 +312,7 @@ async function* streamOpenAICompat(
       const modelId = m?.[1] ?? detail;
       throw new Error(
         `Model '${modelId}' is not installed in Ollama.\n` +
-        `Download it with:  ollama pull ${modelId}`,
+          `Download it with:  ollama pull ${modelId}`,
       );
     }
 
@@ -343,7 +340,8 @@ async function* streamOpenAICompat(
     // after a 200 header (e.g. context-length exceeded). Surface it instead of
     // silently ending with an empty/truncated reply.
     if (obj.error) {
-      const detail = typeof obj.error === 'string' ? obj.error : (obj.error.message ?? 'stream error');
+      const detail =
+        typeof obj.error === 'string' ? obj.error : (obj.error.message ?? 'stream error');
       throw new Error(`${backendLabel}: ${cleanBackendError(res.status, detail)}`);
     }
     const delta = obj.choices?.[0]?.delta;
@@ -359,7 +357,10 @@ async function* streamOpenAICompat(
     if (delta?.tool_calls) acc.add(delta.tool_calls);
   }
   const tail = think.flush();
-  if (tail) { content += tail; yield { type: 'delta', text: tail }; }
+  if (tail) {
+    content += tail;
+    yield { type: 'delta', text: tail };
+  }
   content = stripReasoning(content);
 
   let toolCalls = acc.result();
@@ -458,7 +459,10 @@ async function* streamOllamaNative(
   // numCtx (via the same reserve promptBudgetFor subtracts out) so it can never
   // itself exceed the context window on a small preset.
   if (config.maxNewTokens) {
-    options.num_predict = Math.max(config.maxNewTokens, reasoningOutputReserve(config.ollamaNumCtx));
+    options.num_predict = Math.max(
+      config.maxNewTokens,
+      reasoningOutputReserve(config.ollamaNumCtx),
+    );
   }
 
   let res: Response;
@@ -501,7 +505,9 @@ async function* streamOllamaNative(
       if (typeof j.error === 'string') detail = j.error;
       else if (j.error && typeof (j.error as { message?: string }).message === 'string')
         detail = (j.error as { message: string }).message;
-    } catch { /* keep raw body as fallback */ }
+    } catch {
+      /* keep raw body as fallback */
+    }
 
     // 404 "model not found" → actionable pull hint, not a misleading connectivity error.
     if (res.status === 404 && /model .* not found/i.test(detail)) {
@@ -509,7 +515,7 @@ async function* streamOllamaNative(
       const modelId = m?.[1] ?? detail;
       throw new Error(
         `Model '${modelId}' is not installed in Ollama.\n` +
-        `Download it with:  ollama pull ${modelId}`,
+          `Download it with:  ollama pull ${modelId}`,
       );
     }
 
@@ -559,10 +565,16 @@ async function* streamOllamaNative(
     if (msg?.tool_calls?.length) {
       nativeCalls = nativeCalls.concat(nativeToolCallsToToolCalls(msg.tool_calls));
     }
-    if (obj.done) { doneReason = obj.done_reason; break; }
+    if (obj.done) {
+      doneReason = obj.done_reason;
+      break;
+    }
   }
   const tail = think.flush();
-  if (tail) { content += tail; yield { type: 'delta', text: tail }; }
+  if (tail) {
+    content += tail;
+    yield { type: 'delta', text: tail };
+  }
   content = stripReasoning(content);
 
   let toolCalls = nativeCalls;
@@ -632,7 +644,10 @@ export class HFModel implements ChatModel {
       if (delta?.tool_calls) acc.add(delta.tool_calls as ToolCallDelta[]);
     }
     const tail = think.flush();
-    if (tail) { content += tail; yield { type: 'delta', text: tail }; }
+    if (tail) {
+      content += tail;
+      yield { type: 'delta', text: tail };
+    }
     content = stripReasoning(content);
 
     let toolCalls = acc.result();
@@ -734,9 +749,7 @@ function mergeSystemMessages(messages: Message[]): Message[] {
   if (firstUser < 0) {
     return [{ role: 'user', content: prefix }, ...rest];
   }
-  return rest.map((m, i) =>
-    i === firstUser ? { ...m, content: `${prefix}\n\n${m.content}` } : m,
-  );
+  return rest.map((m, i) => (i === firstUser ? { ...m, content: `${prefix}\n\n${m.content}` } : m));
 }
 
 /** Apple Silicon MLX backend (mlx_lm.server) — OpenAI-compatible endpoint. */
@@ -829,11 +842,15 @@ export function parseInlineToolCalls(content: string): ToolCall[] {
   // ── 1. <function=name><parameter=key>value</parameter></function> ──────────
   // Used by Llama 3.x and other models in prompt-based fallback mode.
   if (content.includes('<function=')) {
-    for (const m of content.matchAll(/<function=([a-zA-Z_][a-zA-Z0-9_]*)[^>]*>([\s\S]*?)<\/function>/g)) {
+    for (const m of content.matchAll(
+      /<function=([a-zA-Z_][a-zA-Z0-9_]*)[^>]*>([\s\S]*?)<\/function>/g,
+    )) {
       const name = m[1];
       if (!name) continue;
       const args: Record<string, string> = {};
-      for (const p of (m[2] ?? '').matchAll(/<parameter=([a-zA-Z_][a-zA-Z0-9_]*)[^>]*>([\s\S]*?)<\/parameter>/g)) {
+      for (const p of (m[2] ?? '').matchAll(
+        /<parameter=([a-zA-Z_][a-zA-Z0-9_]*)[^>]*>([\s\S]*?)<\/parameter>/g,
+      )) {
         if (p[1] && p[2] !== undefined) args[p[1]] = p[2].trim();
       }
       calls.push({
@@ -896,8 +913,8 @@ export function parseInlineToolCalls(content: string): ToolCall[] {
 }
 
 export function createModel(config: Config): ChatModel {
-  if (config.backend === 'vllm')      return new VLLMModel(config);
+  if (config.backend === 'vllm') return new VLLMModel(config);
   if (config.backend === 'llama_cpp') return new LlamaCppModel(config);
-  if (config.backend === 'mlx')       return new MlxModel(config);
+  if (config.backend === 'mlx') return new MlxModel(config);
   return config.backend === 'ollama' ? new OllamaModel(config) : new HFModel(config);
 }

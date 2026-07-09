@@ -43,7 +43,9 @@ export function SetupFlow({ onComplete, onCancel }: Props) {
 
   return (
     <Box flexDirection="column" padding={2} gap={1}>
-      <Text bold color="cyan">Welcome to Handoff</Text>
+      <Text bold color="cyan">
+        Welcome to Handoff
+      </Text>
       <Text>Enter your HuggingFace token to get started.</Text>
       <Text dimColor>Get one at huggingface.co/settings/tokens</Text>
 
@@ -51,7 +53,11 @@ export function SetupFlow({ onComplete, onCancel }: Props) {
         <Text>HF Token:</Text>
         <Box borderStyle="round" paddingX={1}>
           <Text color="green">{saving ? 'Saving...' : input.replace(/./g, '*')}</Text>
-          {!saving && <Text color="green" dimColor>|</Text>}
+          {!saving && (
+            <Text color="green" dimColor>
+              |
+            </Text>
+          )}
         </Box>
         {error && <Text color="red">{error}</Text>}
         <Text dimColor>Press Enter to confirm{onCancel ? ' · Esc to go back' : ''}</Text>

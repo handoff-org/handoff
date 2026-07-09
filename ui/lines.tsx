@@ -95,7 +95,8 @@ function layout(
   width: number,
   theme: Theme,
   keyBase: string,
-): React.ReactNode[] {  const lines: React.ReactNode[] = [];
+): React.ReactNode[] {
+  const lines: React.ReactNode[] = [];
   let firstOfEntry = true;
   for (const b of blocks) {
     const wrapped = wrap(b.text, width - 2);
@@ -104,11 +105,7 @@ function layout(
       lines.push(
         <Text key={`${keyBase}-${lines.length}`}>
           {marker}
-          {b.inline ? (
-            renderInline(ln, theme)
-          ) : (
-            <Text color={b.color}>{ln}</Text>
-          )}
+          {b.inline ? renderInline(ln, theme) : <Text color={b.color}>{ln}</Text>}
         </Text>,
       );
     });
@@ -144,8 +141,7 @@ export function entryLines(
               {prefix}
             </Text>
             <Text color={theme.user}>{ln}</Text>
-            {' '.repeat(padW)}
-            {' '}
+            {' '.repeat(padW)}{' '}
           </Text>,
         );
       });
@@ -165,7 +161,13 @@ export function entryLines(
       ];
     case 'tool_result':
       return layout(
-        [{ marker: <Text color={theme.toolResult}>{'↳ '}</Text>, color: 'gray', text: truncateResult(entry.result) }],
+        [
+          {
+            marker: <Text color={theme.toolResult}>{'↳ '}</Text>,
+            color: 'gray',
+            text: truncateResult(entry.result),
+          },
+        ],
         width,
         theme,
         keyBase,
@@ -192,12 +194,18 @@ export function entryLines(
       );
       out.push(
         <Text key={`${keyBase}-dttl`}>
-          <Text color={border} dimColor>{ind + '│ '}</Text>
-          <Text color={theme.assistant} bold>{titleText}</Text>
+          <Text color={border} dimColor>
+            {ind + '│ '}
+          </Text>
+          <Text color={theme.assistant} bold>
+            {titleText}
+          </Text>
           <Text>{'  '}</Text>
           <Text dimColor>{statText}</Text>
           <Text>{' '.repeat(Math.max(0, innerW - titleLen))}</Text>
-          <Text color={border} dimColor>{' │'}</Text>
+          <Text color={border} dimColor>
+            {' │'}
+          </Text>
         </Text>,
       );
       for (const r of entry.rows) {
@@ -209,13 +217,19 @@ export function entryLines(
           const body = (s + seg).padEnd(innerW);
           out.push(
             <Text key={`${keyBase}-d${out.length}`}>
-              <Text color={border} dimColor>{ind + '│ '}</Text>
+              <Text color={border} dimColor>
+                {ind + '│ '}
+              </Text>
               {r.sign === '~' || r.sign === ' ' ? (
                 <Text dimColor>{body}</Text>
               ) : (
-                <Text color={color} backgroundColor={bg}>{body}</Text>
+                <Text color={color} backgroundColor={bg}>
+                  {body}
+                </Text>
               )}
-              <Text color={border} dimColor>{' │'}</Text>
+              <Text color={border} dimColor>
+                {' │'}
+              </Text>
             </Text>,
           );
         });
@@ -224,9 +238,13 @@ export function entryLines(
         const more = `… ${entry.truncated} more line${entry.truncated === 1 ? '' : 's'}`;
         out.push(
           <Text key={`${keyBase}-dmore`}>
-            <Text color={border} dimColor>{ind + '│ '}</Text>
+            <Text color={border} dimColor>
+              {ind + '│ '}
+            </Text>
             <Text dimColor>{more.padEnd(innerW)}</Text>
-            <Text color={border} dimColor>{' │'}</Text>
+            <Text color={border} dimColor>
+              {' │'}
+            </Text>
           </Text>,
         );
       }
@@ -251,8 +269,7 @@ export function entryLines(
           <Text key={`${keyBase}-n${i}`} backgroundColor={bg}>
             {' '}
             <Text color={theme.note}>{ln}</Text>
-            {' '.repeat(padW)}
-            {' '}
+            {' '.repeat(padW)}{' '}
           </Text>,
         );
       });
@@ -265,10 +282,7 @@ export function entryLines(
       const innerCap = Math.max(20, Math.min(width - 4, 80));
       const innerW = Math.min(
         innerCap,
-        Math.max(
-          ' Commands'.length,
-          ...COMMANDS.map((cmd) => 1 + nameW + 2 + cmd.desc.length),
-        ),
+        Math.max(' Commands'.length, ...COMMANDS.map((cmd) => 1 + nameW + 2 + cmd.desc.length)),
       );
       const rows: React.ReactNode[] = [lead];
       rows.push(
@@ -279,9 +293,15 @@ export function entryLines(
       const title = 'Commands';
       rows.push(
         <Text key={`${keyBase}-htitle`}>
-          <Text color={c} dimColor>{'│ '}</Text>
-          <Text color={theme.assistant} bold>{title.padEnd(innerW)}</Text>
-          <Text color={c} dimColor>{' │'}</Text>
+          <Text color={c} dimColor>
+            {'│ '}
+          </Text>
+          <Text color={theme.assistant} bold>
+            {title.padEnd(innerW)}
+          </Text>
+          <Text color={c} dimColor>
+            {' │'}
+          </Text>
         </Text>,
       );
       for (const cmd of COMMANDS) {
@@ -291,16 +311,22 @@ export function entryLines(
           const isFirst = seg.startsWith(` ${cmd.name}`);
           rows.push(
             <Text key={`${keyBase}-h${rows.length}`}>
-              <Text color={c} dimColor>{'│ '}</Text>
-              {isFirst
-                ? [
-                    <Text key="nm" color={theme.user}>{` ${cmd.name}`}</Text>,
-                    <Text key="ds" dimColor>
-                      {seg.slice(1 + cmd.name.length).padEnd(innerW - 1 - cmd.name.length)}
-                    </Text>,
-                  ]
-                : <Text dimColor>{seg.padEnd(innerW)}</Text>}
-              <Text color={c} dimColor>{' │'}</Text>
+              <Text color={c} dimColor>
+                {'│ '}
+              </Text>
+              {isFirst ? (
+                [
+                  <Text key="nm" color={theme.user}>{` ${cmd.name}`}</Text>,
+                  <Text key="ds" dimColor>
+                    {seg.slice(1 + cmd.name.length).padEnd(innerW - 1 - cmd.name.length)}
+                  </Text>,
+                ]
+              ) : (
+                <Text dimColor>{seg.padEnd(innerW)}</Text>
+              )}
+              <Text color={c} dimColor>
+                {' │'}
+              </Text>
             </Text>,
           );
         }
@@ -315,7 +341,22 @@ export function entryLines(
     case 'error':
       return [
         lead,
-        ...layout([{ marker: <Text color={theme.error} bold>{'✗ '}</Text>, color: theme.error, text: entry.message }], width, theme, keyBase),
+        ...layout(
+          [
+            {
+              marker: (
+                <Text color={theme.error} bold>
+                  {'✗ '}
+                </Text>
+              ),
+              color: theme.error,
+              text: entry.message,
+            },
+          ],
+          width,
+          theme,
+          keyBase,
+        ),
       ];
     default:
       return [];
@@ -375,11 +416,7 @@ function codeBlockBody(
   const innerW = Math.max(8, width - 2 - gutterW - 1);
   const diff = looksLikeDiff(lang, code);
   let key = 0;
-  const gutter = (label: string) => (
-    <Text dimColor>
-      {label.padStart(numW)} │{' '}
-    </Text>
-  );
+  const gutter = (label: string) => <Text dimColor>{label.padStart(numW)} │ </Text>;
 
   if (diff) {
     let oldLn = 1;

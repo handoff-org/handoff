@@ -13,14 +13,35 @@ import {
 } from '../src/agent/advisor.js';
 import { catalogForBackend, findCatalogEntry } from '../config/catalog.js';
 
-function macbook(gb: number, tier: HardwareProfile['macTier'] = 'base', power: HardwareProfile['power'] = 'plugged'): HardwareProfile {
+function macbook(
+  gb: number,
+  tier: HardwareProfile['macTier'] = 'base',
+  power: HardwareProfile['power'] = 'plugged',
+): HardwareProfile {
   const perfTier =
-    gb <= 8 ? 'tiny' : gb <= 16 ? 'cool' : gb <= 24 ? 'balanced' : gb <= 36 ? 'capable' : 'high_end';
+    gb <= 8
+      ? 'tiny'
+      : gb <= 16
+        ? 'cool'
+        : gb <= 24
+          ? 'balanced'
+          : gb <= 36
+            ? 'capable'
+            : 'high_end';
   return {
-    os: 'darwin', arch: 'arm64', appleSilicon: true, totalMemoryGb: gb,
+    os: 'darwin',
+    arch: 'arm64',
+    appleSilicon: true,
+    totalMemoryGb: gb,
     chipName: `Apple M2${tier === 'base' ? '' : ' ' + tier[0]!.toUpperCase() + tier.slice(1)}`,
-    macTier: tier, macGeneration: 'M2', isMacBook: true, power, gpuCores: 16,
-    gpuVendor: 'apple', vramGb: null, gpuName: null,
+    macTier: tier,
+    macGeneration: 'M2',
+    isMacBook: true,
+    power,
+    gpuCores: 16,
+    gpuVendor: 'apple',
+    vramGb: null,
+    gpuName: null,
     perfTier: perfTier as HardwareProfile['perfTier'],
   };
 }
@@ -30,9 +51,19 @@ function gpuPc(vramGb: number, ramGb = 64): HardwareProfile {
   const perfTier =
     vramGb >= 24 ? 'workstation' : vramGb >= 12 ? 'high_end' : vramGb >= 8 ? 'capable' : 'balanced';
   return {
-    os: 'linux', arch: 'x64', appleSilicon: false, totalMemoryGb: ramGb,
-    chipName: null, macTier: 'unknown', macGeneration: 'unknown', isMacBook: null, power: 'plugged',
-    gpuCores: null, gpuVendor: 'nvidia', vramGb, gpuName: `NVIDIA RTX (${vramGb}GB)`,
+    os: 'linux',
+    arch: 'x64',
+    appleSilicon: false,
+    totalMemoryGb: ramGb,
+    chipName: null,
+    macTier: 'unknown',
+    macGeneration: 'unknown',
+    isMacBook: null,
+    power: 'plugged',
+    gpuCores: null,
+    gpuVendor: 'nvidia',
+    vramGb,
+    gpuName: `NVIDIA RTX (${vramGb}GB)`,
     perfTier: perfTier as HardwareProfile['perfTier'],
   };
 }
@@ -55,7 +86,12 @@ test('16 GB MacBook Cool recommends a small/fast model, not 20B+', () => {
 test('ornith:35b is never the default on 16/24/32 GB MacBooks', () => {
   for (const gb of [16, 24, 32]) {
     for (const mode of ['cool', 'balanced'] as const) {
-      const rec = advise(input(macbook(gb, gb >= 32 ? 'pro' : 'base'), { performanceMode: mode, goalRole: 'coding_agent' })).recommended!;
+      const rec = advise(
+        input(macbook(gb, gb >= 32 ? 'pro' : 'base'), {
+          performanceMode: mode,
+          goalRole: 'coding_agent',
+        }),
+      ).recommended!;
       assert.notEqual(rec.entry.id, 'ornith:35b', `ornith:35b was default on ${gb}GB ${mode}`);
     }
   }
@@ -82,7 +118,9 @@ test('24 GB MacBook default is 8-14B class, not 30B+', () => {
 });
 
 test('32 GB Pro Balanced may surface 20B but labelled warm/hot, not cool-safe', () => {
-  const ranked = rankCandidates(input(macbook(32, 'pro'), { performanceMode: 'balanced', goalRole: 'tool_use' }));
+  const ranked = rankCandidates(
+    input(macbook(32, 'pro'), { performanceMode: 'balanced', goalRole: 'tool_use' }),
+  );
   const gptoss = ranked.find((r) => r.entry.id === 'gpt-oss:20b');
   assert.ok(gptoss, 'gpt-oss:20b should be a candidate');
   assert.ok(gptoss!.risk === 'hot' || gptoss!.risk === 'warm');
@@ -90,9 +128,20 @@ test('32 GB Pro Balanced may surface 20B but labelled warm/hot, not cool-safe', 
 
 test('a slow benchmark demotes a model below a fast alternative', () => {
   const hw = macbook(24, 'pro');
-  const fp = ['darwin', 'arm64', hw.chipName, `${hw.totalMemoryGb}gb`].join('|').replace(/\s+/g, '');
+  const fp = ['darwin', 'arm64', hw.chipName, `${hw.totalMemoryGb}gb`]
+    .join('|')
+    .replace(/\s+/g, '');
   const bench: BenchmarkRecord[] = [
-    { backend: 'ollama', modelId: 'qwen3:14b', quant: 'q4_K_M', contextTokens: 8192, hardwareFingerprint: fp, tokensPerSec: 1.5, fullGpu: true, toolCallOk: true },
+    {
+      backend: 'ollama',
+      modelId: 'qwen3:14b',
+      quant: 'q4_K_M',
+      contextTokens: 8192,
+      hardwareFingerprint: fp,
+      tokensPerSec: 1.5,
+      fullGpu: true,
+      toolCallOk: true,
+    },
   ];
   const withBench = rankCandidates(input(hw, { benchmarks: bench, goalRole: 'coding_agent' }));
   const without = rankCandidates(input(hw, { goalRole: 'coding_agent' }));
@@ -103,11 +152,24 @@ test('a slow benchmark demotes a model below a fast alternative', () => {
 
 test('a CPU-spill benchmark demotes a model and warns', () => {
   const hw = macbook(32, 'pro');
-  const fp = ['darwin', 'arm64', hw.chipName, `${hw.totalMemoryGb}gb`].join('|').replace(/\s+/g, '');
+  const fp = ['darwin', 'arm64', hw.chipName, `${hw.totalMemoryGb}gb`]
+    .join('|')
+    .replace(/\s+/g, '');
   const bench: BenchmarkRecord[] = [
-    { backend: 'ollama', modelId: 'gpt-oss:20b', quant: 'q4_K_M', contextTokens: 8192, hardwareFingerprint: fp, tokensPerSec: 12, fullGpu: false, toolCallOk: true },
+    {
+      backend: 'ollama',
+      modelId: 'gpt-oss:20b',
+      quant: 'q4_K_M',
+      contextTokens: 8192,
+      hardwareFingerprint: fp,
+      tokensPerSec: 12,
+      fullGpu: false,
+      toolCallOk: true,
+    },
   ];
-  const adv = advise(input(hw, { benchmarks: bench, currentModelId: 'gpt-oss:20b', performanceMode: 'max' }));
+  const adv = advise(
+    input(hw, { benchmarks: bench, currentModelId: 'gpt-oss:20b', performanceMode: 'max' }),
+  );
   assert.ok(adv.warnings.some((w) => /not fully on GPU|CPU/i.test(w)));
 });
 
@@ -133,12 +195,22 @@ test('cloud models are not recommended without cloud backend + consent', () => {
   const ranked = rankCandidates(input(macbook(16)));
   assert.ok(ranked.every((r) => r.entry.privacy !== 'cloud_opt_in'));
   // On HF without consent, cloud models are filtered out.
-  const hf = rankCandidates({ hardware: macbook(16), backend: 'hf', performanceMode: 'balanced', cloudConsent: false });
+  const hf = rankCandidates({
+    hardware: macbook(16),
+    backend: 'hf',
+    performanceMode: 'balanced',
+    cloudConsent: false,
+  });
   assert.ok(hf.every((r) => r.entry.privacy !== 'cloud_opt_in'));
 });
 
 test('HF with consent allows cloud models', () => {
-  const hf = rankCandidates({ hardware: macbook(16), backend: 'hf', performanceMode: 'max', cloudConsent: true });
+  const hf = rankCandidates({
+    hardware: macbook(16),
+    backend: 'hf',
+    performanceMode: 'max',
+    cloudConsent: true,
+  });
   assert.ok(hf.some((r) => r.entry.privacy === 'cloud_opt_in'));
 });
 
@@ -171,7 +243,9 @@ test('effectiveBudgetGb keys off VRAM for a discrete GPU, not system RAM', () =>
 
 test('12 GB GPU (with 64 GB RAM) never defaults to a 30B+ model', () => {
   for (const mode of ['cool', 'balanced', 'max'] as const) {
-    const rec = advise(input(gpuPc(12), { performanceMode: mode, goalRole: 'coding_agent' })).recommended!;
+    const rec = advise(
+      input(gpuPc(12), { performanceMode: mode, goalRole: 'coding_agent' }),
+    ).recommended!;
     assert.ok(rec, `should recommend something in ${mode}`);
     assert.ok(
       (rec.entry.totalParamsB ?? 99) <= 15,
@@ -181,8 +255,12 @@ test('12 GB GPU (with 64 GB RAM) never defaults to a 30B+ model', () => {
 });
 
 test('a bigger GPU unlocks bigger models than a small one', () => {
-  const small = advise(input(gpuPc(8), { performanceMode: 'balanced', goalRole: 'coding_agent' })).recommended!;
-  const big = advise(input(gpuPc(24), { performanceMode: 'balanced', goalRole: 'coding_agent' })).recommended!;
+  const small = advise(
+    input(gpuPc(8), { performanceMode: 'balanced', goalRole: 'coding_agent' }),
+  ).recommended!;
+  const big = advise(
+    input(gpuPc(24), { performanceMode: 'balanced', goalRole: 'coding_agent' }),
+  ).recommended!;
   assert.ok(
     (big.entry.totalParamsB ?? 0) >= (small.entry.totalParamsB ?? 0),
     `24 GB (${big.entry.label}) should allow >= params than 8 GB (${small.entry.label})`,
@@ -193,7 +271,8 @@ test('a model that overflows VRAM is flagged hot (spill), not safe', () => {
   // gpt-oss:20b (~13 GB at q4) cannot fit a 12 GB card.
   const ranked = rankCandidates(input(gpuPc(12), { performanceMode: 'max', goalRole: 'tool_use' }));
   const big = ranked.find((r) => (r.entry.totalParamsB ?? 0) >= 20);
-  if (big) assert.equal(big.risk, 'hot', `${big.entry.label} should be hot (VRAM spill) on a 12 GB card`);
+  if (big)
+    assert.equal(big.risk, 'hot', `${big.entry.label} should be hot (VRAM spill) on a 12 GB card`);
 });
 
 test('context defaults scale with VRAM on a discrete GPU', () => {
@@ -206,11 +285,17 @@ test('context defaults scale with VRAM on a discrete GPU', () => {
 test('a rejected model is scored down and never recommended', () => {
   const base = rankCandidates(input(macbook(24, 'pro'), { goalRole: 'coding_agent' }));
   const topId = base[0]!.entry.id;
-  const withReject = advise(input(macbook(24, 'pro'), {
-    goalRole: 'coding_agent',
-    personalization: { rejectedModels: [topId] },
-  }));
-  assert.notEqual(withReject.recommended?.entry.id, topId, 'rejected model must not be recommended');
+  const withReject = advise(
+    input(macbook(24, 'pro'), {
+      goalRole: 'coding_agent',
+      personalization: { rejectedModels: [topId] },
+    }),
+  );
+  assert.notEqual(
+    withReject.recommended?.entry.id,
+    topId,
+    'rejected model must not be recommended',
+  );
 });
 
 test('a preferred model gets a scoring boost', () => {
@@ -218,23 +303,30 @@ test('a preferred model gets a scoring boost', () => {
   const ranked = rankCandidates(input(macbook(24, 'pro'), { goalRole: 'coding_agent' }));
   const target = ranked[Math.min(2, ranked.length - 1)]!.entry.id;
   const before = ranked.findIndex((r) => r.entry.id === target);
-  const after = rankCandidates(input(macbook(24, 'pro'), {
-    goalRole: 'coding_agent',
-    personalization: { preferredModels: [target] },
-  })).findIndex((r) => r.entry.id === target);
+  const after = rankCandidates(
+    input(macbook(24, 'pro'), {
+      goalRole: 'coding_agent',
+      personalization: { preferredModels: [target] },
+    }),
+  ).findIndex((r) => r.entry.id === target);
   assert.ok(after <= before, `preferred model should not rank lower (${before} → ${after})`);
 });
 
 test('prefersFastSmallModels penalizes large models', () => {
   const plain = rankCandidates(input(macbook(64, 'max'), { performanceMode: 'max' }));
-  const fastSmall = rankCandidates(input(macbook(64, 'max'), {
-    performanceMode: 'max',
-    personalization: { prefersFastSmallModels: true },
-  }));
+  const fastSmall = rankCandidates(
+    input(macbook(64, 'max'), {
+      performanceMode: 'max',
+      personalization: { prefersFastSmallModels: true },
+    }),
+  );
   const big = plain.find((r) => (r.entry.totalParamsB ?? 0) >= 20)?.entry.id;
   if (big) {
     const rankPlain = plain.findIndex((r) => r.entry.id === big);
     const rankFast = fastSmall.findIndex((r) => r.entry.id === big);
-    assert.ok(rankFast >= rankPlain, 'a 20B+ model should not rank higher when fast/small is preferred');
+    assert.ok(
+      rankFast >= rankPlain,
+      'a 20B+ model should not rank higher when fast/small is preferred',
+    );
   }
 });

@@ -32,8 +32,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
           </Text>
           <Text>{msg}</Text>
           <Text dimColor>
-            Your projects, config, and session are safe on disk. Press Ctrl-C to exit,
-            then relaunch (handoff --resume) to continue.
+            Your projects, config, and session are safe on disk. Press Ctrl-C to exit, then relaunch
+            (handoff --resume) to continue.
           </Text>
         </Box>
       );

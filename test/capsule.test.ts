@@ -10,14 +10,8 @@ const home = freshHome();
 const { createProject, projectPaths } = await import('../src/workspace/project.js');
 const { executeRun } = await import('../src/workspace/runner.js');
 const { readLedger } = await import('../src/workspace/ledger.js');
-const {
-  readCapsule,
-  listCapsules,
-  promoteRun,
-  isPromoted,
-  formatCompare,
-  parseMetrics,
-} = await import('../src/workspace/capsule.js');
+const { readCapsule, listCapsules, promoteRun, isPromoted, formatCompare, parseMetrics } =
+  await import('../src/workspace/capsule.js');
 const { gitState } = await import('../src/util/git.js');
 
 test('executeRun captures a reproducible capsule with metrics, code, and repro.sh', () => {
@@ -75,9 +69,20 @@ test('promoteRun marks a run canonical (and rejects unknown ids)', () => {
 
 test('formatCompare reports a metric delta between two runs', () => {
   const meta = createProject({ title: 'Compare' });
-  const a = executeRun(meta.slug, { language: 'shell', code: 'echo "METRIC acc=0.80"', description: 'a' });
-  const b = executeRun(meta.slug, { language: 'shell', code: 'echo "METRIC acc=0.90"', description: 'b' });
-  const out = formatCompare(readCapsule(meta.slug, a.capsuleId)!, readCapsule(meta.slug, b.capsuleId)!);
+  const a = executeRun(meta.slug, {
+    language: 'shell',
+    code: 'echo "METRIC acc=0.80"',
+    description: 'a',
+  });
+  const b = executeRun(meta.slug, {
+    language: 'shell',
+    code: 'echo "METRIC acc=0.90"',
+    description: 'b',
+  });
+  const out = formatCompare(
+    readCapsule(meta.slug, a.capsuleId)!,
+    readCapsule(meta.slug, b.capsuleId)!,
+  );
   assert.match(out, /acc/);
   assert.match(out, /0\.8/);
   assert.match(out, /0\.9/);

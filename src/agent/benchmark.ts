@@ -111,7 +111,9 @@ export async function benchmarkModel(opts: {
   try {
     // Disable thinking so the throughput number reflects raw generation speed.
     // Reasoning models (Qwen3, DeepSeek-R1) would otherwise report near-zero tok/s.
-    for await (const part of opts.model.chatStream(THROUGHPUT_PROMPT, undefined, undefined, { think: false })) {
+    for await (const part of opts.model.chatStream(THROUGHPUT_PROMPT, undefined, undefined, {
+      think: false,
+    })) {
       if (part.type === 'delta') {
         if (firstChunkAt === null) {
           firstChunkAt = performanceNow();

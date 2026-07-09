@@ -98,7 +98,8 @@ function privacyGuidance(hasProject: boolean): string {
 
 const FAMILY_HINTS: Record<ModelFamily, string> = {
   qwen: 'Emit valid tool calls with exact file paths; read before editing; keep summaries compact.',
-  ornith: 'Act as a coding agent through tools; run terminal actions via tools; never dump code walls in chat.',
+  ornith:
+    'Act as a coding agent through tools; run terminal actions via tools; never dump code walls in chat.',
   gpt_oss: 'Produce schema-adherent tool arguments and concise post-tool summaries.',
   gemma: 'Write polished, well-cited prose; avoid unsupported claims; still act through tools.',
   deepseek: 'Give concise, evidence-backed audit findings; no visible chain-of-thought.',
@@ -156,7 +157,10 @@ function projectStartupGuidance(projects: ProjectMeta[]): string {
       'template yourself, and do not ask for a description or add extra confirmation steps.'
     );
   }
-  const names = projects.slice(0, 8).map((p) => `"${p.title}" (${p.slug})`).join(', ');
+  const names = projects
+    .slice(0, 8)
+    .map((p) => `"${p.title}" (${p.slug})`)
+    .join(', ');
   return (
     `${projects.length} research project(s) exist but none is open: ${names}. When the user wants to ` +
     'work on, continue, or open research (not for greetings or small talk), call ask_user listing these ' +
@@ -212,9 +216,12 @@ export function projectContext(meta: ProjectMeta | null): string {
 /** Choose a profile from options + project state when not set explicitly. */
 export function resolveProfile(meta: ProjectMeta | null, opts: BuildOpts): PromptProfile {
   if (opts.promptProfile) return opts.promptProfile;
-  if (opts.focus === 'general' || !meta) return meta ? 'standard' : opts.focus === 'general' ? 'general' : 'standard';
+  if (opts.focus === 'general' || !meta)
+    return meta ? 'standard' : opts.focus === 'general' ? 'general' : 'standard';
   const paperish =
-    meta.paperMode === 'overleaf' || opts.activeTask === 'paper' || opts.activeTask === 'literature';
+    meta.paperMode === 'overleaf' ||
+    opts.activeTask === 'paper' ||
+    opts.activeTask === 'literature';
   if (paperish) return 'strict_paper';
   if (opts.performanceMode === 'cool') return 'compact';
   return 'standard';
@@ -235,7 +242,11 @@ function dedupeSections(sections: string[]): string[] {
  * Full system message. Backward-compatible: buildSystem(prompt, meta) works as
  * before; pass `opts` to select a profile, backend, and model family.
  */
-export function buildSystem(systemPrompt: string, meta: ProjectMeta | null, opts: BuildOpts = {}): string {
+export function buildSystem(
+  systemPrompt: string,
+  meta: ProjectMeta | null,
+  opts: BuildOpts = {},
+): string {
   // General/off-work mode drops all project + Overleaf context.
   const effectiveMeta = opts.focus === 'general' ? null : meta;
   const profile = resolveProfile(effectiveMeta, opts);
@@ -246,11 +257,11 @@ export function buildSystem(systemPrompt: string, meta: ProjectMeta | null, opts
 
   if (profile === 'general') {
     sections.push(
-      priorityGuidance(), 
-      toolUseGuidance(), 
-      interactionGuidance(), 
-      responseStyleGuidance(), 
-      privacyGuidance(hasProject)
+      priorityGuidance(),
+      toolUseGuidance(),
+      interactionGuidance(),
+      responseStyleGuidance(),
+      privacyGuidance(hasProject),
     );
     const fam = modelFamilyGuidance(opts.modelFamily);
     if (fam) sections.push(fam);
@@ -260,11 +271,11 @@ export function buildSystem(systemPrompt: string, meta: ProjectMeta | null, opts
 
   // Safety-critical sections are in every profile.
   sections.push(
-    priorityGuidance(), 
-    toolUseGuidance(), 
-    interactionGuidance(), 
-    responseStyleGuidance(), 
-    privacyGuidance(hasProject)
+    priorityGuidance(),
+    toolUseGuidance(),
+    interactionGuidance(),
+    responseStyleGuidance(),
+    privacyGuidance(hasProject),
   );
 
   if (profile === 'compact') {
@@ -277,7 +288,7 @@ export function buildSystem(systemPrompt: string, meta: ProjectMeta | null, opts
     sections.push(
       researchToolGuidance(),
       paperTemplateGuidance(templateLabels),
-      paperCitationChecklist()
+      paperCitationChecklist(),
     );
   }
 
@@ -299,15 +310,19 @@ export function buildSystem(systemPrompt: string, meta: ProjectMeta | null, opts
 }
 
 /** Debug helper: report the resolved profile and approximate character length. */
-export function describePrompt(systemPrompt: string, meta: ProjectMeta | null, opts: BuildOpts = {}): {
+export function describePrompt(
+  systemPrompt: string,
+  meta: ProjectMeta | null,
+  opts: BuildOpts = {},
+): {
   profile: PromptProfile;
   length: number;
   version: number;
 } {
   const built = buildSystem(systemPrompt, meta, opts);
-  return { 
-    profile: resolveProfile(opts.focus === 'general' ? null : meta, opts), 
-    length: built.length, 
-    version: SYSTEM_PROMPT_VERSION
-   };
+  return {
+    profile: resolveProfile(opts.focus === 'general' ? null : meta, opts),
+    length: built.length,
+    version: SYSTEM_PROMPT_VERSION,
+  };
 }

@@ -9,12 +9,22 @@ import { join, relative, sep } from 'path';
  */
 
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', '.venv', 'venv', '__pycache__', '.mypy_cache',
-  'dist', 'build', '.next', '.cache', '.pytest_cache', '.ipynb_checkpoints',
+  'node_modules',
+  '.git',
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.mypy_cache',
+  'dist',
+  'build',
+  '.next',
+  '.cache',
+  '.pytest_cache',
+  '.ipynb_checkpoints',
 ]);
-const MAX_FILES = 4000;      // files visited before we stop walking
+const MAX_FILES = 4000; // files visited before we stop walking
 const MAX_FILE_BYTES = 1_000_000; // skip files larger than ~1 MB
-const BINARY_SNIFF = 8192;   // bytes to check for a NUL (binary marker)
+const BINARY_SNIFF = 8192; // bytes to check for a NUL (binary marker)
 
 /** Walk `root` depth-first, yielding project-relative file paths (bounded). */
 export function* walkFiles(root: string): Generator<string> {
@@ -81,7 +91,10 @@ export function globFiles(root: string, pattern: string, limit = 200): GlobResul
   let capped = false;
   for (const rel of walkFiles(root)) {
     if (re.test(toPosix(rel))) {
-      if (out.length >= limit) { capped = true; break; }
+      if (out.length >= limit) {
+        capped = true;
+        break;
+      }
       out.push(toPosix(rel));
     }
   }

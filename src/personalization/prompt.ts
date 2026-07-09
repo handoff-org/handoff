@@ -46,9 +46,14 @@ export function buildPersonalizationPrompt(profile: AdaptiveProfile, ctx: Prompt
   const s = profile.interactionStyle;
   if (strong(s.verbosity, EXPLICIT_MIN)) global.push(`Prefers ${s.verbosity!.value} answers.`);
   if (strong(s.tone, EXPLICIT_MIN)) global.push(`Prefers a ${s.tone!.value} tone.`);
-  if (strong(s.prefersBullets, EXPLICIT_MIN) && s.prefersBullets!.value) global.push('Prefers bulleted answers.');
-  if (strong(s.prefersCodeFirst, EXPLICIT_MIN) && s.prefersCodeFirst!.value) global.push('Prefers code first, prose after.');
-  if (strong(s.prefersExplanationsBeforeEdits, EXPLICIT_MIN) && s.prefersExplanationsBeforeEdits!.value)
+  if (strong(s.prefersBullets, EXPLICIT_MIN) && s.prefersBullets!.value)
+    global.push('Prefers bulleted answers.');
+  if (strong(s.prefersCodeFirst, EXPLICIT_MIN) && s.prefersCodeFirst!.value)
+    global.push('Prefers code first, prose after.');
+  if (
+    strong(s.prefersExplanationsBeforeEdits, EXPLICIT_MIN) &&
+    s.prefersExplanationsBeforeEdits!.value
+  )
     global.push('Prefers a short plan/explanation before edits.');
 
   const mp = profile.modelAndPerformance;
@@ -75,7 +80,11 @@ export function buildPersonalizationPrompt(profile: AdaptiveProfile, ctx: Prompt
 
   // Any remaining generic explicit notes (unclassified "remember that ...").
   for (const pref of profile.explicitPreferences) {
-    if (pref.key.startsWith('note-') && pref.confidence >= EXPLICIT_MIN && typeof pref.value === 'string') {
+    if (
+      pref.key.startsWith('note-') &&
+      pref.confidence >= EXPLICIT_MIN &&
+      typeof pref.value === 'string'
+    ) {
       global.push(String(pref.value).replace(/\.*$/, '.'));
     }
   }
@@ -84,7 +93,10 @@ export function buildPersonalizationPrompt(profile: AdaptiveProfile, ctx: Prompt
   if (!lines.length) return '';
   lines = lines.slice(0, MAX_LINES);
 
-  let block = ['User preferences (local profile — adapt to these; the user can edit them):', ...lines.map((l) => `- ${l}`)].join('\n');
+  let block = [
+    'User preferences (local profile — adapt to these; the user can edit them):',
+    ...lines.map((l) => `- ${l}`),
+  ].join('\n');
   if (block.length > MAX_CHARS) block = block.slice(0, MAX_CHARS).replace(/\n- [^\n]*$/, '');
   return block;
 }

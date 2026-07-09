@@ -49,7 +49,11 @@ function storedOllamaPerf() {
   try {
     const raw = readFileSync(join(homedir(), '.handoff', 'config.json'), 'utf8');
     const cfg = JSON.parse(raw);
-    return { flash: cfg.ollamaFlashAttention, kv: cfg.ollamaKvCacheType, routerEnabled: cfg.routerEnabled === true };
+    return {
+      flash: cfg.ollamaFlashAttention,
+      kv: cfg.ollamaKvCacheType,
+      routerEnabled: cfg.routerEnabled === true,
+    };
   } catch {
     return {};
   }

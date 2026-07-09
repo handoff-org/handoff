@@ -9,9 +9,24 @@ const NOW = '2026-07-05T12:00:00.000Z';
 /** A profile with a couple of explicit prefs (verbosity + paper template + language). */
 function sample(): AdaptiveProfile {
   let p = defaultProfile(NOW);
-  p = applyExplicit(p, detectExplicitPreference('from now on I prefer short answers')!, 'prefers concise answers', NOW);
-  p = applyExplicit(p, detectExplicitPreference('always use the NeurIPS format')!, 'prefers the NeurIPS paper template', NOW);
-  p = applyExplicit(p, detectExplicitPreference('I prefer python for experiments')!, 'prefers python for experiments/code', NOW);
+  p = applyExplicit(
+    p,
+    detectExplicitPreference('from now on I prefer short answers')!,
+    'prefers concise answers',
+    NOW,
+  );
+  p = applyExplicit(
+    p,
+    detectExplicitPreference('always use the NeurIPS format')!,
+    'prefers the NeurIPS paper template',
+    NOW,
+  );
+  p = applyExplicit(
+    p,
+    detectExplicitPreference('I prefer python for experiments')!,
+    'prefers python for experiments/code',
+    NOW,
+  );
   return p;
 }
 
@@ -43,8 +58,14 @@ test('renders a compact, deterministic block', () => {
 });
 
 test('cloud backend excludes the profile unless allowed', () => {
-  assert.equal(buildPersonalizationPrompt(sample(), ctx({ isCloudBackend: true, allowCloud: false })), '');
-  assert.notEqual(buildPersonalizationPrompt(sample(), ctx({ isCloudBackend: true, allowCloud: true })), '');
+  assert.equal(
+    buildPersonalizationPrompt(sample(), ctx({ isCloudBackend: true, allowCloud: false })),
+    '',
+  );
+  assert.notEqual(
+    buildPersonalizationPrompt(sample(), ctx({ isCloudBackend: true, allowCloud: true })),
+    '',
+  );
 });
 
 test('focus=general keeps global style but drops project/research lines', () => {
@@ -56,6 +77,11 @@ test('focus=general keeps global style but drops project/research lines', () => 
 test('low-confidence inferred entries are omitted', () => {
   const p = defaultProfile(NOW);
   // An inferred value below the 0.6 threshold must not appear.
-  p.interactionStyle.prefersBullets = { value: true, confidence: 0.55, evidenceCount: 3, updatedAt: NOW };
+  p.interactionStyle.prefersBullets = {
+    value: true,
+    confidence: 0.55,
+    evidenceCount: 3,
+    updatedAt: NOW,
+  };
   assert.equal(buildPersonalizationPrompt(p, ctx()), '');
 });

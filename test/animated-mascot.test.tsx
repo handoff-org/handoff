@@ -34,11 +34,15 @@ test('animating starts an interval; disabled starts none; unmount clears it', as
   const realClear = globalThis.clearInterval;
   let sets = 0;
   let clears = 0;
-  (globalThis as unknown as { setInterval: typeof setInterval }).setInterval = ((...a: unknown[]) => {
+  (globalThis as unknown as { setInterval: typeof setInterval }).setInterval = ((
+    ...a: unknown[]
+  ) => {
     sets++;
     return (realSet as (...x: unknown[]) => unknown)(...a);
   }) as typeof setInterval;
-  (globalThis as unknown as { clearInterval: typeof clearInterval }).clearInterval = ((...a: unknown[]) => {
+  (globalThis as unknown as { clearInterval: typeof clearInterval }).clearInterval = ((
+    ...a: unknown[]
+  ) => {
     clears++;
     return (realClear as (...x: unknown[]) => unknown)(...a);
   }) as typeof clearInterval;
@@ -67,7 +71,10 @@ test('animating starts an interval; disabled starts none; unmount clears it', as
     await tick(5);
 
     assert.equal(deltaRm, deltaOff, 'reduced motion must not start the hook interval');
-    assert.ok(deltaOn > deltaOff, `enabled should start an interval (on=${deltaOn}, off=${deltaOff})`);
+    assert.ok(
+      deltaOn > deltaOff,
+      `enabled should start an interval (on=${deltaOn}, off=${deltaOff})`,
+    );
     assert.ok(clears > clearsBefore, 'unmount should clear the interval');
   } finally {
     globalThis.setInterval = realSet;

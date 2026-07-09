@@ -9,8 +9,7 @@ export function useTerminalSize(): { columns: number; rows: number } {
   });
 
   useEffect(() => {
-    const onResize = () =>
-      setSize({ columns: stdout.columns || 80, rows: stdout.rows || 24 });
+    const onResize = () => setSize({ columns: stdout.columns || 80, rows: stdout.rows || 24 });
     stdout.on('resize', onResize);
     return () => {
       stdout.off('resize', onResize);

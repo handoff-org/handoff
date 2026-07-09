@@ -44,14 +44,29 @@ export function SetupWizard({ initialConfig, onComplete }: Props) {
   // Fetch available models from local OpenAI-compat servers on the model step.
   useEffect(() => {
     if (config.backend === 'vllm' && step === 'model')
-      fetchVllmModels(config.vllmBaseUrl).then(setVllmModels).catch(() => setVllmModels([]));
+      fetchVllmModels(config.vllmBaseUrl)
+        .then(setVllmModels)
+        .catch(() => setVllmModels([]));
     if (config.backend === 'llama_cpp' && step === 'model')
-      fetchVllmModels(config.llamaCppBaseUrl).then(setLlamaCppModels).catch(() => setLlamaCppModels([]));
+      fetchVllmModels(config.llamaCppBaseUrl)
+        .then(setLlamaCppModels)
+        .catch(() => setLlamaCppModels([]));
     if (config.backend === 'mlx' && step === 'model')
-      fetchVllmModels(config.mlxBaseUrl).then(setMlxModels).catch(() => setMlxModels([]));
+      fetchVllmModels(config.mlxBaseUrl)
+        .then(setMlxModels)
+        .catch(() => setMlxModels([]));
     if (config.backend === 'ollama' && step === 'model')
-      listInstalledModels(config.ollamaBaseUrl).then(setOllamaModels).catch(() => setOllamaModels([]));
-  }, [config.backend, config.vllmBaseUrl, config.llamaCppBaseUrl, config.mlxBaseUrl, config.ollamaBaseUrl, step]);
+      listInstalledModels(config.ollamaBaseUrl)
+        .then(setOllamaModels)
+        .catch(() => setOllamaModels([]));
+  }, [
+    config.backend,
+    config.vllmBaseUrl,
+    config.llamaCppBaseUrl,
+    config.mlxBaseUrl,
+    config.ollamaBaseUrl,
+    step,
+  ]);
 
   // Toggle a favourite during setup — same behaviour as the in-app picker so F
   // works identically before and after the wizard. Functional updater keeps it
@@ -62,9 +77,7 @@ export function SetupWizard({ initialConfig, onComplete }: Props) {
       const existing = (c.favourites ?? []) as FavouriteEntry[];
       const idx = existing.findIndex((f) => f.backend === backend && f.modelId === modelId);
       const next =
-        idx === -1
-          ? [...existing, { backend, modelId }]
-          : existing.filter((_, i) => i !== idx);
+        idx === -1 ? [...existing, { backend, modelId }] : existing.filter((_, i) => i !== idx);
       void writeStore({ favourites: next });
       return { ...c, favourites: next };
     });
@@ -128,11 +141,7 @@ export function SetupWizard({ initialConfig, onComplete }: Props) {
 
   if (step === 'backend') {
     return (
-      <Select
-        title="Choose your backend"
-        options={BACKEND_OPTIONS}
-        onSelect={chooseBackend}
-      />
+      <Select title="Choose your backend" options={BACKEND_OPTIONS} onSelect={chooseBackend} />
     );
   }
 

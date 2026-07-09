@@ -7,11 +7,7 @@ import { parseJsonl } from '../util/jsonl.js';
 import type { ProjectMeta } from './project.js';
 
 export type HandoffMode =
-  | 'for-me'
-  | 'for-new-student'
-  | 'for-pi'
-  | 'for-reviewer'
-  | 'for-industry-partner';
+  'for-me' | 'for-new-student' | 'for-pi' | 'for-reviewer' | 'for-industry-partner';
 
 export interface HandoffOptions {
   mode: HandoffMode;
@@ -47,9 +43,18 @@ export function parseHandoffFlags(argStr: string): HandoffOptions {
 
 function parseSinceDate(since: string): Date {
   const now = new Date();
-  if (since === 'last-week') { now.setDate(now.getDate() - 7); return now; }
-  if (since === 'yesterday') { now.setDate(now.getDate() - 1); return now; }
-  if (since === 'last-month') { now.setDate(now.getDate() - 30); return now; }
+  if (since === 'last-week') {
+    now.setDate(now.getDate() - 7);
+    return now;
+  }
+  if (since === 'yesterday') {
+    now.setDate(now.getDate() - 1);
+    return now;
+  }
+  if (since === 'last-month') {
+    now.setDate(now.getDate() - 30);
+    return now;
+  }
   const d = new Date(since);
   return isNaN(d.getTime()) ? new Date(0) : d;
 }
@@ -66,7 +71,9 @@ function readNotebookRaw(slug: string): string {
   try {
     const p = join(projectDir(slug), 'NOTEBOOK.md');
     return existsSync(p) ? readFileSync(p, 'utf-8') : '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /** Split NOTEBOOK.md into individual entry blocks (each starts with `## YYYY-`). */
@@ -103,7 +110,9 @@ function readClaims(slug: string): ClaimEntry[] {
     const p = join(projectDir(slug), 'claims', 'claims.jsonl');
     if (!existsSync(p)) return [];
     return parseJsonl<ClaimEntry>(readFileSync(p, 'utf-8'));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // --- risks ---
@@ -117,7 +126,9 @@ function readRisks(slug: string): string[] {
       .filter((l) => /^\s*[-*]\s+/.test(l))
       .map((l) => l.replace(/^\s*[-*]\s+/, '').trim())
       .filter(Boolean);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // --- decisions ---
@@ -128,14 +139,18 @@ function readRecentDecisions(slug: string): string[] {
     if (!existsSync(dir)) return [];
     return readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
-      .sort().reverse().slice(0, 5)
+      .sort()
+      .reverse()
+      .slice(0, 5)
       .map((f) => {
         const content = readFileSync(join(dir, f), 'utf-8');
         const title = content.match(/^#\s+(.+)/m)?.[1] ?? f.replace(/\.md$/, '');
         const date = f.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
         return date ? `${date}  ${title}` : title;
       });
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // --- files to read first ---
@@ -146,9 +161,13 @@ function filesToRead(slug: string): string[] {
   if (existsSync(join(root, 'paper', 'main.tex'))) files.push('paper/main.tex');
   try {
     const csvs = readdirSync(join(root, 'results'))
-      .filter((f) => f.endsWith('.csv')).sort().slice(0, 2);
+      .filter((f) => f.endsWith('.csv'))
+      .sort()
+      .slice(0, 2);
     for (const csv of csvs) files.push(`results/${csv}`);
-  } catch { /* no results/ yet */ }
+  } catch {
+    /* no results/ yet */
+  }
   return files;
 }
 
@@ -167,7 +186,10 @@ function render(meta: ProjectMeta, opts: HandoffOptions, today: string): string 
   const sinceDate = since ? parseSinceDate(since) : null;
   const allEntries = parseNotebookEntries(readNotebookRaw(slug));
   const recentEntries = sinceDate
-    ? allEntries.filter((e) => { const d = entryDate(e); return d && d >= sinceDate; })
+    ? allEntries.filter((e) => {
+        const d = entryDate(e);
+        return d && d >= sinceDate;
+      })
     : allEntries.slice(-6);
 
   const allRuns = readLedger(slug);
@@ -262,7 +284,10 @@ function render(meta: ProjectMeta, opts: HandoffOptions, today: string): string 
   }
 
   // Decisions
-  if (decisions.length > 0 && (mode === 'for-me' || mode === 'for-pi' || mode === 'for-new-student')) {
+  if (
+    decisions.length > 0 &&
+    (mode === 'for-me' || mode === 'for-pi' || mode === 'for-new-student')
+  ) {
     push('Recent decisions:');
     for (const d of decisions) push(`  - ${d}`);
     push('');
@@ -278,11 +303,11 @@ function render(meta: ProjectMeta, opts: HandoffOptions, today: string): string 
   // Next actions (heuristic)
   const actions: string[] = [];
   if (unsupported.length > 0)
-    actions.push(`link evidence for ${unsupported.length} unsupported claim${unsupported.length > 1 ? 's' : ''} (/audit-paper)`);
-  if (risks.length > 0)
-    actions.push('address open risks (see above)');
-  if (!bestRun && lastRun && lastRun.exitCode !== 0)
-    actions.push('investigate last failed run');
+    actions.push(
+      `link evidence for ${unsupported.length} unsupported claim${unsupported.length > 1 ? 's' : ''} (/audit-paper)`,
+    );
+  if (risks.length > 0) actions.push('address open risks (see above)');
+  if (!bestRun && lastRun && lastRun.exitCode !== 0) actions.push('investigate last failed run');
 
   if (actions.length > 0) {
     push('Suggested next actions:');

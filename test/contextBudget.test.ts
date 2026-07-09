@@ -72,7 +72,13 @@ test('promptBudgetFor + reasoning reserve can never overflow the window', () => 
 });
 
 test('assessTurn flags CPU spill first and unconditionally', () => {
-  const a = assessTurn({ promptTokens: 100, totalMs: 1000, outputTokens: 10, budget: 5000, cpuSpill: true });
+  const a = assessTurn({
+    promptTokens: 100,
+    totalMs: 1000,
+    outputTokens: 10,
+    budget: 5000,
+    cpuSpill: true,
+  });
   assert.equal(a.slow, true);
   assert.match(a.message ?? '', /CPU\/GPU mixed/);
 });
@@ -85,7 +91,10 @@ test('assessTurn flags an over-budget prompt', () => {
 
 test('assessTurn flags slow generation only with enough output and elapsed time', () => {
   // 30 output tokens over 10s = 3 tok/s, but under the 40-token floor → not slow.
-  assert.equal(assessTurn({ promptTokens: 100, totalMs: 10000, outputTokens: 30, budget: 5000 }).slow, false);
+  assert.equal(
+    assessTurn({ promptTokens: 100, totalMs: 10000, outputTokens: 30, budget: 5000 }).slow,
+    false,
+  );
   // 60 tokens over 20s = 3 tok/s → slow.
   const slow = assessTurn({ promptTokens: 100, totalMs: 20000, outputTokens: 60, budget: 5000 });
   assert.equal(slow.slow, true);
@@ -94,7 +103,8 @@ test('assessTurn flags slow generation only with enough output and elapsed time'
 
 test('assessTurn stays quiet on a fast, in-budget turn', () => {
   assert.equal(
-    assessTurn({ promptTokens: 100, totalMs: 2000, ttftMs: 300, outputTokens: 200, budget: 5000 }).slow,
+    assessTurn({ promptTokens: 100, totalMs: 2000, ttftMs: 300, outputTokens: 200, budget: 5000 })
+      .slow,
     false,
   );
 });

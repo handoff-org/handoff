@@ -3,14 +3,31 @@ import assert from 'node:assert/strict';
 import { buildDoctorReport } from '../src/agent/doctor.js';
 import { parseOllamaPs } from '../src/agent/ollama.js';
 import { advise } from '../src/agent/advisor.js';
-import { FULL_CATALOG, catalogForBackend, findCatalogEntry, isValidCatalogEntry, isAmbiguousTag, resolveOllamaTag } from '../config/catalog.js';
+import {
+  FULL_CATALOG,
+  catalogForBackend,
+  findCatalogEntry,
+  isValidCatalogEntry,
+  isAmbiguousTag,
+  resolveOllamaTag,
+} from '../config/catalog.js';
 import type { HardwareProfile } from '../src/system/hardware.js';
 
 function mac(gb: number): HardwareProfile {
   return {
-    os: 'darwin', arch: 'arm64', appleSilicon: true, totalMemoryGb: gb,
-    chipName: 'Apple M2 Pro', macTier: 'pro', macGeneration: 'M2', isMacBook: true,
-    power: 'battery', gpuCores: 16, gpuVendor: 'apple', vramGb: null, gpuName: 'Apple M2 Pro',
+    os: 'darwin',
+    arch: 'arm64',
+    appleSilicon: true,
+    totalMemoryGb: gb,
+    chipName: 'Apple M2 Pro',
+    macTier: 'pro',
+    macGeneration: 'M2',
+    isMacBook: true,
+    power: 'battery',
+    gpuCores: 16,
+    gpuVendor: 'apple',
+    vramGb: null,
+    gpuName: 'Apple M2 Pro',
     perfTier: gb <= 16 ? 'cool' : 'capable',
   };
 }
@@ -76,7 +93,13 @@ test('doctor warns when ollama ps shows a CPU spill', () => {
     hardware: hw,
     installedModels: ['qwen3-coder:30b', 'qwen3:8b'],
     psRows,
-    advice: advise({ hardware: hw, backend: 'ollama', performanceMode: 'cool', currentModelId: 'qwen3-coder:30b', currentContextTokens: 64000 }),
+    advice: advise({
+      hardware: hw,
+      backend: 'ollama',
+      performanceMode: 'cool',
+      currentModelId: 'qwen3-coder:30b',
+      currentContextTokens: 64000,
+    }),
   });
   assert.match(report, /NOT fully on GPU|CPU spill/i);
   assert.match(report, /Detected|Hardware/);
@@ -100,8 +123,11 @@ test('doctor marks an out-of-catalog model as unchecked', () => {
 test('doctor flags a large context window as risky via the advisor', () => {
   const hw = mac(16);
   const advice = advise({
-    hardware: hw, backend: 'ollama', performanceMode: 'cool',
-    currentModelId: 'qwen3:8b', currentContextTokens: 64000,
+    hardware: hw,
+    backend: 'ollama',
+    performanceMode: 'cool',
+    currentModelId: 'qwen3:8b',
+    currentContextTokens: 64000,
   });
   // The advisor should warn about the oversized context.
   assert.ok(advice.warnings.some((w) => /context/i.test(w)));

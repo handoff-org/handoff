@@ -1,10 +1,4 @@
-import {
-  appendFileSync,
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  mkdirSync,
-} from 'fs';
+import { appendFileSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { projectDir } from './project.js';
 import { parseJsonl } from '../util/jsonl.js';
@@ -187,8 +181,7 @@ export function formatClaimsSummary(claims: Claim[], projectTitle: string): stri
     unsupported: claims.filter((c) => c.status === 'unsupported').length,
     contradicted: claims.filter((c) => c.status === 'contradicted').length,
     other: claims.filter(
-      (c) =>
-        !['supported', 'weakly_supported', 'unsupported', 'contradicted'].includes(c.status),
+      (c) => !['supported', 'weakly_supported', 'unsupported', 'contradicted'].includes(c.status),
     ).length,
   };
 

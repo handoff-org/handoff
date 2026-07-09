@@ -215,6 +215,8 @@ export function getTheme(name: string | undefined): Theme {
   return muted;
 }
 
-export const THEME_OPTIONS: SelectOption<string>[] = Object.values(THEMES).map(
-  (t) => ({ label: t.name, value: t.name, hint: t.mascot }),
-);
+export const THEME_OPTIONS: SelectOption<string>[] = Object.values(THEMES).map((t) => ({
+  label: t.name,
+  value: t.name,
+  hint: t.mascot,
+}));

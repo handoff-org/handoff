@@ -50,7 +50,10 @@ export function registerWorkspaceTools(registry: ToolRegistry): void {
       type: 'object',
       properties: {
         title: { type: 'string', description: 'Human-readable project name' },
-        description: { type: 'string', description: 'One-line description of the research (optional)' },
+        description: {
+          type: 'string',
+          description: 'One-line description of the research (optional)',
+        },
         field: { type: 'string', description: 'Research field, e.g. "linguistics" (optional)' },
       },
       required: ['title'],

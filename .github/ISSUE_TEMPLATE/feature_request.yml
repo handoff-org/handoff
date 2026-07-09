@@ -1,7 +1,7 @@
 name: Feature request
 description: Suggest a capability or improvement for handoff.
-title: "[feature]: "
-labels: ["enhancement"]
+title: '[feature]: '
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:

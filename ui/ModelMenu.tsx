@@ -48,11 +48,15 @@ interface Props {
 }
 
 function catalogFor(backend: Backend): ModelEntry[] {
-  return backend === 'ollama' ? OLLAMA_MODELS
-    : backend === 'hf' || backend === 'vllm' ? HF_MODELS
-    : backend === 'llama_cpp' ? LLAMA_CPP_MODELS
-    : backend === 'mlx' ? MLX_MODELS
-    : [];
+  return backend === 'ollama'
+    ? OLLAMA_MODELS
+    : backend === 'hf' || backend === 'vllm'
+      ? HF_MODELS
+      : backend === 'llama_cpp'
+        ? LLAMA_CPP_MODELS
+        : backend === 'mlx'
+          ? MLX_MODELS
+          : [];
 }
 
 function buildRows(
@@ -68,15 +72,16 @@ function buildRows(
   const curatedValues = new Set(curatedModels.map((m) => m.value));
 
   const serverModels: string[] =
-    backend === 'vllm' ? vllmModels
-    : backend === 'llama_cpp' ? llamaCppModels
-    : backend === 'mlx' ? mlxModels
-    : [];
+    backend === 'vllm'
+      ? vllmModels
+      : backend === 'llama_cpp'
+        ? llamaCppModels
+        : backend === 'mlx'
+          ? mlxModels
+          : [];
 
   const safeFavs = favourites ?? [];
-  const thisFavSet = new Set(
-    safeFavs.filter((f) => f.backend === backend).map((f) => f.modelId),
-  );
+  const thisFavSet = new Set(safeFavs.filter((f) => f.backend === backend).map((f) => f.modelId));
   const thisFavs = safeFavs.filter((f) => f.backend === backend);
 
   // Track model values already shown (Favourites + Downloaded) to avoid
@@ -118,9 +123,7 @@ function buildRows(
 
   // ── 3. Curated catalog by RAM tier — only models not yet shown ────
   for (const tier of TIER_ORDER) {
-    const inTier = curatedModels.filter(
-      (m) => m.tier === tier && !shownValues.has(m.value),
-    );
+    const inTier = curatedModels.filter((m) => m.tier === tier && !shownValues.has(m.value));
     if (inTier.length === 0) continue;
     rows.push({ kind: 'header', label: TIER_LABELS[tier], tier });
     for (const m of inTier) {
@@ -148,11 +151,15 @@ function buildRows(
 }
 
 const backendLabel = (b: Backend): string =>
-  b === 'ollama' ? 'Ollama'
-  : b === 'hf' ? 'HuggingFace'
-  : b === 'llama_cpp' ? 'llama.cpp'
-  : b === 'mlx' ? 'MLX'
-  : 'vLLM';
+  b === 'ollama'
+    ? 'Ollama'
+    : b === 'hf'
+      ? 'HuggingFace'
+      : b === 'llama_cpp'
+        ? 'llama.cpp'
+        : b === 'mlx'
+          ? 'MLX'
+          : 'vLLM';
 
 export function ModelMenu({
   backend,
@@ -189,7 +196,7 @@ export function ModelMenu({
         performanceMode,
         currentModelId,
         cloudConsent,
-        ...((preferredModels?.length || rejectedModels?.length || prefersFastSmallModels)
+        ...(preferredModels?.length || rejectedModels?.length || prefersFastSmallModels
           ? {
               personalization: {
                 ...(preferredModels ? { preferredModels } : {}),
@@ -199,7 +206,16 @@ export function ModelMenu({
             }
           : {}),
       }),
-    [hw, backend, performanceMode, currentModelId, cloudConsent, preferredModels, rejectedModels, prefersFastSmallModels],
+    [
+      hw,
+      backend,
+      performanceMode,
+      currentModelId,
+      cloudConsent,
+      preferredModels,
+      rejectedModels,
+      prefersFastSmallModels,
+    ],
   );
   const recommendedValue = advice.recommended?.entry.id;
 
@@ -228,7 +244,8 @@ export function ModelMenu({
   const badgeWidth = useMemo(() => {
     let max = 0;
     for (const r of displayRows) {
-      if (r.kind === 'model') max = Math.max(max, badges(r.entry, personalOf(r.entry.value)).length);
+      if (r.kind === 'model')
+        max = Math.max(max, badges(r.entry, personalOf(r.entry.value)).length);
     }
     return max;
   }, [displayRows, preferredModels, rejectedModels, slowModels]);
@@ -257,9 +274,7 @@ export function ModelMenu({
     const newIdx = selectableIndices.findIndex((i) => {
       const row = displayRows[i];
       const id =
-        row?.kind === 'model' ? row.entry.value
-        : row?.kind === 'vllm-item' ? row.modelId
-        : null;
+        row?.kind === 'model' ? row.entry.value : row?.kind === 'vllm-item' ? row.modelId : null;
       return id === pendingFocusId;
     });
     if (newIdx !== -1) {
@@ -306,9 +321,11 @@ export function ModelMenu({
     // uppercase 'F' from a shift-combo still matches on every terminal.
     if (char && char.trim().toLowerCase() === 'f') {
       const modelId =
-        currentRow?.kind === 'model' ? currentRow.entry.value
-        : currentRow?.kind === 'vllm-item' ? currentRow.modelId
-        : null;
+        currentRow?.kind === 'model'
+          ? currentRow.entry.value
+          : currentRow?.kind === 'vllm-item'
+            ? currentRow.modelId
+            : null;
       if (modelId) {
         onToggleFavourite(modelId);
         setPendingFocusId(modelId);
@@ -331,12 +348,16 @@ export function ModelMenu({
   if (isManual) {
     return (
       <Box flexDirection="column" padding={1} gap={1}>
-        <Text bold color="cyan">Enter model ID — {backendLabel(backend)}</Text>
+        <Text bold color="cyan">
+          Enter model ID — {backendLabel(backend)}
+        </Text>
         <Text dimColor>Type the model ID exactly as loaded in your server.</Text>
         <Box marginTop={1} flexDirection="column">
           <Box borderStyle="round" paddingX={1}>
             <Text color="green">{manualInput || ' '}</Text>
-            <Text color="green" dimColor>|</Text>
+            <Text color="green" dimColor>
+              |
+            </Text>
           </Box>
           <Text dimColor>Enter to confirm · Esc to go back</Text>
         </Box>
@@ -350,7 +371,9 @@ export function ModelMenu({
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">Select model · {backendLabel(backend)}</Text>
+      <Text bold color="cyan">
+        Select model · {backendLabel(backend)}
+      </Text>
 
       {/* Hardware-aware suggestion + risk warnings for local backends. */}
       {isLocal && (
@@ -359,11 +382,11 @@ export function ModelMenu({
             <Text dimColor>{hw.os === 'darwin' ? 'Your Mac: ' : 'Your machine: '}</Text>
             <Text>{describeHardware(hw)}</Text>
           </Box>
-          {advice.recommended && (
-            <Text color="cyan">➜ {advice.explanation}</Text>
-          )}
+          {advice.recommended && <Text color="cyan">➜ {advice.explanation}</Text>}
           {advice.warnings.slice(0, 2).map((w, wi) => (
-            <Text key={wi} color="yellow">⚠ {w}</Text>
+            <Text key={wi} color="yellow">
+              ⚠ {w}
+            </Text>
           ))}
         </Box>
       )}
@@ -378,17 +401,23 @@ export function ModelMenu({
             const isRecTier = row.tier && row.tier === recTier;
             return (
               <Box key={i} marginTop={i === 0 ? 0 : 1}>
-                <Text dimColor bold>{row.label}</Text>
+                <Text dimColor bold>
+                  {row.label}
+                </Text>
                 {isRecTier && <Text color="cyan"> · suggested tier</Text>}
               </Box>
             );
           }
 
-          const label = row.kind === 'model' ? row.entry.label : row.kind === 'vllm-item' ? row.modelId : '';
-          const value = row.kind === 'model' ? row.entry.value : row.kind === 'vllm-item' ? row.modelId : '';
+          const label =
+            row.kind === 'model' ? row.entry.label : row.kind === 'vllm-item' ? row.modelId : '';
+          const value =
+            row.kind === 'model' ? row.entry.value : row.kind === 'vllm-item' ? row.modelId : '';
           const rawHint = row.kind === 'model' ? (row.entry.hint ?? '') : '';
-          const hint = rawHint.length > maxHintWidth ? rawHint.slice(0, maxHintWidth - 1) + '…' : rawHint;
-          const isFav = row.kind === 'model' ? row.isFav : row.kind === 'vllm-item' ? row.isFav : false;
+          const hint =
+            rawHint.length > maxHintWidth ? rawHint.slice(0, maxHintWidth - 1) + '…' : rawHint;
+          const isFav =
+            row.kind === 'model' ? row.isFav : row.kind === 'vllm-item' ? row.isFav : false;
           const isCurrent = value !== '' && value === currentModelId;
           const isRecommended = value !== '' && value === recommendedValue;
           const entry = row.kind === 'model' ? row.entry : undefined;
@@ -397,7 +426,8 @@ export function ModelMenu({
             return (
               <Box key={i}>
                 <Text color={active ? 'green' : undefined} dimColor={!active}>
-                  {active ? '❯ ' : '  '}{'  '}✎ Enter model ID manually
+                  {active ? '❯ ' : '  '}
+                  {'  '}✎ Enter model ID manually
                 </Text>
               </Box>
             );
@@ -406,7 +436,9 @@ export function ModelMenu({
           const rowAccent = isFav ? VELVET : active ? 'green' : undefined;
           // Reserve a fixed badge column (badge text + trailing pad) so the
           // keyword hint always begins at the same column across every row.
-          const badgeText = (entry ? badges(entry, personalOf(entry.value)) : '').padEnd(badgeWidth);
+          const badgeText = (entry ? badges(entry, personalOf(entry.value)) : '').padEnd(
+            badgeWidth,
+          );
           return (
             <Box key={i}>
               <Text color={active ? 'green' : undefined}>{active ? '❯ ' : '  '}</Text>
@@ -415,7 +447,12 @@ export function ModelMenu({
                 {label.padEnd(labelWidth)}
               </Text>
               {badgeWidth > 0 && <Text color={isFav ? VELVET : undefined}>{badgeText}</Text>}
-              {hint && <Text color={isFav ? VELVET : undefined} dimColor={!isFav}>  {hint}</Text>}
+              {hint && (
+                <Text color={isFav ? VELVET : undefined} dimColor={!isFav}>
+                  {' '}
+                  {hint}
+                </Text>
+              )}
               {isCurrent && <Text color="green"> ●</Text>}
               {isRecommended && !isCurrent && <Text color="cyan"> · suggested</Text>}
             </Box>
@@ -428,14 +465,19 @@ export function ModelMenu({
         <Text dimColor>
           ↑/↓ navigate · Enter select · F favourite{onCancel ? ' · Esc back' : ''}
         </Text>
-        <Text dimColor>Catalog {CATALOG_DATE} · /model doctor for diagnostics · perf mode: {performanceMode}</Text>
+        <Text dimColor>
+          Catalog {CATALOG_DATE} · /model doctor for diagnostics · perf mode: {performanceMode}
+        </Text>
       </Box>
     </Box>
   );
 }
 
 /** Compact badge for a model row — maturity + heat + learned personalization. */
-function badges(e: ModelEntry, pz?: { preferred?: boolean; rejected?: boolean; slow?: boolean }): string {
+function badges(
+  e: ModelEntry,
+  pz?: { preferred?: boolean; rejected?: boolean; slow?: boolean },
+): string {
   const parts: string[] = [];
   if (e.maturity === 'server_only') parts.push('srv');
   else if (e.maturity === 'cloud_only') parts.push('cld');
@@ -453,9 +495,13 @@ function badges(e: ModelEntry, pz?: { preferred?: boolean; rejected?: boolean; s
 /** The RAM tier a model id maps to (for the "suggested tier" header marker). */
 function tierOfValue(value: string | undefined, backend: Backend): ModelTier | undefined {
   if (!value) return undefined;
-  const list = backend === 'ollama' ? OLLAMA_MODELS
-    : backend === 'hf' || backend === 'vllm' ? HF_MODELS
-    : backend === 'llama_cpp' ? LLAMA_CPP_MODELS
-    : MLX_MODELS;
+  const list =
+    backend === 'ollama'
+      ? OLLAMA_MODELS
+      : backend === 'hf' || backend === 'vllm'
+        ? HF_MODELS
+        : backend === 'llama_cpp'
+          ? LLAMA_CPP_MODELS
+          : MLX_MODELS;
   return list.find((m) => m.value === value)?.tier;
 }

@@ -19,7 +19,9 @@ test('saveSession redacts a token in tool-call args (history + entries)', async 
     {
       role: 'assistant',
       content: '',
-      tool_calls: [{ id: 'c0', type: 'function', function: { name: 'overleaf_link', arguments: ARGS } }],
+      tool_calls: [
+        { id: 'c0', type: 'function', function: { name: 'overleaf_link', arguments: ARGS } },
+      ],
     },
   ];
   const entries = [{ kind: 'tool_call', name: 'overleaf_link', args: ARGS }];
@@ -30,7 +32,7 @@ test('saveSession redacts a token in tool-call args (history + entries)', async 
   assert.ok(await loadLastSession(), 'session should still round-trip as valid JSON');
 });
 
-test('saveSession does not mutate the caller\'s live in-memory history', async () => {
+test("saveSession does not mutate the caller's live in-memory history", async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const history: any = [
     {
@@ -40,5 +42,9 @@ test('saveSession does not mutate the caller\'s live in-memory history', async (
     },
   ];
   await saveSession(history, []);
-  assert.equal(history[0].tool_calls[0].function.arguments, ARGS, 'live history must not be mutated');
+  assert.equal(
+    history[0].tool_calls[0].function.arguments,
+    ARGS,
+    'live history must not be mutated',
+  );
 });
