@@ -13,18 +13,36 @@ exceptions.
 ## Commands
 
 ```bash
-npm run qa:chat          # all named scenarios
+npm run qa:chat          # all named scenarios (mock model)
 npm run qa:chat:smoke    # fast CI subset (no network / Ollama / cloud)
 npm run qa:chat:fuzz     # one seeded random session (50 turns)
+npm run qa:chat:real     # all scenarios against your real local model
 
 # targeted / reproducible
 npx tsx qa/chat-sim/runner.ts --scenario paper-start --seed 1
+npx tsx qa/chat-sim/runner.ts --scenario project-basics --real-model --keep-temp
 npx tsx qa/chat-sim/runner.ts --fuzz --iterations 40 --seed 123 --keep-temp
 ```
 
 Flags: `--all`, `--smoke`, `--scenario <id>`, `--fuzz`/`--random`, `--seed N`,
-`--iterations N`, `--keep-temp`, `--real-model` (accepted; the default path is
-always the mock model).
+`--iterations N`, `--keep-temp`, `--real-model`.
+
+## Two model modes
+
+- **Mock (default, deterministic).** A scripted `ChatModel` replays each
+  scenario's planned steps — text, tool calls, malformed/duplicate calls, slow/
+  interrupted streams, thrown errors, over-long output, reasoning-only
+  truncation. Offline, fast, and the only mode used in CI. Content assertions
+  are hard failures.
+- **Real (`--real-model`).** Runs the same scenarios against your actual local
+  model (read from `~/.handoff/config.json`, e.g. Ollama + qwen3:8b), built via
+  `createModel`, in the isolated temp HOME. The agent generates its own
+  responses and picks its own tool calls; the scripted steps are ignored. Since
+  the model won't follow the script, **content assertions become warnings** —
+  only crashes, uncaught errors, and timeouts fail the run (this is what
+  surfaces broken prompts / bad model+tool behavior). Needs Ollama running; the
+  runner preflights the server and warns if it's down. Slow (per-turn timeout
+  120 s, per-scenario 300 s).
 
 ## Output
 

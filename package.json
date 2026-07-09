@@ -33,6 +33,7 @@
     "qa:chat": "tsx qa/chat-sim/runner.ts --all",
     "qa:chat:smoke": "tsx qa/chat-sim/runner.ts --smoke",
     "qa:chat:fuzz": "tsx qa/chat-sim/runner.ts --fuzz --iterations 50",
+    "qa:chat:real": "tsx qa/chat-sim/runner.ts --all --real-model",
     "prepublishOnly": "npm run typecheck && npm test"
   },
   "keywords": [

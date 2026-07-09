@@ -1,6 +1,7 @@
 import { spawnSync } from 'child_process';
-import { mkdirSync, rmSync, appendFileSync, existsSync } from 'fs';
+import { mkdirSync, rmSync, appendFileSync, existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { allScenarios, smokeScenarios, scenarioById, fuzzScenario } from './scenarios.js';
 import { writeReports } from './summarize.js';
@@ -11,7 +12,39 @@ const REPO_ROOT = join(HERE, '..', '..');
 const CHILD = join(HERE, 'runScenario.ts');
 const LOG_DIR = join(REPO_ROOT, 'qa', 'logs');
 const TMP_ROOT = join(REPO_ROOT, 'tmp', 'qa-home');
-const PER_SCENARIO_TIMEOUT_MS = 60_000;
+const MOCK_SCENARIO_TIMEOUT_MS = 60_000;
+const REAL_SCENARIO_TIMEOUT_MS = 300_000;
+
+/** Read the user's real backend/model so --real-model can drive a live client. */
+function readRealModelInfo(): { backend: string; modelId: string; ollamaBaseUrl: string } {
+  const fallback = {
+    backend: 'ollama',
+    modelId: 'qwen3:8b',
+    ollamaBaseUrl: 'http://127.0.0.1:11434',
+  };
+  try {
+    const cfg = JSON.parse(readFileSync(join(homedir(), '.handoff', 'config.json'), 'utf-8'));
+    return {
+      backend: cfg.backend ?? fallback.backend,
+      modelId: cfg.modelId ?? fallback.modelId,
+      ollamaBaseUrl: cfg.ollamaBaseUrl ?? fallback.ollamaBaseUrl,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/** Best-effort check that the local Ollama server is reachable. */
+async function ollamaReachable(baseUrl: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/tags`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 interface Flags {
   mode: 'all' | 'smoke' | 'scenario' | 'fuzz';
@@ -66,11 +99,8 @@ function ts(): string {
 
 async function main(): Promise<void> {
   const flags = parseFlags(process.argv.slice(2));
-  if (flags.realModel) {
-    process.stderr.write(
-      'note: --real-model is not wired into the default harness; running with the mock model.\n',
-    );
-  }
+  const real = flags.realModel ? readRealModelInfo() : null;
+  const perScenarioTimeout = flags.realModel ? REAL_SCENARIO_TIMEOUT_MS : MOCK_SCENARIO_TIMEOUT_MS;
   const scenarios = selectScenarios(flags);
   const runId = ts();
   mkdirSync(LOG_DIR, { recursive: true });
@@ -80,7 +110,17 @@ async function main(): Promise<void> {
 
   process.stdout.write(`\nQA chat simulation — run ${runId}\n`);
   process.stdout.write(`Scenarios: ${scenarios.map((s) => s.id).join(', ')}\n`);
-  process.stdout.write(`Seed: ${flags.seed}  ·  log: ${logPath}\n\n`);
+  process.stdout.write(`Seed: ${flags.seed}  ·  log: ${logPath}\n`);
+  if (real) {
+    process.stdout.write(`Model: REAL — ${real.backend} / ${real.modelId}\n`);
+    if (real.backend === 'ollama' && !(await ollamaReachable(real.ollamaBaseUrl))) {
+      process.stdout.write(
+        `\n⚠ Ollama is not reachable at ${real.ollamaBaseUrl}. Start it (\`ollama serve\`) and pull ${real.modelId}, ` +
+          `or the scenarios will each fail with a connection error.\n`,
+      );
+    }
+  }
+  process.stdout.write('\n');
 
   let anyFailed = false;
   for (const scenario of scenarios) {
@@ -102,11 +142,17 @@ async function main(): Promise<void> {
     };
     for (const k of Object.keys(childEnv)) if (k.startsWith('HANDOFF_')) delete childEnv[k];
     delete childEnv['HF_TOKEN'];
+    if (real) {
+      childEnv['QA_REAL_MODEL'] = '1';
+      childEnv['QA_MODEL_BACKEND'] = real.backend;
+      childEnv['QA_MODEL_ID'] = real.modelId;
+      childEnv['QA_OLLAMA_URL'] = real.ollamaBaseUrl;
+    }
 
     const res = spawnSync(process.execPath, ['--import', 'tsx', CHILD], {
       cwd: REPO_ROOT,
       encoding: 'utf-8',
-      timeout: PER_SCENARIO_TIMEOUT_MS,
+      timeout: perScenarioTimeout,
       env: childEnv,
     });
 

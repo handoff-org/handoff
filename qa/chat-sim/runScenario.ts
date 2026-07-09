@@ -39,7 +39,18 @@ process.on('uncaughtException', (err) => recordCrash('uncaughtException', err));
 process.on('unhandledRejection', (err) => recordCrash('unhandledRejection', err));
 
 async function main(): Promise<void> {
-  const outcome = await runScenario(scenario!, { seed, homeDir: homedir() }, logger);
+  const realModel = process.env['QA_REAL_MODEL'] === '1';
+  const runOpts = realModel
+    ? {
+        realModel: true,
+        ...(process.env['QA_MODEL_BACKEND']
+          ? { modelBackend: process.env['QA_MODEL_BACKEND'] }
+          : {}),
+        ...(process.env['QA_MODEL_ID'] ? { modelId: process.env['QA_MODEL_ID'] } : {}),
+        ...(process.env['QA_OLLAMA_URL'] ? { ollamaBaseUrl: process.env['QA_OLLAMA_URL'] } : {}),
+      }
+    : {};
+  const outcome = await runScenario(scenario!, { seed, homeDir: homedir() }, logger, runOpts);
   // Emit the machine-readable outcome as the final stdout line.
   process.stdout.write(JSON.stringify({ ...outcome, crashed }) + '\n');
   process.exit(crashed || !outcome.passed ? 1 : 0);

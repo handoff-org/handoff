@@ -19,7 +19,7 @@ import {
   resolveWorkspacePath,
   projectPaths,
 } from '../../src/workspace/project.js';
-import type { Message } from '../../src/agent/model.js';
+import { createModel, type ChatModel, type Message } from '../../src/agent/model.js';
 
 import { MockChatModel } from './mockModel.js';
 import { QaLogger, truncate } from './logger.js';
@@ -42,6 +42,20 @@ export interface ScenarioOutcome {
   warnings: number;
   errors: number;
   timeouts: number;
+}
+
+/**
+ * How to drive the model. Default (mock) is deterministic and offline. In
+ * `real` mode the scenarios run against an actual local model built from the
+ * user's config, so the agent generates its own responses + tool calls; the
+ * scripted mock steps are ignored, and content assertions become warnings
+ * (only crashes / uncaught errors / timeouts fail the run).
+ */
+export interface RunOptions {
+  realModel?: boolean;
+  modelBackend?: string;
+  modelId?: string;
+  ollamaBaseUrl?: string;
 }
 
 function buildRegistry(): ToolRegistry {
@@ -126,19 +140,23 @@ export async function runScenario(
   scenario: Scenario,
   ctx: ScenarioContext,
   logger: QaLogger,
+  runOpts: RunOptions = {},
 ): Promise<ScenarioOutcome> {
   const started = Date.now();
+  const realModel = runOpts.realModel === true;
 
   // Seed a deterministic config for this scenario. `backend` must be a valid
   // enum value or loadConfig's safeParse discards the whole stored config and
-  // reverts to defaults — the mock ChatModel is injected directly below, so no
-  // real backend is ever contacted regardless of this value.
+  // reverts to defaults. In mock mode the model is injected directly (backend is
+  // cosmetic); in real mode we point config at the user's actual backend/model
+  // so createModel() builds a live client.
   const cfgDir = join(homedir(), '.handoff');
   mkdirSync(cfgDir, { recursive: true });
   const baseConfig = {
-    backend: 'ollama',
-    modelId: 'mock:chat-sim',
+    backend: realModel ? (runOpts.modelBackend ?? 'ollama') : 'ollama',
+    modelId: realModel ? (runOpts.modelId ?? 'qwen3:8b') : 'mock:chat-sim',
     mode: 'auto',
+    ...(realModel && runOpts.ollamaBaseUrl ? { ollamaBaseUrl: runOpts.ollamaBaseUrl } : {}),
     ...(scenario.config ?? {}),
   };
   // Only pre-write config when the scenario didn't seed its own (corrupt-state
@@ -172,7 +190,8 @@ export async function runScenario(
   });
 
   const registry = buildRegistry();
-  const model = new MockChatModel();
+  const mock = realModel ? null : new MockChatModel();
+  const model: ChatModel = mock ?? createModel(config!);
   const approve = (name: string, args: string): Promise<boolean> =>
     Promise.resolve(scenario.approve ? scenario.approve(name, args) : true);
   const askUser = (question: string, options: string[]): Promise<string> =>
@@ -183,7 +202,7 @@ export async function runScenario(
   let history: Message[] = [
     { role: 'system', content: buildSystem(systemPrompt, getActiveProject(), {}) },
   ];
-  const turnTimeout = scenario.turnTimeoutMs ?? DEFAULT_TURN_TIMEOUT_MS;
+  const turnTimeout = scenario.turnTimeoutMs ?? (realModel ? 120_000 : DEFAULT_TURN_TIMEOUT_MS);
 
   let toolCalls = 0;
   let writes = 0;
@@ -201,10 +220,14 @@ export async function runScenario(
       continue;
     }
 
-    // Chat turn: enqueue the mock's planned steps (default to a short reply).
-    model.enqueue(
-      turn.steps && turn.steps.length ? turn.steps : [{ kind: 'text', text: 'Understood.' }],
-    );
+    // Chat turn. In mock mode, enqueue the scenario's planned steps (default to
+    // a short reply). In real mode the model generates its own response, so the
+    // scripted steps are ignored.
+    if (mock) {
+      mock.enqueue(
+        turn.steps && turn.steps.length ? turn.steps : [{ kind: 'text', text: 'Understood.' }],
+      );
+    }
     logger.userMessage(turn.text);
 
     const ac = new AbortController();
@@ -310,6 +333,12 @@ export async function runScenario(
         },
       ];
     }
+  }
+  // In real-model mode the agent generates its own responses, so content
+  // assertions (e.g. "the model wrote this file") are advisory — downgrade them
+  // to warnings. Crashes, uncaught errors, and timeouts still fail the run.
+  if (realModel) {
+    assertions = assertions.map((a) => (a.passed ? a : { ...a, severity: 'warning' as const }));
   }
   for (const a of assertions) logger.assertion(a);
 
