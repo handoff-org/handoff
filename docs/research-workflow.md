@@ -55,9 +55,15 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
 
 ## Pillar 3 — Report results
 
+- ✅ **Export results** — `export_results` turns one or more runs' captured metrics into a
+  paper-ready table (LaTeX booktabs + markdown), built straight from the capsule so numbers
+  are never retyped. It also emits `\includegraphics` figure blocks and copies the figure
+  files from `results/` into `paper/figures/` so they render on Overleaf, saves a durable
+  copy under `results/tables/`, and hands back the LaTeX to drop into `main.tex` with
+  `edit_file`. Pick runs by id, or `promoted` / `all` / `latest`.
 - ✅ Ask handoff to summarize outputs, build LaTeX/markdown tables, save figures to
   `results/`.
-- ⭐ Structured results artifact, proper stats reporting, stale-number detection.
+- ⭐ Proper stats reporting (CIs, effect sizes), stale-number detection, terminal figure preview.
 
 ## Pillar 4 — Write the paper
 

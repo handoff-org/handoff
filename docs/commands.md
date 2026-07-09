@@ -44,6 +44,13 @@ object) or printing `METRIC name=value` lines — they're parsed into the capsul
 | `/compare-runs <a> <b>` | Diff two runs' metrics (with deltas), environment, and code. |
 | `/promote-run <run_id>` | Mark a run canonical (recorded in `runs/promoted.json`). |
 
+The **`export_results`** tool turns captured runs into paper-ready artifacts: a metrics table
+(LaTeX booktabs + markdown) built from the capsule — never retyped — plus `\includegraphics`
+figure blocks. It copies the figure files from the private `results/` dir into
+`paper/figures/` so they render on Overleaf, saves a copy under `results/tables/`, and returns
+the LaTeX to place in `main.tex` with `edit_file`. Choose runs by id or with
+`promoted` / `all` / `latest` (default: promoted runs, else the latest).
+
 ## Paper claims & handoff
 
 See [Claims & handoff](claims-and-handoff.md) for the full workflow.

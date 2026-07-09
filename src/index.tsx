@@ -9,6 +9,7 @@ import { registerSkillTools } from './skills/tools.js';
 import { registerWorkspaceTools } from './workspace/tools.js';
 import { registerOverleafTools } from './workspace/overleaf.js';
 import { registerRunnerTools } from './workspace/runner.js';
+import { registerReportTools } from './workspace/report.js';
 import { seedTemplates } from './workspace/templateStore.js';
 import { inkControl } from '../ui/inkControl.js';
 import { App } from '../ui/app.js';
@@ -38,6 +39,7 @@ function Root({ initialConfig, autoResume }: { initialConfig: Config; autoResume
     registerWorkspaceTools(r);
     registerOverleafTools(r);
     registerRunnerTools(r);
+    registerReportTools(r);
     return r;
   }, []);
 
