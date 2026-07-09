@@ -22,6 +22,7 @@ export const COMMANDS: Command[] = [
   },
   { name: '/mode', desc: 'toggle hands-on / hands-off' },
   { name: '/audit-paper', desc: 'scan paper/ for unsupported claims and numbers' },
+  { name: '/provenance', desc: 'check that paper numbers still match their linked runs' },
   { name: '/claims', desc: 'show all tracked claims with status' },
   { name: '/unsupported', desc: 'list claims with no linked evidence' },
   { name: '/claim-add', desc: 'add a claim  (/claim-add <text>)' },

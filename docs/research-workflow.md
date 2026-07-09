@@ -82,10 +82,15 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
 
 - ✅ `/audit-paper` catalogs numeric and comparison claims; `/unsupported` shows what
   still needs evidence; `/claim-link-run` and `/claim-link-paper` attach it.
+- ✅ **Provenance / stale-number check** — `/provenance` (and the `check_provenance` tool)
+  verifies every run-linked claim: it compares the number written in the paper against the
+  linked run's current captured metric and flags any mismatch as `outdated`
+  ("paper says 0.92; run r3 now reports accuracy=0.89"). Re-run an experiment (`/rerun`),
+  then `/provenance` to catch numbers the paper left behind; fixing the number clears it.
 - ✅ `/handoff` generates a transfer packet for your future self, a PI, a reviewer, or
   an industry partner.
 - See [Claims & handoff](claims-and-handoff.md).
-- ⭐ Metric/figure provenance, stale-number detection.
+- ⭐ Auto-linking an unlinked number to its run; comparison-claim verification.
 
 ## Privacy
 

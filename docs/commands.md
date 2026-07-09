@@ -58,6 +58,7 @@ See [Claims & handoff](claims-and-handoff.md) for the full workflow.
 | Command | What it does |
 |---------|--------------|
 | `/audit-paper` | Scan `paper/` for unsupported claims, numbers, and comparisons. |
+| `/provenance` | Check that paper numbers still match their linked runs; flags mismatches as `outdated` (paper 0.92 → run reports 0.89). Run after `/rerun`. Also available to the model as the `check_provenance` tool. |
 | `/claims` | Show all tracked claims with a status summary. |
 | `/unsupported` | List claims with no linked evidence. |
 | `/claim-add <text>` | Add a claim manually. |

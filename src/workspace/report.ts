@@ -6,6 +6,7 @@ import { listCapsules, readCapsule, getPromoted, type Capsule } from './capsule.
 import { mainTexFile } from './overleaf.js';
 import { appendNotebook } from '../research/notebook.js';
 import { metricsTable, figureBlock, isFigureFile, sanitizeRef } from './resultsTable.js';
+import { checkProvenance, applyProvenanceVerdicts, formatProvenanceReport } from './provenance.js';
 
 /**
  * Resolve a `runs` spec into capsules (oldest first). Accepts explicit space/
@@ -173,6 +174,26 @@ export function registerReportTools(registry: ToolRegistry): void {
         table.markdown,
       );
       return out.join('\n');
+    },
+  });
+
+  registry.register({
+    name: 'check_provenance',
+    description:
+      'Verify that the numbers written in the paper still match the runs that produced them. ' +
+      'For every claim linked to a run (see /claim-link-run), it compares the numbers in the ' +
+      "claim text against that run's current captured metrics, marks any mismatch as " +
+      '"outdated" with a concrete note (paper 0.92 → run reports 0.89), and recovers a claim ' +
+      'if its number now matches again. Run this after /rerun or before a handoff. Operates on ' +
+      'the active project; takes no arguments.',
+    sensitive: true,
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project.';
+      const verdicts = checkProvenance(meta.slug);
+      applyProvenanceVerdicts(meta.slug, verdicts);
+      return formatProvenanceReport(verdicts, meta.title);
     },
   });
 }

@@ -101,6 +101,11 @@ import {
   formatClaimDetail,
 } from '../src/workspace/claims.js';
 import { auditPaper, formatAuditReport } from '../src/workspace/auditor.js';
+import {
+  checkProvenance,
+  applyProvenanceVerdicts,
+  formatProvenanceReport,
+} from '../src/workspace/provenance.js';
 import { executeRun } from '../src/workspace/runner.js';
 import {
   readCapsule,
@@ -807,6 +812,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       if (cmd === '/audit-paper') {
         const result = auditPaper(slug);
         addEntry({ kind: 'note', content: formatAuditReport(result, meta.title) });
+        return;
+      }
+
+      if (cmd === '/provenance') {
+        const verdicts = checkProvenance(slug);
+        applyProvenanceVerdicts(slug, verdicts);
+        addEntry({ kind: 'note', content: formatProvenanceReport(verdicts, meta.title) });
         return;
       }
 
@@ -1740,7 +1752,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         return;
       }
       if (
-        /^\/(audit-paper|claims|unsupported|claim-add|claim-status|claim-link-run|claim-link-paper)\b/i.test(
+        /^\/(audit-paper|provenance|claims|unsupported|claim-add|claim-status|claim-link-run|claim-link-paper)\b/i.test(
           trimmed,
         )
       ) {
