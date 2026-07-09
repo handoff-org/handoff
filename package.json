@@ -38,6 +38,7 @@
     "bench:science-agent": "tsx src/adapters/science-agent-bench.ts",
     "bench:scicode": "tsx src/adapters/scicode.ts",
     "bench:ml-agent": "tsx src/adapters/ml-agent-bench.ts",
+    "bench:compare": "tsx benchmarks/scripts/compare-sota.ts",
     "prepublishOnly": "npm run typecheck && npm test"
   },
   "keywords": [
