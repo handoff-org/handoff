@@ -244,6 +244,11 @@ export async function runScenario(
         signal: ac.signal,
         approve,
         askUser,
+        // Disable extended thinking in real-model mode: qwen3 and similar
+        // reasoning models spend minutes in <think> between tool calls and
+        // time out before answering. The QA harness only needs tool calls +
+        // answers, not chain-of-thought quality.
+        think: !realModel,
       })) {
         handleEvent(ev);
       }

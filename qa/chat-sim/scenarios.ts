@@ -185,6 +185,10 @@ const scenarios: Scenario[] = [
     id: 'research-offline',
     name: 'Research tool with no network fails gracefully',
     smoke: true,
+    // Patches globalThis.fetch to simulate offline. In real-model mode the
+    // Ollama client also uses fetch, so the model itself can't connect —
+    // this test is only meaningful with the mock model.
+    skipRealModel: true,
     setup: () => {
       // Simulate no internet: every fetch rejects.
       (globalThis as unknown as { fetch: unknown }).fetch = () =>

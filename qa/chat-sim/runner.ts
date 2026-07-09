@@ -74,7 +74,10 @@ function parseFlags(argv: string[]): Flags {
 }
 
 function selectScenarios(flags: Flags): Scenario[] {
-  if (flags.mode === 'smoke') return smokeScenarios();
+  const filterRealModel = (list: Scenario[]): Scenario[] =>
+    flags.realModel ? list.filter((s) => !s.skipRealModel) : list;
+
+  if (flags.mode === 'smoke') return filterRealModel(smokeScenarios());
   if (flags.mode === 'fuzz') return [fuzzScenario(flags.iterations)];
   if (flags.mode === 'scenario') {
     const id = flags.scenarioId ?? '';
@@ -88,9 +91,13 @@ function selectScenarios(flags: Flags): Scenario[] {
       );
       process.exit(2);
     }
+    if (flags.realModel && s.skipRealModel) {
+      process.stderr.write(`Scenario "${id}" is marked skipRealModel and cannot run with --real-model.\n`);
+      process.exit(2);
+    }
     return [s];
   }
-  return allScenarios();
+  return filterRealModel(allScenarios());
 }
 
 function ts(): string {

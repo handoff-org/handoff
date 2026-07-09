@@ -140,6 +140,12 @@ export interface Scenario {
   name: string;
   /** Include in the fast CI smoke suite (no network, no real model, < a few s). */
   smoke?: boolean;
+  /**
+   * Skip this scenario in --real-model mode. Use for scenarios whose setup
+   * patches low-level globals (e.g. fetch) in ways that also break the real
+   * model connection, making them unmeaningful against a live backend.
+   */
+  skipRealModel?: boolean;
   /** Written into the temp config.json before the scenario runs. */
   config?: Record<string, unknown>;
   /** Prepare the temp HOME (e.g. seed corrupt files) before turns run. */
