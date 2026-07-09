@@ -30,6 +30,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test",
+    "qa:chat": "tsx qa/chat-sim/runner.ts --all",
+    "qa:chat:smoke": "tsx qa/chat-sim/runner.ts --smoke",
+    "qa:chat:fuzz": "tsx qa/chat-sim/runner.ts --fuzz --iterations 50",
     "prepublishOnly": "npm run typecheck && npm test"
   },
   "keywords": [

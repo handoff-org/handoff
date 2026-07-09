@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from 'fs';
-import { join, isAbsolute, resolve } from 'path';
+import { join, isAbsolute, resolve, sep } from 'path';
 import { homedir } from 'os';
 
 /** Root for all research projects. */
@@ -184,4 +184,19 @@ export function resolveWorkspacePath(p: string): string {
   if (isAbsolute(p)) return p;
   const meta = getActiveProject();
   return meta ? join(projectDir(meta.slug), p) : resolve(p);
+}
+
+/**
+ * Whether a resolved target stays inside the active project's root. Used by the
+ * mutating tools to refuse a write that a `../` sequence (or an absolute path)
+ * would send outside the workspace — otherwise "write ../../secret" escapes the
+ * project entirely. With no active project there is nothing to contain, so it
+ * returns true (paths are then CWD-relative and the launcher owns that choice).
+ */
+export function isWithinProject(target: string): boolean {
+  const meta = getActiveProject();
+  if (!meta) return true;
+  const root = resolve(projectDir(meta.slug));
+  const t = resolve(target);
+  return t === root || t.startsWith(root + sep);
 }

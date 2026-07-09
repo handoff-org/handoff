@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { ToolRegistry } from './registry.js';
 import { overleafWriteGuard } from '../workspace/overleaf.js';
-import { resolveWorkspacePath } from '../workspace/project.js';
+import { resolveWorkspacePath, isWithinProject } from '../workspace/project.js';
 import { grepFiles, globFiles } from './search.js';
 import { checkFetchUrl } from './ssrf.js';
 
@@ -44,6 +44,9 @@ export function registerBuiltins(registry: ToolRegistry): void {
     async execute({ path, content, append }) {
       // Relative paths resolve into the active research project, not the CWD.
       const target = resolveWorkspacePath(String(path));
+      if (!isWithinProject(target)) {
+        return `Refused: "${path}" resolves outside the project workspace. Write files inside the active project.`;
+      }
       const isAppend = append === true || append === 'true';
       // In an Overleaf-linked paper, force edits into the single main document
       // and reject fragment overwrites that would break LaTeX compilation.
@@ -81,6 +84,9 @@ export function registerBuiltins(registry: ToolRegistry): void {
     },
     async execute({ path, old_string, new_string, replace_all }) {
       const target = resolveWorkspacePath(String(path));
+      if (!isWithinProject(target)) {
+        return `Refused: "${path}" resolves outside the project workspace. Edit files inside the active project.`;
+      }
       const oldStr = String(old_string);
       const newStr = String(new_string);
       if (oldStr === newStr) return 'No change: old_string and new_string are identical.';
@@ -118,6 +124,9 @@ export function registerBuiltins(registry: ToolRegistry): void {
     },
     async execute({ path }) {
       const target = resolveWorkspacePath(String(path));
+      if (!isWithinProject(target)) {
+        return `Refused: "${path}" resolves outside the project workspace. Create directories inside the active project.`;
+      }
       await mkdir(target, { recursive: true });
       return `Created directory ${target}`;
     },

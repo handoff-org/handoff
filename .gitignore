@@ -17,3 +17,7 @@ BUILD_SEQUENCE.txt
 PRODUCT_PLAN.txt
 TODO.md
 ERRORS.md
+
+# QA chat-simulation harness output + isolated temp HOMEs
+qa/logs/
+tmp/

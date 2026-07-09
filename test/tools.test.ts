@@ -42,6 +42,26 @@ test('run_shell executes inside the active project directory, not the launch dir
   assert.ok(out.includes(meta.slug), `expected cwd inside project "${meta.slug}", got: ${out}`);
 });
 
+test('mutating tools refuse paths that escape the project workspace', async () => {
+  createProject({ title: 'Escape Guard' });
+  // Relative traversal and absolute paths that resolve outside the project are
+  // refused (regression: `../` used to escape the workspace — found by qa:chat).
+  assert.match(
+    await reg.call('write_file', { path: '../../../../outside.txt', content: 'x' }),
+    /Refused/,
+  );
+  assert.match(await reg.call('make_dir', { path: '../../evil' }), /Refused/);
+  assert.match(
+    await reg.call('write_file', { path: '/tmp/handoff-escape-qa.txt', content: 'x' }),
+    /Refused/,
+  );
+  // A normal in-project write still succeeds.
+  assert.match(
+    await reg.call('write_file', { path: 'literature/ok.md', content: 'y' }),
+    /Written to/,
+  );
+});
+
 test('write_file append mode adds to a file instead of overwriting', async () => {
   createProject({ title: 'Append Tool' });
   await reg.call('write_file', { path: 'NOTEBOOK.md', content: 'line 1\n' });
