@@ -33,7 +33,7 @@ HOME=$(mktemp -d) BENCH_VERBOSE=1 npx tsx src/adapters/ml-agent-bench.ts \
   --bench-dir /ABS/PATH/to/MLAgentBench --task cifar10 --model qwen3:8b
 ```
 
-### CORE-Bench — adapter present (needs real-schema + Docker wiring)
+### CORE-Bench — adapter present (real schema; capsules auto-download)
 **Reproduce a research paper's computational results.**
 Paper: arXiv:2409.11363 | [GitHub](https://github.com/siegelz/core-bench)
 
@@ -41,20 +41,31 @@ Paper: arXiv:2409.11363 | [GitHub](https://github.com/siegelz/core-bench)
 git clone https://github.com/siegelz/core-bench ~/Desktop/benchmarks/core-bench
 ```
 
-Real data: `benchmark/dataset/core_train.json` (clear) + `core_test.json.gpg`
-(password `reproducibility`). Capsules auto-download from Princeton; running them
-faithfully needs Docker (the official harness builds a per-capsule image).
+Loads real tasks from `benchmark/dataset/core_train.json` (45 capsules, gold
+answers; test set is GPG-encrypted, password `reproducibility` → `--dataset test`).
+Capsule code/data (~tens of MB each) auto-downloads from Princeton and extracts with
+`tar`; each run gets the capsule dir as its long-timeout `run_shell` cwd. **Faithful
+reproduction generally needs the capsule environment (Docker/deps)** — best on a
+machine with them.
 
 ```bash
-CORE_BENCH_DIR=~/Desktop/benchmarks/core-bench npm run bench:core -- --difficulty easy --limit 5
+CORE_BENCH_DIR=~/Desktop/benchmarks/core-bench npm run bench:core -- --limit 1
 ```
 
-### DABStep — ⭐ adapter planned (next)
-**Multi-step data analysis over CSVs + documentation (payments domain).**
+### DABStep — ✅ adapter working (lightest to run)
+**Multi-step data analysis over payments CSVs + documentation.**
 Blog: https://huggingface.co/blog/dabstep | Data: `adyen/DABstep` (HF, openly available)
 
-Light setup: data on HF, Python-only, answer-scored (numbers/words/MC with numeric
-tolerance + fuzzy match) — a clean fit for the `submit_answer` + `scoreAnswer` runner.
+No clone needed — the adapter downloads the 7 shared context files and pulls tasks
+over HTTP. The `dev` split (10 tasks) ships gold answers and is scored locally; the
+`default` split (450 tasks) has held-out answers and writes a leaderboard submission
+file. Answer-scored (exact / tight numeric tolerance). Light compute (pandas over
+CSVs) — the quickest agentic benchmark to run.
+
+```bash
+npm run bench:dabstep -- --split dev --limit 5 --model qwen3:8b
+npm run bench:dabstep -- --split default            # full 450 → submission file
+```
 
 ### DiscoveryBench — adapter planned (last)
 **Data-driven hypothesis discovery across 6 science domains.**

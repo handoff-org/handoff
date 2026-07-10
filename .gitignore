@@ -21,3 +21,10 @@ ERRORS.md
 # QA chat-simulation harness output + isolated temp HOMEs
 qa/logs/
 tmp/
+
+# Benchmark adapters: downloaded datasets, run outputs, and per-run scratch
+# (capsules, task work dirs). The adapter code (src/adapters/) and the
+# comparison script (benchmarks/scripts/) stay tracked.
+benchmarks/data/
+benchmarks/results/
+benchmarks/work/

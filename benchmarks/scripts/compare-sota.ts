@@ -132,6 +132,27 @@ const SOTA_DB: BenchmarkSota[] = [
       ],
     },
   },
+
+  // ── DABStep ──────────────────────────────────────────────────────────────────
+  // Adyen + Hugging Face — https://huggingface.co/blog/dabstep
+  // Pass = answer matches gold (exact / tight numeric tolerance). 450 tasks
+  // (easy/hard) over payments data + docs. Answers held out; leaderboard-scored.
+  {
+    name: 'DABStep',
+    npmScript: 'bench:dabstep',
+    source: 'Adyen + Hugging Face (2025)',
+    metric: 'answer match (exact / tight numeric tolerance)',
+    leaderboard: 'https://huggingface.co/spaces/adyen/DABstep',
+    overall: {
+      best: {
+        agent: 'ReAct agent',
+        model: 'o3-mini',
+        passRate: 0.16,
+        date: '2025-02',
+        notes: 'best reported at launch (humans ~62% on easy tier)',
+      },
+    },
+  },
 ];
 
 // ── Result loader ─────────────────────────────────────────────────────────────

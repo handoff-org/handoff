@@ -1,5 +1,6 @@
-import { mkdirSync, appendFileSync } from 'fs';
+import { mkdirSync, appendFileSync, realpathSync } from 'fs';
 import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { runAgentLoop } from '../agent/loop.js';
@@ -340,4 +341,19 @@ export async function loadModelAndConfig(
 
   const model = createModel(config);
   return { model, config };
+}
+
+/**
+ * True when the given module (pass `import.meta.url`) is the script node was
+ * invoked with. Adapters guard their top-level `main()` with this so that
+ * IMPORTING one (e.g. a test importing its scorer) never kicks off the whole
+ * benchmark run — that dangling async main() would keep the process alive.
+ */
+export function isEntrypoint(metaUrl: string): boolean {
+  try {
+    const arg = process.argv[1];
+    return !!arg && realpathSync(arg) === realpathSync(fileURLToPath(metaUrl));
+  } catch {
+    return false;
+  }
 }

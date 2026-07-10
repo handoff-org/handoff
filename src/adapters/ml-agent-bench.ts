@@ -39,6 +39,7 @@ import {
   parseArgs,
   loadModelAndConfig,
   ts,
+  isEntrypoint,
 } from './runner.js';
 import type { BenchTask } from './types.js';
 
@@ -231,7 +232,9 @@ async function main(): Promise<void> {
   process.stdout.write(`\nResults: ${outputPath}\n`);
 }
 
-void main().catch((err) => {
-  process.stderr.write(`${String(err)}\n`);
-  process.exit(1);
-});
+if (isEntrypoint(import.meta.url)) {
+  void main().catch((err) => {
+    process.stderr.write(`${String(err)}\n`);
+    process.exit(1);
+  });
+}

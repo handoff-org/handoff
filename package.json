@@ -36,6 +36,7 @@
     "qa:chat:real": "tsx qa/chat-sim/runner.ts --all --real-model",
     "bench:core": "tsx src/adapters/core-bench.ts",
     "bench:ml-agent": "tsx src/adapters/ml-agent-bench.ts",
+    "bench:dabstep": "tsx src/adapters/dabstep.ts",
     "bench:compare": "tsx benchmarks/scripts/compare-sota.ts",
     "prepublishOnly": "npm run typecheck && npm test"
   },
