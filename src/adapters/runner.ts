@@ -1,5 +1,7 @@
 import { mkdirSync, appendFileSync } from 'fs';
 import { join, dirname } from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { runAgentLoop } from '../agent/loop.js';
 import { buildSystem } from '../agent/systemPrompt.js';
 import { ToolRegistry } from '../tools/registry.js';
@@ -7,6 +9,11 @@ import { registerBuiltins } from '../tools/builtin.js';
 import { loadConfig, type Config } from '../../config/schema.js';
 import { createModel, type ChatModel } from '../agent/model.js';
 import type { BenchTask, BenchmarkRun, TaskResult } from './types.js';
+
+const execAsync = promisify(exec);
+
+/** BENCH_VERBOSE=1 → stream each tool call / result / assistant message to stderr. */
+const VERBOSE = !!process.env['BENCH_VERBOSE'];
 
 export const DEFAULT_TASK_TIMEOUT_MS = 5 * 60_000;
 export const MAX_OUTER_TURNS = 3; // each outer turn = up to 10 tool-call rounds
@@ -47,6 +54,19 @@ export interface RunTaskOpts {
   timeoutMs?: number;
   /** Scorer; defaults to scoreAnswer. Pass custom logic per benchmark. */
   scorer?: (predicted: string | null, expected: string) => boolean;
+  /**
+   * Working directory for shell commands. When set, the benchmark overrides the
+   * builtin `run_shell` (which runs in the active project with a 30s cap) with one
+   * that runs here — so the agent's `python train.py` resolves relative data paths
+   * correctly and its output lands in the task's isolated work dir.
+   */
+  workDir?: string;
+  /**
+   * Timeout (ms) for a single shell command. The builtin run_shell caps at 30s,
+   * which kills real training/experiment commands. Benchmarks that run models need
+   * minutes; defaults to `timeoutMs` when `workDir` is set. Ignored without workDir.
+   */
+  shellTimeoutMs?: number;
 }
 
 export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
@@ -57,6 +77,8 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
     systemPrompt,
     timeoutMs = DEFAULT_TASK_TIMEOUT_MS,
     scorer = scoreAnswer,
+    workDir,
+    shellTimeoutMs,
   } = opts;
 
   const started = Date.now();
@@ -67,6 +89,45 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
 
   const registry = new ToolRegistry();
   registerBuiltins(registry);
+
+  // Benchmark shell: the builtin run_shell runs in the active project and caps at
+  // 30s — too short for training/experiment commands, and the wrong cwd for a task
+  // work dir. When workDir is set, override it with a task-scoped, long-timeout shell
+  // (bigger output buffer too, since training logs are verbose). Interactive handoff
+  // is untouched; this only affects this benchmark registry.
+  if (workDir) {
+    const shellTimeout = shellTimeoutMs ?? timeoutMs;
+    registry.register({
+      name: 'run_shell',
+      description: 'Run a shell command and return its stdout/stderr.',
+      sensitive: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Shell command to execute' },
+        },
+        required: ['command'],
+      },
+      async execute({ command }) {
+        try {
+          const { stdout, stderr } = await execAsync(String(command), {
+            timeout: shellTimeout,
+            cwd: workDir,
+            maxBuffer: 32 * 1024 * 1024,
+          });
+          return [stdout, stderr].filter(Boolean).join('\n--- stderr ---\n');
+        } catch (err) {
+          // Surface timeouts/non-zero exits to the agent as tool output (not a throw)
+          // so it can read the error and adapt, matching the builtin's forgiving shape.
+          const e = err as { stdout?: string; stderr?: string; message?: string; killed?: boolean };
+          const parts = [e.stdout, e.stderr].filter(Boolean).join('\n--- stderr ---\n');
+          const note = e.killed ? `(command exceeded ${shellTimeout}ms and was killed)` : (e.message ?? 'command failed');
+          return parts ? `${parts}\n--- error ---\n${note}` : note;
+        }
+      },
+    });
+  }
+
   registry.register({
     name: 'submit_answer',
     description:
@@ -104,7 +165,20 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
         approve: () => Promise.resolve(true),
         think: false,
       })) {
-        if (ev.type === 'tool_call') totalToolCalls++;
+        if (ev.type === 'tool_call') {
+          totalToolCalls++;
+          if (VERBOSE) {
+            const preview = String(ev.args ?? '').replace(/\s+/g, ' ').slice(0, 120);
+            process.stderr.write(`    → ${ev.name}(${preview})\n`);
+          }
+        }
+        if (VERBOSE && ev.type === 'tool_result') {
+          const out = String(ev.result ?? '').replace(/\s+/g, ' ').slice(0, 160);
+          process.stderr.write(`      ⇐ ${out}\n`);
+        }
+        if (VERBOSE && ev.type === 'message_end' && ev.content?.trim()) {
+          process.stderr.write(`    💬 ${ev.content.replace(/\s+/g, ' ').slice(0, 160)}\n`);
+        }
         if (ev.type === 'done') {
           totalTurns++;
           // Prepend system to the returned messages for next outer turn
@@ -112,6 +186,7 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
         }
         if (ev.type === 'error' && !ac.signal.aborted) {
           runError = ev.message;
+          if (VERBOSE) process.stderr.write(`    ⚠ error: ${ev.message}\n`);
         }
       }
       if (submittedAnswer !== null) break;
@@ -231,8 +306,38 @@ export function ts(): string {
   return new Date().toISOString().replace(/[:.]/g, '-').replace('Z', '');
 }
 
-export async function loadModelAndConfig(): Promise<{ model: ChatModel; config: Config }> {
+/**
+ * Load config, then apply any CLI overrides for --model and --backend.
+ *
+ * Supported flags (all optional):
+ *   --model    <id>       Override the model id (e.g. qwen3:14b, llama3.1:8b)
+ *   --backend  <name>     Override the backend (ollama | vllm | llama_cpp | mlx | hf)
+ *   --base-url <url>      Override the backend's base URL (e.g. http://host:11434)
+ *
+ * These can also be set via environment variables:
+ *   HANDOFF_MODEL, HANDOFF_BACKEND, HANDOFF_OLLAMA_URL / HANDOFF_VLLM_URL etc.
+ * (env vars are already handled by loadConfig; CLI flags take precedence over both).
+ */
+export async function loadModelAndConfig(
+  args?: Record<string, string | undefined>,
+): Promise<{ model: ChatModel; config: Config }> {
   const config = await loadConfig();
+
+  if (args?.['model']) config.modelId = args['model'];
+  if (args?.['backend']) {
+    const b = args['backend'] as Config['backend'];
+    config.backend = b;
+  }
+  if (args?.['base-url']) {
+    // Apply to whichever backend is active
+    switch (config.backend) {
+      case 'ollama':    config.ollamaBaseUrl   = args['base-url']; break;
+      case 'vllm':      config.vllmBaseUrl      = args['base-url']; break;
+      case 'llama_cpp': config.llamaCppBaseUrl  = args['base-url']; break;
+      case 'mlx':       config.mlxBaseUrl       = args['base-url']; break;
+    }
+  }
+
   const model = createModel(config);
   return { model, config };
 }

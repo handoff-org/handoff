@@ -1,26 +1,35 @@
 /**
  * MLAgentBench adapter (arXiv:2310.03302)
- * ML experimentation: improve a given ML training script to maximize final metric.
+ * ML experimentation: improve a given ML training script to maximize a metric.
  * https://github.com/snap-stanford/MLAgentBench
  *
  * Usage:
- *   npx tsx src/adapters/ml-agent-bench.ts --bench-dir ~/code/MLAgentBench
- *   ML_AGENT_BENCH_DIR=~/code/MLAgentBench npm run bench:ml-agent
+ *   npx tsx src/adapters/ml-agent-bench.ts --bench-dir ~/Desktop/benchmarks/MLAgentBench --task cifar10
+ *   ML_AGENT_BENCH_DIR=~/Desktop/benchmarks/MLAgentBench npm run bench:ml-agent -- --task cifar10
  *
  * Flags:
  *   --bench-dir   Path to cloned repo (or $ML_AGENT_BENCH_DIR)
  *   --task        Task name (e.g. "cifar10") — default: all
  *   --limit       Max tasks to run
+ *   --baseline    Reference metric to beat (pass = final >= baseline). Omit → any
+ *                 valid numeric metric the agent reports counts as pass (smoke mode).
  *   --output      Output JSONL path
+ *   --model       Model id to use (e.g. qwen3:14b)  [default: from config]
+ *   --backend     Backend (ollama | vllm | llama_cpp | mlx | hf)
+ *   --base-url    Backend base URL (e.g. http://localhost:11434)
  *
- * Scoring note:
- *   MLAgentBench measures final validation metric improvement over a known baseline.
- *   Each task has a baseline metric and a "good" target. This adapter scores
- *   pass = final metric >= baseline (any improvement counts).
- *   Set --strict to score pass = final metric >= task target.
+ * Layout (real repo):
+ *   <bench-dir>/MLAgentBench/benchmarks/<task>/
+ *     env/      train.py, task_descriptor.txt, (data/ after prepare.py)
+ *     scripts/  research_problem.txt, prepare.py, read_only_files.txt
+ *
+ * Each run gets an ISOLATED copy of the task's env/ under benchmarks/work/ so the
+ * agent's edits + training output never touch the pristine clone, and repeat runs
+ * start clean. The agent operates via absolute paths; the benchmark run_shell runs
+ * inside the work dir with a long timeout (real training needs minutes, not 30s).
  */
 
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, mkdirSync, cpSync, rmSync } from 'fs';
 import { join, resolve } from 'path';
 import {
   runTask,
@@ -30,180 +39,137 @@ import {
   parseArgs,
   loadModelAndConfig,
   ts,
-  scoreAnswer,
 } from './runner.js';
 import type { BenchTask } from './types.js';
 
 const BENCH_NAME = 'MLAgentBench';
+const TASK_TIMEOUT_MS = 20 * 60_000; // ML training can take a while on CPU
 
-// ── Task format ───────────────────────────────────────────────────────────────
-// Tasks at: <bench-dir>/MLAgentBench/tasks/<task_name>/
-// Each task directory contains:
-//   task_descriptor.py (or task.py)  — defines the task
-//   env/                             — the training environment
-//   scripts/                         — starter code
-//   logs/                            — reference outputs
-// We also read task metadata from a consolidated tasks.json if present,
-// or fall back to scanning individual directories.
-//
-// tasks.json format (if present):
-//   [{ name, description, baseline_metric, target_metric, metric_name,
-//      time_limit_hours, data_note }]
-
-interface MLTask {
-  name: string;
-  description?: string;
-  baseline_metric?: number;
-  target_metric?: number;
-  metric_name?: string;
-  time_limit_hours?: number;
-  data_note?: string;
+function benchmarksDir(benchDir: string): string {
+  // Repo nests the package: <bench-dir>/MLAgentBench/benchmarks/<task>
+  return join(benchDir, 'MLAgentBench', 'benchmarks');
 }
 
-function loadTasks(benchDir: string, taskFilter?: string): BenchTask[] {
-  const tasksDir = join(benchDir, 'MLAgentBench', 'tasks');
-  if (!existsSync(tasksDir)) {
+interface LoadedTask {
+  task: BenchTask;
+  envDir: string; // pristine source env for this task
+}
+
+function loadTasks(benchDir: string, taskFilter?: string): LoadedTask[] {
+  const tasksRoot = benchmarksDir(benchDir);
+  if (!existsSync(tasksRoot)) {
     throw new Error(
-      `MLAgentBench/tasks/ not found at ${tasksDir}\n` +
-        `Clone: git clone https://github.com/snap-stanford/MLAgentBench ~/code/MLAgentBench`,
+      `benchmarks/ not found at ${tasksRoot}\n` +
+        `Clone: git clone https://github.com/snap-stanford/MLAgentBench ${benchDir}`,
     );
   }
 
-  // Try consolidated metadata first
-  const metaPath = join(benchDir, 'tasks.json');
-  let metaMap: Record<string, MLTask> = {};
-  if (existsSync(metaPath)) {
-    try {
-      const raw = JSON.parse(readFileSync(metaPath, 'utf-8')) as MLTask[];
-      for (const t of raw) metaMap[t.name] = t;
-    } catch {
-      // ignore — fall back to scanning
-    }
-  }
-
-  const taskDirs = readdirSync(tasksDir, { withFileTypes: true })
+  const taskDirs = readdirSync(tasksRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name);
 
-  const tasks: BenchTask[] = [];
+  const loaded: LoadedTask[] = [];
   for (const name of taskDirs) {
     if (taskFilter && name !== taskFilter) continue;
 
-    const taskDir = join(tasksDir, name);
-    const meta = metaMap[name];
-    const taskEnvDir = join(taskDir, 'env');
+    const taskDir = join(tasksRoot, name);
+    const envDir = join(taskDir, 'env');
+    const scriptsDir = join(taskDir, 'scripts');
+    if (!existsSync(envDir)) continue; // not a runnable task dir
 
-    const description = meta?.description ?? readTaskDescription(taskDir, name);
-    const baselineMetric = meta?.baseline_metric;
-    const metricName = meta?.metric_name ?? 'validation metric';
-    const targetMetric = meta?.target_metric;
+    const problem = readText(join(scriptsDir, 'research_problem.txt'));
+    const descriptor = readText(join(envDir, 'task_descriptor.txt'));
+    const readOnly = readText(join(scriptsDir, 'read_only_files.txt'));
+    const envFiles = safeList(envDir);
 
-    const envListing = buildEnvListing(taskEnvDir);
-    const starterInfo = buildStarterInfo(taskDir);
-
-    const prompt =
-      `You are running an MLAgentBench task.\n\n` +
-      `Task: ${name}\n` +
-      `Metric: ${metricName}` +
-      (baselineMetric != null ? ` (baseline: ${baselineMetric})` : '') +
-      (targetMetric != null ? `, target: ${targetMetric}` : '') +
-      `\n\n` +
-      `Description:\n${description}\n\n` +
-      envListing +
-      starterInfo +
-      `Instructions:\n` +
-      `1. Read the starter code in ${taskDir}/env/ or ${taskDir}/scripts/.\n` +
-      `2. Improve the training script to maximize the ${metricName}.\n` +
-      `   Use write_file to modify scripts and run_shell to train the model.\n` +
-      `3. After training, read the final validation ${metricName} from the output.\n` +
-      `4. Call submit_answer with the final ${metricName} you achieved (e.g., "0.9134").\n` +
-      (meta?.data_note ? `\nNote: ${meta.data_note}\n` : '');
-
-    // expected = target metric or "improve" (we score any improvement)
-    const expected =
-      targetMetric != null ? String(targetMetric) : baselineMetric != null ? String(baselineMetric) : '0';
-
-    tasks.push({
-      id: name,
-      prompt,
-      expected,
-      meta: {
-        baseline_metric: baselineMetric,
-        target_metric: targetMetric,
-        metric_name: metricName,
-        task_dir: taskDir,
+    // Prompt is filled in per-run once the work dir exists (needs its absolute
+    // path). Store the raw pieces on meta and build the final prompt in setup.
+    loaded.push({
+      envDir,
+      task: {
+        id: name,
+        prompt: '', // set in prepareRun()
+        expected: '0', // overridden by --baseline; 0 = smoke (any real metric passes)
+        meta: {
+          problem,
+          descriptor,
+          readOnly,
+          envFiles,
+          task_dir: taskDir,
+        },
       },
     });
   }
-  return tasks;
+  return loaded;
 }
 
-function readTaskDescription(taskDir: string, taskName: string): string {
-  // Try several common locations for task description
-  const candidates = [
-    join(taskDir, 'README.md'),
-    join(taskDir, 'task.py'),
-    join(taskDir, 'task_descriptor.py'),
-  ];
-  for (const p of candidates) {
-    if (existsSync(p)) {
-      try {
-        const content = readFileSync(p, 'utf-8');
-        // Return first 500 chars as description
-        return content.slice(0, 500).trim();
-      } catch {
-        continue;
-      }
-    }
-  }
-  return `Improve the ${taskName} ML training script to maximize validation performance.`;
-}
-
-function buildEnvListing(envDir: string): string {
-  if (!existsSync(envDir)) return '';
+function readText(path: string): string {
   try {
-    const files = readdirSync(envDir)
-      .filter((f) => f.endsWith('.py') || f.endsWith('.sh') || f.endsWith('.txt'))
-      .slice(0, 10)
-      .join(', ');
-    if (!files) return '';
-    return `Environment files: ${files}\n\n`;
+    return existsSync(path) ? readFileSync(path, 'utf-8').trim() : '';
   } catch {
     return '';
   }
 }
 
-function buildStarterInfo(taskDir: string): string {
-  const scriptsDir = join(taskDir, 'scripts');
-  if (!existsSync(scriptsDir)) return '';
+function safeList(dir: string): string {
   try {
-    const scripts = readdirSync(scriptsDir).slice(0, 5).join(', ');
-    return scripts ? `Starter scripts: ${scripts}\n\n` : '';
+    return readdirSync(dir).slice(0, 20).join(', ');
   } catch {
     return '';
   }
 }
 
 /**
- * MLAgentBench scorer: pass if predicted metric >= baseline_metric (any improvement).
- * In strict mode (task.expected = target_metric), pass if predicted >= target.
+ * Copy the pristine env/ into an isolated work dir and build the task prompt with
+ * that absolute path baked in. Returns the work dir (the shell cwd for this run).
  */
-function mlScorer(predicted: string | null, expected: string): boolean {
-  if (predicted === null) return false;
-  const p = Number(predicted.trim().replace(/,/g, '').replace(/%$/, ''));
-  const e = Number(expected.trim().replace(/,/g, '').replace(/%$/, ''));
-  if (isNaN(p) || isNaN(e)) return scoreAnswer(predicted, expected);
-  // Pass if predicted >= expected (beat or match baseline/target)
-  return p >= e * 0.99; // 1% slack for floating-point variation
+function prepareRun(lt: LoadedTask, workRoot: string): string {
+  const workDir = join(workRoot, lt.task.id);
+  rmSync(workDir, { recursive: true, force: true });
+  mkdirSync(workDir, { recursive: true });
+  cpSync(lt.envDir, workDir, { recursive: true });
+
+  const m = lt.task.meta as Record<string, string>;
+  lt.task.prompt =
+    `You are running the MLAgentBench "${lt.task.id}" task.\n\n` +
+    `Working directory (all files are here; use these absolute paths):\n  ${workDir}\n\n` +
+    (m.problem ? `Research problem:\n${m.problem}\n\n` : '') +
+    (m.descriptor ? `Task details:\n${m.descriptor}\n\n` : '') +
+    (m.envFiles ? `Files in the working directory: ${m.envFiles}\n` : '') +
+    (m.readOnly ? `Read-only files (do not modify): ${m.readOnly}\n` : '') +
+    `\nInstructions:\n` +
+    `1. Read ${join(workDir, 'train.py')} with read_file to understand the baseline.\n` +
+    `2. Run it first with run_shell ("python train.py") to get the baseline metric.\n` +
+    `3. Improve the script with edit_file (better model, hyperparameters, features),\n` +
+    `   then re-run it. Keep epochs small to stay within the time budget.\n` +
+    `4. When you have your best result, call submit_answer with the final metric\n` +
+    `   printed by the script (a bare number, e.g. "62.34" or "0.6234").`;
+  return workDir;
+}
+
+/**
+ * Smoke scorer: with no --baseline (expected "0"), pass = the agent reported a
+ * valid, positive numeric metric (i.e. it actually ran the task and read a result).
+ * With a --baseline, pass = final metric >= baseline (beat the reference).
+ */
+function makeScorer(baseline: number | null) {
+  return (predicted: string | null, expected: string): boolean => {
+    if (predicted === null) return false;
+    const p = Number(predicted.trim().replace(/,/g, '').replace(/%$/, ''));
+    if (!isFinite(p)) return false;
+    const floor = baseline ?? Number(expected);
+    if (!isFinite(floor) || floor <= 0) return p > 0; // smoke: any real metric
+    return p >= floor * 0.99; // 1% slack
+  };
 }
 
 const SYSTEM_PROMPT =
   'You are an ML experimentation agent running MLAgentBench tasks. ' +
-  'You will be given an ML training environment and asked to improve the training script ' +
-  'to maximize a validation metric. Use read_file to inspect the code, write_file to modify it, ' +
-  'and run_shell to execute training runs. Monitor training output for the final metric. ' +
-  'When done, call submit_answer with the final validation metric you achieved (e.g. "0.9134"). ' +
-  'Be concrete and precise — do not approximate.';
+  'You are given a training script and must improve it to maximize a validation metric. ' +
+  'Use read_file to inspect code, edit_file to modify it, and run_shell to execute training runs ' +
+  '(run_shell already runs inside the task working directory, so "python train.py" works directly). ' +
+  'Read the metric from the script output. When done, call submit_answer with the final metric ' +
+  'as a bare number. Keep training epochs modest so runs finish within the time budget.';
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -212,38 +178,50 @@ async function main(): Promise<void> {
   const benchDir = resolve(args['bench-dir'] ?? process.env['ML_AGENT_BENCH_DIR'] ?? '');
   if (!benchDir) {
     process.stderr.write(
-      'Usage: tsx src/adapters/ml-agent-bench.ts --bench-dir <path>\n' +
+      'Usage: tsx src/adapters/ml-agent-bench.ts --bench-dir <path> [--task cifar10]\n' +
         '       or set ML_AGENT_BENCH_DIR environment variable\n',
     );
     process.exit(1);
   }
 
-  let tasks = loadTasks(benchDir, args['task']);
-  if (args['limit']) tasks = tasks.slice(0, Number(args['limit']));
+  let loaded = loadTasks(benchDir, args['task']);
+  if (args['limit']) loaded = loaded.slice(0, Number(args['limit']));
+  if (loaded.length === 0) {
+    process.stderr.write(`No tasks matched${args['task'] ? ` "${args['task']}"` : ''} under ${benchmarksDir(benchDir)}\n`);
+    process.exit(1);
+  }
 
-  process.stdout.write(`${BENCH_NAME}: ${tasks.length} task(s)\n`);
+  const baseline = args['baseline'] != null ? Number(args['baseline']) : null;
+  const scorer = makeScorer(baseline);
+  const workRoot = resolve('benchmarks', 'work', 'mlagentbench');
+  mkdirSync(workRoot, { recursive: true });
 
-  const { model, config } = await loadModelAndConfig();
+  process.stdout.write(`${BENCH_NAME}: ${loaded.length} task(s)\n`);
+
+  const { model, config } = await loadModelAndConfig(args);
   const runId = ts();
   const outputPath = args['output'] ?? join('benchmarks', 'results', `ml-agent-bench-${runId}.jsonl`);
 
   const results = [];
-  for (const task of tasks) {
-    process.stdout.write(`  ${task.id} … `);
+  for (const lt of loaded) {
+    const workDir = prepareRun(lt, workRoot);
+    if (baseline != null) lt.task.expected = String(baseline);
+    process.stdout.write(`  ${lt.task.id} … (work: ${workDir})\n`);
     const result = await runTask({
-      task,
+      task: lt.task,
       benchmarkName: BENCH_NAME,
       model,
       systemPrompt: SYSTEM_PROMPT,
-      scorer: mlScorer,
-      // ML training can take longer — give 15 minutes per task
-      timeoutMs: 15 * 60_000,
+      scorer,
+      timeoutMs: TASK_TIMEOUT_MS,
+      workDir,
+      shellTimeoutMs: TASK_TIMEOUT_MS,
     });
     results.push(result);
     process.stdout.write(
       result.passed
-        ? `✓  metric=${result.predicted ?? '?'}  (${result.durationMs}ms)\n`
-        : `✗  metric=${result.predicted ?? 'null'}  baseline=${result.expected}  (${result.durationMs}ms)\n`,
+        ? `    ✓  metric=${result.predicted ?? '?'}  (${(result.durationMs / 1000).toFixed(0)}s, ${result.toolCalls} tool calls)\n`
+        : `    ✗  metric=${result.predicted ?? 'null'}  (${(result.durationMs / 1000).toFixed(0)}s, ${result.toolCalls} tool calls)${result.error ? ` — ${result.error}` : ''}\n`,
     );
   }
 

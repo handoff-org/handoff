@@ -1,127 +1,102 @@
 # Benchmark Repos
 
-Clone these alongside the handoff repo (e.g. into `~/code/`).
+Clone these alongside the handoff repo (e.g. into `~/Desktop/benchmarks/`).
 Do **not** clone them inside the handoff directory.
 
----
-
-## CORE-Bench
-**Computational reproducibility of research papers.**
-Paper: arXiv:2409.11363 | [GitHub](https://github.com/siegelz/core-bench)
-
-```bash
-git clone https://github.com/siegelz/core-bench ~/code/core-bench
-```
-
-- ~300 tasks across easy / medium / hard difficulty
-- Each task: a Code Ocean capsule (code + data) + a specific question about a paper's numeric result
-- The agent must run the code and find the answer
-
-```bash
-# Run all tasks
-npx tsx src/adapters/core-bench.ts --bench-dir ~/code/core-bench
-
-# Only easy tasks, limit 20
-npx tsx src/adapters/core-bench.ts --bench-dir ~/code/core-bench --difficulty easy --limit 20
-
-# One task by id
-npx tsx src/adapters/core-bench.ts --bench-dir ~/code/core-bench --task-id <task_id>
-
-# Or use npm script
-CORE_BENCH_DIR=~/code/core-bench npm run bench:core
-```
+Two ways handoff is evaluated:
+- **Agentic adapters** (`src/adapters/`) drive handoff's real agent loop (full tool
+  registry + `submit_answer`) and score the answer. Used for benchmarks where the
+  answer is a value the agent computes with tools.
+- **External harness** — for code-generation benchmarks that score by executing the
+  model's generated code against hidden tests, we run the benchmark's *own* harness
+  pointed at a local model, rather than an adapter.
 
 ---
 
-## ScienceAgentBench
-**Data-driven scientific discovery: write Python to answer a research question from a dataset.**
-Paper: arXiv:2410.05080 | [GitHub](https://github.com/OSU-NLP-Group/ScienceAgentBench)
+## Agentic run set (adapters)
 
-```bash
-git clone https://github.com/OSU-NLP-Group/ScienceAgentBench ~/code/science-agent-bench
-```
-
-- 102 tasks across 4 domains: Bioinformatics, Computational Chemistry, GIS, Psychology
-- Each task: a dataset directory + scientific question → write a program that produces the answer
-- Evaluation: execution-based (program produces the expected output)
-
-```bash
-# Run all tasks
-npx tsx src/adapters/science-agent-bench.ts --bench-dir ~/code/science-agent-bench
-
-# Filter by domain
-npx tsx src/adapters/science-agent-bench.ts --bench-dir ~/code/science-agent-bench --domain Bioinformatics
-
-# Or use npm script
-SCIENCE_AGENT_BENCH_DIR=~/code/science-agent-bench npm run bench:science-agent
-```
-
----
-
-## SciCode
-**Scientific research programming: subproblem solving across natural sciences.**
-Paper: arXiv:2407.13168 | [GitHub](https://github.com/scicode-bench/scicode)
-
-```bash
-git clone https://github.com/scicode-bench/scicode ~/code/scicode
-```
-
-- 338 subproblems from 80 research-level problems across physics, math, chemistry, biology, materials science
-- Each subproblem: implement a specific Python function; compare output to ground truth
-- Graded: exact match or within tolerance (numeric scientific quantities)
-
-```bash
-# Run all subproblems
-npx tsx src/adapters/scicode.ts --bench-dir ~/code/scicode
-
-# Filter by topic
-npx tsx src/adapters/scicode.ts --bench-dir ~/code/scicode --topic physics
-
-# One problem (all its subproblems)
-npx tsx src/adapters/scicode.ts --bench-dir ~/code/scicode --problem-id 23
-
-# Or use npm script
-SCICODE_DIR=~/code/scicode npm run bench:scicode
-```
-
----
-
-## MLAgentBench
-**ML experimentation: improve a training script to maximize a validation metric.**
+### MLAgentBench — ✅ adapter working
+**ML experimentation: improve a training script to beat a baseline.**
 Paper: arXiv:2310.03302 | [GitHub](https://github.com/snap-stanford/MLAgentBench)
 
 ```bash
-git clone https://github.com/snap-stanford/MLAgentBench ~/code/MLAgentBench
+git clone https://github.com/snap-stanford/MLAgentBench ~/Desktop/benchmarks/MLAgentBench
 ```
 
-- 13 ML tasks (CIFAR-10, ogbn-arxiv, spaceship-titanic, etc.)
-- Each task: a starter training script + dataset → beat the baseline validation metric
-- Scored: any improvement over baseline counts as pass; target metric for strict scoring
+Real layout: tasks at `MLAgentBench/benchmarks/<task>/{env,scripts}`; task text in
+`scripts/research_problem.txt`. Data is per-task (Kaggle CLI, or torchvision/HF/OGB
+auto-download for cifar10/imdb/ogbn-arxiv). Each run gets an isolated work-dir copy
+of `env/`; the benchmark `run_shell` runs there with a long timeout.
 
 ```bash
-# Run all tasks
-npx tsx src/adapters/ml-agent-bench.ts --bench-dir ~/code/MLAgentBench
+HOME=$(mktemp -d) BENCH_VERBOSE=1 npx tsx src/adapters/ml-agent-bench.ts \
+  --bench-dir /ABS/PATH/to/MLAgentBench --task cifar10 --model qwen3:8b
+```
 
-# One task
-npx tsx src/adapters/ml-agent-bench.ts --bench-dir ~/code/MLAgentBench --task cifar10
+### CORE-Bench — adapter present (needs real-schema + Docker wiring)
+**Reproduce a research paper's computational results.**
+Paper: arXiv:2409.11363 | [GitHub](https://github.com/siegelz/core-bench)
 
-# Or use npm script
-ML_AGENT_BENCH_DIR=~/code/MLAgentBench npm run bench:ml-agent
+```bash
+git clone https://github.com/siegelz/core-bench ~/Desktop/benchmarks/core-bench
+```
+
+Real data: `benchmark/dataset/core_train.json` (clear) + `core_test.json.gpg`
+(password `reproducibility`). Capsules auto-download from Princeton; running them
+faithfully needs Docker (the official harness builds a per-capsule image).
+
+```bash
+CORE_BENCH_DIR=~/Desktop/benchmarks/core-bench npm run bench:core -- --difficulty easy --limit 5
+```
+
+### DABStep — ⭐ adapter planned (next)
+**Multi-step data analysis over CSVs + documentation (payments domain).**
+Blog: https://huggingface.co/blog/dabstep | Data: `adyen/DABstep` (HF, openly available)
+
+Light setup: data on HF, Python-only, answer-scored (numbers/words/MC with numeric
+tolerance + fuzzy match) — a clean fit for the `submit_answer` + `scoreAnswer` runner.
+
+### DiscoveryBench — adapter planned (last)
+**Data-driven hypothesis discovery across 6 science domains.**
+Paper: arXiv:2407.01725 | [GitHub](https://github.com/allenai/discoverybench)
+
+```bash
+git clone https://github.com/allenai/discoverybench ~/Desktop/benchmarks/discoverybench
+```
+
+Note: scoring is **facet-based / LLM-judged**, so the adapter needs a dedicated
+scorer (their eval harness or a judge model) rather than plain answer matching.
+
+---
+
+## External harness (not an adapter)
+
+### SciCode
+**Scientific research programming — generate a function, execute against hidden tests.**
+Paper: arXiv:2407.13168 | [GitHub](https://github.com/scicode-bench/SciCode)
+
+Scored by executing generated code against numeric targets (`test_data.h5`), so we
+use SciCode's own `inspect_ai` harness pointed at local Ollama — not a handoff adapter.
+
+```bash
+git clone https://github.com/scicode-bench/SciCode ~/Desktop/benchmarks/scicode
+cd ~/Desktop/benchmarks/scicode && pip install -e .
+# download test_data.h5 (Google Drive) into eval/data/, then:
+cd eval/inspect_ai
+inspect eval scicode.py --model ollama/qwen3:8b --limit 1 \
+  -T split=validation -T mode=normal -T h5py_file=../data/test_data.h5
 ```
 
 ---
 
 ## Results
 
-All adapters write results to `benchmarks/results/` (JSONL per task + `.summary.json`).
+Adapters write to `benchmarks/results/` (JSONL per task + `.summary.json`).
+Compare against published SOTA with:
 
-```
-benchmarks/results/
-  core-bench-<timestamp>.jsonl
-  core-bench-<timestamp>.summary.json
-  science-agent-bench-<timestamp>.jsonl
-  ...
+```bash
+npm run bench:compare        # reads benchmarks/results/*.summary.json
 ```
 
-Each line in the JSONL is a `TaskResult` object (see `src/adapters/types.ts`).
-The summary JSON has aggregate pass rate, by-difficulty, and by-domain breakdowns.
+Each JSONL line is a `TaskResult` (see `src/adapters/types.ts`); the summary has
+aggregate pass rate + by-difficulty / by-domain breakdowns.

@@ -124,7 +124,7 @@ async function main(): Promise<void> {
 
   process.stdout.write(`${BENCH_NAME}: ${tasks.length} task(s)\n`);
 
-  const { model, config } = await loadModelAndConfig();
+  const { model, config } = await loadModelAndConfig(args);
   const runId = ts();
   const outputPath = args['output'] ?? join('benchmarks', 'results', `core-bench-${runId}.jsonl`);
 

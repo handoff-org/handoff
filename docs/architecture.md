@@ -26,7 +26,7 @@ src/
     presets.ts, contextBudget.ts, compaction.ts       # laptop inference presets + per-turn token budget + history compaction
   tools/
     registry.ts       # ToolRegistry: register/getSchemas/call + sensitivity
-    builtin.ts        # read_file, write_file, edit_file, make_dir, list_dir, search_files, find_files, run_shell, web_fetch, read_pdf, ask_user
+    builtin.ts        # read_file, write_file, edit_file, make_dir, list_dir, search_files, find_files, run_shell, web_fetch, web_search, read_pdf, ask_user
     search.ts         # bounded, dependency-free file walker: grep (search_files) + glob (find_files)
   workspace/
     project.ts        # research projects: scaffold, active project, resolveWorkspacePath
@@ -140,7 +140,8 @@ research, and skills modules register their own. File tools resolve paths throug
 | `search_files` | Regex search over file contents (`path:line: text`), optional glob filter, skips `node_modules`/`.git`/`.venv`/binaries. Backed by `src/tools/search.ts`. |
 | `find_files` | Glob over project paths (`**/*.py`, `results/*.png`). Backed by `src/tools/search.ts`. |
 | `run_shell` | Run a shell command inside the active project root. |
-| `web_fetch` | Fetch a URL (SSRF-guarded by `tools/ssrf.ts`: rejects loopback, private/CGNAT/link-local/unique-local ranges, IPv4-mapped IPv6, and obfuscated decimal/octal/hex IP encodings; http(s) only). |
+| `web_fetch` | Fetch a URL and return readable text (HTML stripped to prose via `tools/web.ts`; content-type aware; output capped by `max_chars`). SSRF-guarded by `tools/ssrf.ts` (rejects loopback, private/CGNAT/link-local/unique-local ranges, IPv4-mapped IPv6, and obfuscated decimal/octal/hex IP encodings; http(s) only) — redirects are followed manually and re-checked per hop. |
+| `web_search` | Search the web (DuckDuckGo HTML endpoint, no API key) and return the top results as title/URL/snippet. Pair with `web_fetch` to read a result. Parsing lives in `tools/web.ts`. |
 | `read_pdf` | Extract text from a local PDF or a direct PDF URL via `pdftotext` (poppler, invoked with array args — no shell; downloaded temp files are cleaned up). |
 | `ask_user` | Present a multiple-choice question to the user; the agent loop routes it to the on-screen picker. |
 
