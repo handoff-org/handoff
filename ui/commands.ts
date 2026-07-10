@@ -7,6 +7,7 @@ export interface Command {
 export const COMMANDS: Command[] = [
   { name: '/project', desc: 'switch, create, or delete a project  (/project new <name>)' },
   { name: '/research', desc: 'fact-check a claim against the literature' },
+  { name: '/note', desc: 'jot a note in the project lab notebook  (/note <text>)' },
   { name: '/overleaf', desc: 'connect & sync your paper with Overleaf' },
   { name: '/compose-skill', desc: 'write a new skill in your editor' },
   { name: '/skill', desc: 'run a skill  (/skill <name>)' },

@@ -29,7 +29,7 @@ const LITERATURE_RE =
 // ── LaTeX sentence extraction ─────────────────────────────────────────────────
 
 /** Strip LaTeX commands and environments for cleaner pattern matching. */
-function stripLatex(line: string): string {
+export function stripLatex(line: string): string {
   return line
     .replace(/(?<!\d)%.*$/, '') // remove % comments — but not % after a digit (e.g. 91.3%)
     .replace(/\\[a-zA-Z]+\*?\{[^}]*\}/g, '') // \cmd{arg}
@@ -222,7 +222,8 @@ export function auditPaper(slug: string): AuditResult {
   };
 }
 
-function findTexFiles(dir: string): string[] {
+/** List .tex files directly under a directory (sorted). */
+export function findTexFiles(dir: string): string[] {
   const out: string[] = [];
   try {
     for (const name of readdirSync(dir)) {

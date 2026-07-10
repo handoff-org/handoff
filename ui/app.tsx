@@ -65,6 +65,7 @@ import {
 } from '../src/personalization/learn.js';
 import { sanitizePreference } from '../src/personalization/redaction.js';
 import { correctionsDirective } from '../src/research/corrections.js';
+import { appendNotebook } from '../src/research/notebook.js';
 import { SKILL_TEMPLATE, saveUserSkill, loadSkills, findSkill } from '../src/skills/store.js';
 import { withQuant, type Backend, type FavouriteEntry } from '../config/models.js';
 import { getTheme } from '../config/theme.js';
@@ -1744,6 +1745,22 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         const claim = trimmed.replace(/^\/research\s*/i, '');
         if (claim) researchSubmit(claim);
         else addEntry({ kind: 'note', content: 'usage: /research <claim or topic>' });
+        return;
+      }
+      // /note keeps original-case text (runCommand lowercases args).
+      if (/^\/note\b/i.test(trimmed)) {
+        const text = trimmed.replace(/^\/note\s*/i, '').trim();
+        if (!text) {
+          addEntry({ kind: 'note', content: 'usage: /note <text>' });
+          return;
+        }
+        const meta = getActiveProject();
+        if (!meta) {
+          addEntry({ kind: 'note', content: 'no active project — open or create one first (/project)' });
+          return;
+        }
+        appendNotebook(meta.slug, { type: 'note', summary: text });
+        addEntry({ kind: 'note', content: `📝 noted in ${meta.title}'s notebook` });
         return;
       }
       // /project keeps original-case names (runCommand lowercases args).

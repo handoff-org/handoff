@@ -42,8 +42,10 @@ src/
     openalex.ts, arxiv.ts   # literature clients (source-agnostic Paper shape)
     corrections.ts    # the /research fact-check directive
     cache.ts          # local paper cache
-    notebook.ts       # auto-kept per-project NOTEBOOK.md
-    tools.ts          # search_papers / search_arxiv / get_paper / fetch_arxiv tools
+    notebook.ts       # auto-kept per-project NOTEBOOK.md (+ read/search helpers)
+    arxivSource.ts    # extract a paper's LaTeX source (gzip+tar via stdlib zlib)
+    prose.ts          # local writing-quality checks (check_writing) + section scaffold
+    tools.ts          # search_papers / search_arxiv / get_paper / fetch_arxiv / read_arxiv_source / cite_paper / take_note / read_notebook / search_notes
   skills/
     store.ts          # load/save skills (flat file or per-skill folder, frontmatter markdown)
     tools.ts          # skill tools

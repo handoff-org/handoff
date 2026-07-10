@@ -56,17 +56,25 @@ function parseEntry(entry: string): ArxivPaper {
 }
 
 /**
+ * Normalise an arXiv ID to its bare form: strips an `arxiv:` prefix, an
+ * abs/pdf/src URL wrapper, and any version suffix (`v2`).
+ */
+export function normalizeArxivId(rawId: string): string {
+  return rawId
+    .replace(/^arxiv:/i, '')
+    .replace(/^https?:\/\/arxiv\.org\/(?:abs|pdf|src)\//i, '')
+    .replace(/v\d+$/, '')
+    .trim();
+}
+
+/**
  * Fetch metadata for an arXiv paper from the public Atom API.
  * Accepts IDs in any common form: "2301.07041", "arxiv:2301.07041",
  * "https://arxiv.org/abs/2301.07041", "2301.07041v2".
  */
 export async function fetchArxivPaper(rawId: string): Promise<ArxivPaper> {
   // Normalise: strip arxiv: prefix, URL, and version suffix.
-  const normalized = rawId
-    .replace(/^arxiv:/i, '')
-    .replace(/^https?:\/\/arxiv\.org\/(?:abs|pdf|src)\//i, '')
-    .replace(/v\d+$/, '')
-    .trim();
+  const normalized = normalizeArxivId(rawId);
 
   const url = `https://export.arxiv.org/api/query?id_list=${encodeURIComponent(normalized)}&max_results=1`;
   const res = await fetch(url, {

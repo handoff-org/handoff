@@ -72,3 +72,55 @@ export function appendNotebook(slug: string, entry: NotebookEntry): void {
     // Non-fatal: notebook is a convenience, never block the main flow.
   }
 }
+
+/**
+ * Split a NOTEBOOK.md into its entry blocks. Each entry the writer emits is a
+ * `## <stamp> — <label>` heading followed by body, separated by `---` lines.
+ * The leading file header (everything before the first `## ` heading) is dropped.
+ * Returns entries oldest→newest, each a trimmed markdown block.
+ */
+export function parseBlocks(md: string): string[] {
+  const blocks: string[] = [];
+  // Split on lines that are exactly a horizontal rule.
+  for (const chunk of md.split(/\n---\n/)) {
+    const idx = chunk.indexOf('## ');
+    if (idx === -1) continue; // header preamble or empty tail
+    const block = chunk.slice(idx).trim();
+    if (block) blocks.push(block);
+  }
+  return blocks;
+}
+
+/**
+ * Read the most recent notebook entries for a project. Returns them
+ * newest-first, capped to `limit` (default 10). Never throws — returns [] if the
+ * notebook is missing or unreadable.
+ */
+export function readNotebook(slug: string, opts: { limit?: number } = {}): string[] {
+  const limit = opts.limit && opts.limit > 0 ? opts.limit : 10;
+  try {
+    const path = notebookPath(slug);
+    if (!existsSync(path)) return [];
+    const blocks = parseBlocks(readFileSync(path, 'utf-8'));
+    return blocks.slice(-limit).reverse();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Return notebook entries containing `term` (case-insensitive), newest-first.
+ * Never throws.
+ */
+export function searchNotebook(slug: string, term: string): string[] {
+  const needle = term.trim().toLowerCase();
+  if (!needle) return [];
+  try {
+    const path = notebookPath(slug);
+    if (!existsSync(path)) return [];
+    const blocks = parseBlocks(readFileSync(path, 'utf-8'));
+    return blocks.filter((b) => b.toLowerCase().includes(needle)).reverse();
+  } catch {
+    return [];
+  }
+}

@@ -3,8 +3,10 @@ import { join } from 'path';
 import type { ToolRegistry } from '../tools/registry.js';
 import { searchWorks, getWork, type Paper } from './openalex.js';
 import { cachePaper, loadCachedPaper } from './cache.js';
-import { fetchArxivPaper, searchArxiv, type ArxivPaper } from './arxiv.js';
-import { appendNotebook } from './notebook.js';
+import { fetchArxivPaper, searchArxiv, normalizeArxivId, type ArxivPaper } from './arxiv.js';
+import { appendNotebook, readNotebook, searchNotebook } from './notebook.js';
+import { readableFromArchive } from './arxivSource.js';
+import { checkFetchUrl } from '../tools/ssrf.js';
 import { getActiveProject, projectPaths } from '../workspace/project.js';
 import { bibFileIn, mainTexFile } from '../workspace/overleaf.js';
 import { starterBib } from '../workspace/templates.js';
@@ -270,6 +272,88 @@ export function registerResearchTools(registry: ToolRegistry): void {
   });
 
   registry.register({
+    name: 'read_arxiv_source',
+    description:
+      "Read an arXiv paper's actual LaTeX source (not the abstract, not the flattened PDF). " +
+      'Downloads the source archive from arxiv.org, extracts the main .tex, and returns readable ' +
+      'text with equations and section structure preserved — far better than read_pdf for ' +
+      'understanding a paper\'s method and math. Accepts any arXiv ID form ("2301.07041", ' +
+      '"arxiv:2301.07041", or an arxiv.org URL). Output is capped; raise max_chars for more.',
+    sensitive: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'arXiv paper ID or URL, e.g. "1706.03762"' },
+        max_chars: {
+          type: 'string',
+          description: 'Truncate output to this many characters (default 16000)',
+        },
+      },
+      required: ['id'],
+    },
+    async execute({ id, max_chars }) {
+      const arxivId = normalizeArxivId(String(id));
+      if (!arxivId) return 'Provide an arXiv ID, e.g. 1706.03762.';
+      const limit = max_chars ? Number(max_chars) : 16_000;
+      const url = `https://arxiv.org/src/${arxivId}`;
+
+      // Follow redirects manually, re-checking each hop against the SSRF guard
+      // (mirrors web_fetch), then read the archive bytes.
+      let current = url;
+      let buf: Buffer | null = null;
+      for (let hop = 0; hop <= 5; hop++) {
+        const bad = checkFetchUrl(current);
+        if (bad) return bad;
+        let res: Response;
+        try {
+          res = await fetch(current, {
+            redirect: 'manual',
+            headers: { 'User-Agent': 'handoff/0.1 (research agent)' },
+          });
+        } catch (err) {
+          return `Failed to fetch arXiv source: ${err instanceof Error ? err.message : String(err)}`;
+        }
+        if (res.status >= 300 && res.status < 400) {
+          const loc = res.headers.get('location');
+          if (!loc) return `HTTP ${res.status} with no Location header.`;
+          current = new URL(loc, current).toString();
+          continue;
+        }
+        if (!res.ok) {
+          return `Could not fetch arXiv source for ${arxivId} (HTTP ${res.status}). Some papers have no source; try read_pdf on the PDF URL.`;
+        }
+        buf = Buffer.from(await res.arrayBuffer());
+        break;
+      }
+      if (!buf) return 'Too many redirects fetching arXiv source.';
+
+      let result: { name: string; text: string } | null;
+      try {
+        result = readableFromArchive(buf);
+      } catch (err) {
+        return `Failed to extract LaTeX source: ${err instanceof Error ? err.message : String(err)}`;
+      }
+      if (!result || !result.text.trim()) {
+        return `No readable LaTeX found in the source for ${arxivId} (it may be PDF-only or an unusual format). Try read_pdf on the PDF.`;
+      }
+
+      const meta = getActiveProject();
+      if (meta) {
+        appendNotebook(meta.slug, {
+          type: 'literature-find',
+          summary: `Read LaTeX source of arXiv:${arxivId} (${result.name})`,
+        });
+      }
+
+      const body =
+        result.text.length > limit
+          ? result.text.slice(0, limit) + `\n\n… [truncated ${result.text.length - limit} more chars — raise max_chars]`
+          : result.text;
+      return `arXiv:${arxivId} — LaTeX source (${result.name}):\n\n${body}`;
+    },
+  });
+
+  registry.register({
     name: 'cite_paper',
     description:
       "Add a paper to the current project's bibliography and get back the \\cite{} command to " +
@@ -334,6 +418,91 @@ export function registerResearchTools(registry: ToolRegistry): void {
         `Added \\cite{${key}} to ${bibPath}.\n\n` +
         `Insert it where the paper is discussed, e.g. edit_file main.tex to add "\\cite{${key}}".`
       );
+    },
+  });
+
+  // ── Note-taking ─────────────────────────────────────────────────────────────
+  // The lab notebook (NOTEBOOK.md) is auto-appended by experiments, citations, and
+  // literature finds. These tools let the agent (and, via /note, the user) record
+  // free-form notes and read/search the journal — the missing manual half.
+
+  registry.register({
+    name: 'take_note',
+    description:
+      "Record a free-form note or insight in the active project's lab notebook " +
+      '(NOTEBOOK.md). Use this to capture an idea, a decision, a TODO, or an ' +
+      'observation worth keeping — anything that isn\'t already logged automatically ' +
+      'by running an experiment or citing a paper. Set kind="insight" for a key ' +
+      'realization (💡), otherwise it is filed as a note (📝).',
+    sensitive: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The note text to record' },
+        kind: {
+          type: 'string',
+          enum: ['note', 'insight'],
+          description: 'note (default) or insight (a key realization)',
+        },
+      },
+      required: ['text'],
+    },
+    async execute({ text, kind }) {
+      const note = String(text ?? '').trim();
+      if (!note) return 'Nothing to record — provide the note text.';
+      const meta = getActiveProject();
+      if (!meta) return 'No active project. Open or create one first (open_project / create_project).';
+      appendNotebook(meta.slug, {
+        type: kind === 'insight' ? 'insight' : 'note',
+        summary: note,
+      });
+      return `Recorded ${kind === 'insight' ? 'insight' : 'note'} in ${meta.title}'s notebook.`;
+    },
+  });
+
+  registry.register({
+    name: 'read_notebook',
+    description:
+      "Read the most recent entries from the active project's lab notebook " +
+      '(NOTEBOOK.md) — experiments, literature finds, citations, notes, and insights, ' +
+      'newest first. Use to recall what has been done or found in this project.',
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'string', description: 'How many recent entries to show (default 10)' },
+      },
+    },
+    async execute({ limit }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project. Open or create one first.';
+      const n = limit ? Number(limit) : 10;
+      const entries = readNotebook(meta.slug, { limit: Number.isFinite(n) ? n : 10 });
+      if (entries.length === 0) return `${meta.title}'s notebook is empty.`;
+      return `Recent entries in ${meta.title}'s notebook (newest first):\n\n${entries.join('\n\n---\n\n')}`;
+    },
+  });
+
+  registry.register({
+    name: 'search_notes',
+    description:
+      "Search the active project's lab notebook (NOTEBOOK.md) for entries " +
+      'containing a term (case-insensitive) — across notes, insights, experiments, ' +
+      'and literature finds. Use to look up an earlier decision, result, or idea.',
+    parameters: {
+      type: 'object',
+      properties: {
+        term: { type: 'string', description: 'Text to search for in the notebook' },
+      },
+      required: ['term'],
+    },
+    async execute({ term }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project. Open or create one first.';
+      const q = String(term ?? '').trim();
+      if (!q) return 'Provide a search term.';
+      const hits = searchNotebook(meta.slug, q);
+      if (hits.length === 0) return `No notebook entries mention "${q}".`;
+      return `${hits.length} entr${hits.length === 1 ? 'y' : 'ies'} mentioning "${q}":\n\n${hits.join('\n\n---\n\n')}`;
     },
   });
 }

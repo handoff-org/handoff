@@ -7,6 +7,7 @@ import { mainTexFile } from './overleaf.js';
 import { appendNotebook } from '../research/notebook.js';
 import { metricsTable, figureBlock, isFigureFile, sanitizeRef } from './resultsTable.js';
 import { checkProvenance, applyProvenanceVerdicts, formatProvenanceReport } from './provenance.js';
+import { checkProse, formatWritingReport, scaffoldSections } from '../research/prose.js';
 
 /**
  * Resolve a `runs` spec into capsules (oldest first). Accepts explicit space/
@@ -194,6 +195,44 @@ export function registerReportTools(registry: ToolRegistry): void {
       const verdicts = checkProvenance(meta.slug);
       applyProvenanceVerdicts(meta.slug, verdicts);
       return formatProvenanceReport(verdicts, meta.title);
+    },
+  });
+
+  registry.register({
+    name: 'check_writing',
+    description:
+      'Run local writing-quality checks over the paper (paper/*.tex): hedge/weasel words, ' +
+      'passive-voice hints, doubled words, leftover TODO/FIXME markers, dangling \\ref (no ' +
+      'matching \\label), and \\cite keys missing from refs.bib. Read-only — it reports issues ' +
+      "for you to fix, never edits. Complements /audit-paper (unsupported claims) and " +
+      'check_provenance (stale numbers). Operates on the active project; takes no arguments.',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project.';
+      return formatWritingReport(checkProse(meta.slug), meta.title);
+    },
+  });
+
+  registry.register({
+    name: 'scaffold_sections',
+    description:
+      'Return a standard section skeleton (Introduction, Related Work, Method, Experiments, ' +
+      'Results, Conclusion — each with a \\label and a TODO) to drop into main.tex before ' +
+      '\\end{document}. Use kind="empirical" for a fuller empirical-paper structure. Returns ' +
+      'the LaTeX; insert it with edit_file (it does not modify the paper itself).',
+    parameters: {
+      type: 'object',
+      properties: {
+        kind: {
+          type: 'string',
+          enum: ['default', 'empirical'],
+          description: 'default (6 sections) or empirical (adds Experimental Setup + Discussion)',
+        },
+      },
+    },
+    async execute({ kind }) {
+      return scaffoldSections(kind === 'empirical' ? 'empirical' : 'default');
     },
   });
 }
