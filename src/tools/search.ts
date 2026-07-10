@@ -140,7 +140,7 @@ export function grepFiles(
   const globRe = opts.glob ? globToRegExp(opts.glob) : null;
 
   const matches: GrepMatch[] = [];
-  let capped = false;
+  const capped = false;
   for (const rel of walkFiles(root)) {
     if (globRe && !globRe.test(toPosix(rel))) continue;
     const full = join(root, rel);

@@ -617,6 +617,7 @@ export class HFModel implements ChatModel {
           model: this.config.modelId,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           messages: messages as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           tools: tools as any,
           ...(this.config.maxNewTokens ? { max_tokens: this.config.maxNewTokens } : {}),
         },

@@ -32,13 +32,22 @@ test('htmlToText turns block tags and <br> into newlines', () => {
 test('htmlToText decodes entities', () => {
   assert.equal(htmlToText('<p>a &amp; b &lt; c &gt; d</p>'), 'a & b < c > d');
   // numeric (decimal + hex) entities, including accented chars without a name map
-  assert.equal(htmlToText("<p>&#39;x&#39; &#x2014; caf&#233;</p>"), "'x' — café");
+  assert.equal(htmlToText('<p>&#39;x&#39; &#x2014; caf&#233;</p>'), "'x' — café");
 });
 
 test('htmlToText collapses runaway whitespace and blank lines', () => {
   const text = htmlToText('<p>a</p>\n\n\n\n<p>b</p>   \t  <span>  c  </span>');
   assert.ok(!/\n{3,}/.test(text), 'no 3+ consecutive newlines');
   assert.ok(!/  /.test(text), 'no double spaces');
+});
+
+test('htmlToText collapses tabs to a single space (regular-whitespace char class)', () => {
+  // Regression: the whitespace regex must be [ \t] (space/tab), not a class that
+  // accidentally contains a non-breaking space. Tabs between words collapse to one
+  // space and no literal tab survives.
+  const text = htmlToText('<p>a\t\t\tb</p>');
+  assert.equal(text, 'a b');
+  assert.ok(!/\t/.test(text), 'no tab characters remain');
 });
 
 test('decodeEntities handles numeric decimal and hex', () => {

@@ -110,7 +110,12 @@ function loadTasks(
         prompt: '', // built per-run once the capsule dir exists
         expected: aggregateAnswer(values),
         domain: cap.field,
-        meta: { capsule_id: cap.capsule_id, question, language: cap.language, doi: cap.capsule_doi },
+        meta: {
+          capsule_id: cap.capsule_id,
+          question,
+          language: cap.language,
+          doi: cap.capsule_doi,
+        },
       });
     }
   }
@@ -180,7 +185,9 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const benchDir = resolve(args['bench-dir'] ?? process.env['CORE_BENCH_DIR'] ?? '');
   if (!benchDir) {
-    process.stderr.write('Usage: tsx src/adapters/core-bench.ts --bench-dir <path>  (or $CORE_BENCH_DIR)\n');
+    process.stderr.write(
+      'Usage: tsx src/adapters/core-bench.ts --bench-dir <path>  (or $CORE_BENCH_DIR)\n',
+    );
     process.exit(1);
   }
   const dataset = args['dataset'] === 'test' ? 'test' : 'train';
@@ -192,7 +199,9 @@ async function main(): Promise<void> {
   let tasks = allTasks;
   if (args['field']) tasks = tasks.filter((t) => t.domain === args['field']);
   if (args['capsule'])
-    tasks = tasks.filter((t) => (t.meta as Record<string, unknown>)['capsule_id'] === args['capsule']);
+    tasks = tasks.filter(
+      (t) => (t.meta as Record<string, unknown>)['capsule_id'] === args['capsule'],
+    );
   if (args['task-id']) tasks = tasks.filter((t) => t.id === args['task-id']);
   if (args['limit']) tasks = tasks.slice(0, Number(args['limit']));
 
@@ -201,7 +210,8 @@ async function main(): Promise<void> {
 
   const { model, config } = await loadModelAndConfig(args);
   const runId = ts();
-  const outputPath = args['output'] ?? join('benchmarks', 'results', `core-bench-${dataset}-${runId}.jsonl`);
+  const outputPath =
+    args['output'] ?? join('benchmarks', 'results', `core-bench-${dataset}-${runId}.jsonl`);
 
   const results: TaskResult[] = [];
   for (const task of tasks) {

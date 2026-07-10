@@ -7,9 +7,8 @@ freshHome();
 
 const { parseBlocks } = await import('../src/research/notebook.js');
 const { createProject } = await import('../src/workspace/project.js');
-const { appendNotebook, readNotebook, searchNotebook, initNotebook } = await import(
-  '../src/research/notebook.js'
-);
+const { appendNotebook, readNotebook, searchNotebook, initNotebook } =
+  await import('../src/research/notebook.js');
 
 // ── parseBlocks (pure) ──────────────────────────────────────────────────────
 

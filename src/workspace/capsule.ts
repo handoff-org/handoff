@@ -125,7 +125,7 @@ export function parseMetrics(stdout: string, resultsDir: string): Record<string,
   } catch {
     /* ignore malformed metrics.json */
   }
-  for (const m of stdout.matchAll(/^\s*METRIC\s+([\w.\-]+)\s*[=:]\s*(-?\d+(?:\.\d+)?)\s*$/gim)) {
+  for (const m of stdout.matchAll(/^\s*METRIC\s+([\w.-]+)\s*[=:]\s*(-?\d+(?:\.\d+)?)\s*$/gim)) {
     if (!(m[1]! in metrics)) {
       const n = Number(m[2]);
       if (Number.isFinite(n)) metrics[m[1]!] = n;
@@ -138,7 +138,7 @@ export function parseMetrics(stdout: string, resultsDir: string): Record<string,
 export function parseSeeds(stdout: string, env: Record<string, string>): Record<string, string> {
   const seeds: Record<string, string> = {};
   if (env.PYTHONHASHSEED) seeds.PYTHONHASHSEED = env.PYTHONHASHSEED;
-  for (const m of stdout.matchAll(/^\s*SEED\s+([\w.\-]+)\s*[=:]\s*(\S+)\s*$/gim))
+  for (const m of stdout.matchAll(/^\s*SEED\s+([\w.-]+)\s*[=:]\s*(\S+)\s*$/gim))
     seeds[m[1]!] = m[2]!;
   return seeds;
 }

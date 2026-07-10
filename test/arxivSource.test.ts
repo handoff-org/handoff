@@ -68,7 +68,9 @@ test('extractSourceArchive handles gzipped tar', () => {
 });
 
 test('extractSourceArchive handles a gzipped bare .tex (no tar)', () => {
-  const gz = gzipSync(Buffer.from('\\documentclass{article}\\begin{document}x\\end{document}', 'utf-8'));
+  const gz = gzipSync(
+    Buffer.from('\\documentclass{article}\\begin{document}x\\end{document}', 'utf-8'),
+  );
   const files = extractSourceArchive(gz);
   assert.equal(files.length, 1);
   assert.ok(files[0]!.content.includes('documentclass'));
@@ -115,8 +117,7 @@ test('texToReadable keeps math + sections, drops comments and preamble', () => {
 });
 
 test('texToReadable keeps an equation environment', () => {
-  const tex =
-    '\\begin{document}\\begin{equation}\\sum_i x_i = 1\\end{equation}\\end{document}';
+  const tex = '\\begin{document}\\begin{equation}\\sum_i x_i = 1\\end{equation}\\end{document}';
   const out = texToReadable(tex);
   assert.ok(out.includes('\\sum_i x_i = 1'));
 });
@@ -128,7 +129,8 @@ test('readableFromArchive: gzipped tar → readable main text', () => {
     { name: 'refs.bib', content: '@article{x}' },
     {
       name: 'main.tex',
-      content: '\\documentclass{article}\\begin{document}\\section{Intro}\nHello $x^2$.\\end{document}',
+      content:
+        '\\documentclass{article}\\begin{document}\\section{Intro}\nHello $x^2$.\\end{document}',
     },
   ]);
   const result = readableFromArchive(gzipSync(tar));

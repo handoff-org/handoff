@@ -138,7 +138,10 @@ export function texToReadable(tex: string): string {
 
   // Remove remaining \commands that take a brace arg we don't care about, but
   // leave math ($...$, \[...\], equation envs) and plain text untouched.
-  s = s.replace(/\\(?:label|usepackage|documentclass|input|include|bibliographystyle|bibliography|maketitle|newcommand|renewcommand)\b\*?(\[[^\]]*\])?(\{[^}]*\})?/g, '');
+  s = s.replace(
+    /\\(?:label|usepackage|documentclass|input|include|bibliographystyle|bibliography|maketitle|newcommand|renewcommand)\b\*?(\[[^\]]*\])?(\{[^}]*\})?/g,
+    '',
+  );
 
   // Whitespace cleanup.
   s = s

@@ -188,7 +188,9 @@ async function main(): Promise<void> {
   let loaded = loadTasks(benchDir, args['task']);
   if (args['limit']) loaded = loaded.slice(0, Number(args['limit']));
   if (loaded.length === 0) {
-    process.stderr.write(`No tasks matched${args['task'] ? ` "${args['task']}"` : ''} under ${benchmarksDir(benchDir)}\n`);
+    process.stderr.write(
+      `No tasks matched${args['task'] ? ` "${args['task']}"` : ''} under ${benchmarksDir(benchDir)}\n`,
+    );
     process.exit(1);
   }
 
@@ -201,7 +203,8 @@ async function main(): Promise<void> {
 
   const { model, config } = await loadModelAndConfig(args);
   const runId = ts();
-  const outputPath = args['output'] ?? join('benchmarks', 'results', `ml-agent-bench-${runId}.jsonl`);
+  const outputPath =
+    args['output'] ?? join('benchmarks', 'results', `ml-agent-bench-${runId}.jsonl`);
 
   const results = [];
   for (const lt of loaded) {

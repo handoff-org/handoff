@@ -157,7 +157,13 @@ export function dabstepScorer(predicted: string | null, expected: string): boole
   }
 
   // Comma/semicolon list → compare as normalized sets.
-  const toSet = (s: string) => new Set(s.split(/[;,]/).map((x) => normalize(x)).filter(Boolean));
+  const toSet = (s: string) =>
+    new Set(
+      s
+        .split(/[;,]/)
+        .map((x) => normalize(x))
+        .filter(Boolean),
+    );
   const ps = toSet(p);
   const es = toSet(e);
   if (es.size > 1 && ps.size === es.size) {
@@ -178,7 +184,9 @@ const SYSTEM_PROMPT =
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const split = args['split'] === 'default' ? 'default' : 'dev';
-  const contextDir = resolve(args['context-dir'] ?? join('benchmarks', 'data', 'dabstep', 'context'));
+  const contextDir = resolve(
+    args['context-dir'] ?? join('benchmarks', 'data', 'dabstep', 'context'),
+  );
 
   process.stdout.write(`${BENCH_NAME}: preparing context in ${contextDir}\n`);
   await ensureContext(contextDir);
@@ -189,11 +197,14 @@ async function main(): Promise<void> {
   if (args['limit']) tasks = tasks.slice(0, Number(args['limit']));
 
   const scored = split === 'dev'; // dev ships gold answers
-  process.stdout.write(`${BENCH_NAME}: ${tasks.length} task(s) [split=${split}, ${scored ? 'scored' : 'submission'}]\n`);
+  process.stdout.write(
+    `${BENCH_NAME}: ${tasks.length} task(s) [split=${split}, ${scored ? 'scored' : 'submission'}]\n`,
+  );
 
   const { model, config } = await loadModelAndConfig(args);
   const runId = ts();
-  const outputPath = args['output'] ?? join('benchmarks', 'results', `dabstep-${split}-${runId}.jsonl`);
+  const outputPath =
+    args['output'] ?? join('benchmarks', 'results', `dabstep-${split}-${runId}.jsonl`);
 
   const results = [];
   const submission: { task_id: string; answer: string }[] = [];
@@ -224,7 +235,9 @@ async function main(): Promise<void> {
           : `✗  got "${result.predicted ?? 'null'}" want "${t.answer}"  (${(result.durationMs / 1000).toFixed(0)}s)\n`,
       );
     } else {
-      process.stdout.write(`answered "${result.predicted ?? 'null'}"  (${(result.durationMs / 1000).toFixed(0)}s)\n`);
+      process.stdout.write(
+        `answered "${result.predicted ?? 'null'}"  (${(result.durationMs / 1000).toFixed(0)}s)\n`,
+      );
     }
   }
 
@@ -235,7 +248,9 @@ async function main(): Promise<void> {
   } else {
     const subPath = outputPath.replace(/\.jsonl$/, '.submission.jsonl');
     writeFileSync(subPath, submission.map((s) => JSON.stringify(s)).join('\n') + '\n', 'utf-8');
-    process.stdout.write(`\nSubmission written: ${subPath}\n(default split answers are held out; submit to the DABStep leaderboard to score)\n`);
+    process.stdout.write(
+      `\nSubmission written: ${subPath}\n(default split answers are held out; submit to the DABStep leaderboard to score)\n`,
+    );
   }
   process.stdout.write(`\nResults: ${outputPath}\n`);
 }

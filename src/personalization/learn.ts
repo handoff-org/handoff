@@ -42,9 +42,9 @@ export function detectExplicitPreference(msg: string): Detected | null {
 
   // Model rejections are a standing signal even without a "from now on" trigger —
   // the strict model-id shape (contains ':' or a digit) keeps false positives low.
-  const reject = low.match(/(?:don'?t|never|stop)\s+us\w*\s+([\w.:\-]+)/);
+  const reject = low.match(/(?:don'?t|never|stop)\s+us\w*\s+([\w.:-]+)/);
   const hot = low.match(
-    /([\w.:]+:[\w.\-]+|[\w.\-]+:\d+\w*)\s+(?:overheats|runs hot|is too (?:slow|hot)|too slow|too hot)/,
+    /([\w.:]+:[\w.-]+|[\w.-]+:\d+\w*)\s+(?:overheats|runs hot|is too (?:slow|hot)|too slow|too hot)/,
   );
   if (reject && /[:\d]/.test(reject[1]!))
     return { key: 'rejected-model', phrase: `avoid model ${reject[1]}` };
@@ -94,8 +94,8 @@ export function detectExplicitPreference(msg: string): Detected | null {
 
   // Prefer a specific model ("use X by default")
   const useDefault =
-    low.match(/\buse\s+([\w.:\-]+)\s+by default\b/) ??
-    low.match(/\bdefault(?:\s+model)?\s+(?:to|is)\s+([\w.:\-]+)/);
+    low.match(/\buse\s+([\w.:-]+)\s+by default\b/) ??
+    low.match(/\bdefault(?:\s+model)?\s+(?:to|is)\s+([\w.:-]+)/);
   if (useDefault && /[:\d]/.test(useDefault[1]!)) {
     return { key: 'preferred-model', phrase: `prefers model ${useDefault[1]}` };
   }
@@ -261,7 +261,7 @@ export function applyExplicit(
       break;
     }
     case 'preferred-model': {
-      const v = phrase.match(/model\s+([\w.:\-]+)/)?.[1] ?? phrase;
+      const v = phrase.match(/model\s+([\w.:-]+)/)?.[1] ?? phrase;
       p.modelAndPerformance.preferredModels = scored(
         mergeUnique(p.modelAndPerformance.preferredModels?.value, v),
         0.9,
@@ -276,7 +276,7 @@ export function applyExplicit(
       break;
     }
     case 'rejected-model': {
-      const v = phrase.match(/model\s+([\w.:\-]+)/)?.[1] ?? phrase;
+      const v = phrase.match(/model\s+([\w.:-]+)/)?.[1] ?? phrase;
       p.modelAndPerformance.rejectedModels = scored(
         mergeUnique(p.modelAndPerformance.rejectedModels?.value, v),
         0.9,

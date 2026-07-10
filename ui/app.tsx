@@ -48,7 +48,6 @@ import {
   saveProfile,
   resetProfile,
   exportProfile,
-  PROFILE_PATH,
 } from '../src/personalization/store.js';
 import {
   formatProfileSummary,
@@ -1756,7 +1755,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         }
         const meta = getActiveProject();
         if (!meta) {
-          addEntry({ kind: 'note', content: 'no active project — open or create one first (/project)' });
+          addEntry({
+            kind: 'note',
+            content: 'no active project — open or create one first (/project)',
+          });
           return;
         }
         appendNotebook(meta.slug, { type: 'note', summary: text });

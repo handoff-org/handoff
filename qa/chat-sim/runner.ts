@@ -92,7 +92,9 @@ function selectScenarios(flags: Flags): Scenario[] {
       process.exit(2);
     }
     if (flags.realModel && s.skipRealModel) {
-      process.stderr.write(`Scenario "${id}" is marked skipRealModel and cannot run with --real-model.\n`);
+      process.stderr.write(
+        `Scenario "${id}" is marked skipRealModel and cannot run with --real-model.\n`,
+      );
       process.exit(2);
     }
     return [s];

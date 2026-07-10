@@ -204,7 +204,7 @@ export function registerReportTools(registry: ToolRegistry): void {
       'Run local writing-quality checks over the paper (paper/*.tex): hedge/weasel words, ' +
       'passive-voice hints, doubled words, leftover TODO/FIXME markers, dangling \\ref (no ' +
       'matching \\label), and \\cite keys missing from refs.bib. Read-only — it reports issues ' +
-      "for you to fix, never edits. Complements /audit-paper (unsupported claims) and " +
+      'for you to fix, never edits. Complements /audit-paper (unsupported claims) and ' +
       'check_provenance (stale numbers). Operates on the active project; takes no arguments.',
     parameters: { type: 'object', properties: {} },
     async execute() {

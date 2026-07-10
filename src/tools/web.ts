@@ -36,7 +36,10 @@ export function decodeEntities(s: string): string {
   return s
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => safeCodePoint(parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (_, dec) => safeCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? NAMED_ENTITIES[name.toLowerCase()] ?? m);
+    .replace(
+      /&([a-zA-Z]+);/g,
+      (m, name) => NAMED_ENTITIES[name] ?? NAMED_ENTITIES[name.toLowerCase()] ?? m,
+    );
 }
 
 function safeCodePoint(n: number): string {
@@ -58,7 +61,10 @@ function safeCodePoint(n: number): string {
 export function htmlToText(html: string): string {
   let s = html;
   // Remove whole non-content elements (with their contents).
-  s = s.replace(/<(script|style|head|noscript|svg|iframe|template|form)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ');
+  s = s.replace(
+    /<(script|style|head|noscript|svg|iframe|template|form)\b[^>]*>[\s\S]*?<\/\1>/gi,
+    ' ',
+  );
   // Drop comments.
   s = s.replace(/<!--[\s\S]*?-->/g, ' ');
   // Line breaks.
@@ -71,7 +77,7 @@ export function htmlToText(html: string): string {
   // Whitespace cleanup: trim each line, drop trailing spaces, cap blank runs.
   s = s
     .split('\n')
-    .map((line) => line.replace(/[ \t ]+/g, ' ').trim())
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -128,14 +134,20 @@ export function parseDuckDuckGoHtml(html: string, limit = 5): SearchResult[] {
   const snippets: string[] = [];
   let sm: RegExpExecArray | null;
   while ((sm = snippetRe.exec(html)) !== null) {
-    snippets.push(htmlToText(sm[1] ?? '').replace(/\n+/g, ' ').trim());
+    snippets.push(
+      htmlToText(sm[1] ?? '')
+        .replace(/\n+/g, ' ')
+        .trim(),
+    );
   }
 
   let am: RegExpExecArray | null;
   let i = 0;
   while ((am = anchorRe.exec(html)) !== null && results.length < limit) {
     const url = unwrapDdgUrl(am[1] ?? '');
-    const title = htmlToText(am[2] ?? '').replace(/\n+/g, ' ').trim();
+    const title = htmlToText(am[2] ?? '')
+      .replace(/\n+/g, ' ')
+      .trim();
     if (!url || !title) {
       i++;
       continue;

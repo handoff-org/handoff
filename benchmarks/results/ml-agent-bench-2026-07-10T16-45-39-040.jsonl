@@ -1,1 +1,0 @@
-{"taskId":"digits","benchmark":"MLAgentBench","passed":true,"predicted":"0.9694","expected":"0","turns":1,"toolCalls":7,"durationMs":37122}

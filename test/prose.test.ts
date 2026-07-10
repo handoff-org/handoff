@@ -4,15 +4,8 @@ import { freshHome } from './helpers.js';
 
 freshHome();
 
-const {
-  weaselHits,
-  passiveHits,
-  dupWordHits,
-  labelsIn,
-  refsIn,
-  citeKeysIn,
-  scaffoldSections,
-} = await import('../src/research/prose.js');
+const { weaselHits, passiveHits, dupWordHits, labelsIn, refsIn, citeKeysIn, scaffoldSections } =
+  await import('../src/research/prose.js');
 const { checkProse } = await import('../src/research/prose.js');
 const { createProject } = await import('../src/workspace/project.js');
 const { writeFileSync, mkdirSync } = await import('fs');
@@ -44,7 +37,11 @@ test('dupWordHits catches doubled words', () => {
 test('labelsIn / refsIn / citeKeysIn extract keys (comma lists expanded)', () => {
   assert.deepEqual(labelsIn('\\label{sec:intro} text \\label{fig:1}'), ['sec:intro', 'fig:1']);
   assert.deepEqual(refsIn('see \\ref{sec:intro} and \\autoref{fig:1}'), ['sec:intro', 'fig:1']);
-  assert.deepEqual(citeKeysIn('\\citep[e.g.][]{a2020,b2021} \\cite{c2022}'), ['a2020', 'b2021', 'c2022']);
+  assert.deepEqual(citeKeysIn('\\citep[e.g.][]{a2020,b2021} \\cite{c2022}'), [
+    'a2020',
+    'b2021',
+    'c2022',
+  ]);
 });
 
 test('scaffoldSections returns labelled sections', () => {
@@ -80,7 +77,9 @@ test('checkProse flags dangling refs, missing cites, weasel words, and TODOs', (
 
   assert.ok(kinds.includes('dangling-ref'), 'sec:missing has no label');
   assert.ok(kinds.includes('missing-cite'), 'ghost2021 not in refs.bib');
-  assert.ok(!report.issues.some((i) => i.kind === 'missing-cite' && i.message.includes('known2020')));
+  assert.ok(
+    !report.issues.some((i) => i.kind === 'missing-cite' && i.message.includes('known2020')),
+  );
   assert.ok(kinds.includes('weasel'), '"very" flagged');
   assert.ok(kinds.includes('todo'), 'TODO flagged');
   assert.ok(report.bibFound);

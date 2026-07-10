@@ -87,21 +87,22 @@ const SOTA_DB: BenchmarkSota[] = [
         best: { agent: 'ResearchAgent', model: 'GPT-4o', passRate: 0.856, date: '2024-09' },
         others: [
           { agent: 'AutoGPT', model: 'GPT-4o', passRate: 0.819, date: '2024-09' },
-          { agent: 'MLAB Agent', model: 'GPT-4', passRate: 0.731, date: '2024-09',
-            notes: 'read-only; cannot run code' },
+          {
+            agent: 'MLAB Agent',
+            model: 'GPT-4',
+            passRate: 0.731,
+            date: '2024-09',
+            notes: 'read-only; cannot run code',
+          },
         ],
       },
       medium: {
         best: { agent: 'ResearchAgent', model: 'GPT-4o', passRate: 0.644, date: '2024-09' },
-        others: [
-          { agent: 'AutoGPT', model: 'GPT-4o', passRate: 0.602, date: '2024-09' },
-        ],
+        others: [{ agent: 'AutoGPT', model: 'GPT-4o', passRate: 0.602, date: '2024-09' }],
       },
       hard: {
         best: { agent: 'ResearchAgent', model: 'GPT-4o', passRate: 0.267, date: '2024-09' },
-        others: [
-          { agent: 'AutoGPT', model: 'GPT-4o', passRate: 0.212, date: '2024-09' },
-        ],
+        others: [{ agent: 'AutoGPT', model: 'GPT-4o', passRate: 0.212, date: '2024-09' }],
       },
     },
   },
@@ -125,10 +126,20 @@ const SOTA_DB: BenchmarkSota[] = [
         notes: '7/13 tasks improved over baseline; best in paper',
       },
       others: [
-        { agent: 'MLAB Agent', model: 'GPT-3.5-turbo', passRate: 0.385, date: '2023-10',
-          notes: '5/13 tasks' },
-        { agent: 'Direct (no agent loop)', model: 'GPT-4', passRate: 0.308, date: '2023-10',
-          notes: '4/13 tasks; single-shot code edit' },
+        {
+          agent: 'MLAB Agent',
+          model: 'GPT-3.5-turbo',
+          passRate: 0.385,
+          date: '2023-10',
+          notes: '5/13 tasks',
+        },
+        {
+          agent: 'Direct (no agent loop)',
+          model: 'GPT-4',
+          passRate: 0.308,
+          date: '2023-10',
+          notes: '4/13 tasks; single-shot code edit',
+        },
       ],
     },
   },
@@ -180,7 +191,8 @@ function loadResults(resultsDir: string, benchmarkFilter?: string): SummaryJson[
   for (const file of files) {
     try {
       const s = JSON.parse(readFileSync(join(resultsDir, file), 'utf-8')) as SummaryJson;
-      if (benchmarkFilter && !s.benchmark.toLowerCase().includes(benchmarkFilter.toLowerCase())) continue;
+      if (benchmarkFilter && !s.benchmark.toLowerCase().includes(benchmarkFilter.toLowerCase()))
+        continue;
       summaries.push(s);
     } catch {
       // skip malformed files
@@ -197,7 +209,10 @@ function dedupLatest(summaries: SummaryJson[]): SummaryJson[] {
   const out: SummaryJson[] = [];
   for (const s of summaries) {
     const key = `${s.benchmark}::${s.model}`;
-    if (!seen.has(key)) { seen.add(key); out.push(s); }
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(s);
+    }
   }
   return out;
 }
@@ -233,8 +248,8 @@ function buildReport(summaries: SummaryJson[]): string {
   lines.push(`_Generated: ${ts}_\n`);
   lines.push(
     '> **How to read this:** Each table shows handoff pass rate vs. the best published result ' +
-    'from the original benchmark paper. Delta (Δ) is percentage-points relative to SOTA best. ' +
-    '"n/a" means no handoff result file exists for that benchmark yet — run the adapter to populate it.',
+      'from the original benchmark paper. Delta (Δ) is percentage-points relative to SOTA best. ' +
+      '"n/a" means no handoff result file exists for that benchmark yet — run the adapter to populate it.',
   );
   lines.push('');
 
@@ -283,7 +298,7 @@ function buildReport(summaries: SummaryJson[]): string {
         const isBest = e === sota.overall.best;
         lines.push(
           `| ${isBest ? '**' : ''}${e.agent} — ${e.model}${isBest ? '**' : ''} ` +
-          `| ${PCT(e.passRate)} | \`${pBar(e.passRate)}\` | — | ${e.date}${e.notes ? ` _(${e.notes})_` : ''} |`,
+            `| ${PCT(e.passRate)} | \`${pBar(e.passRate)}\` | — | ${e.date}${e.notes ? ` _(${e.notes})_` : ''} |`,
         );
       }
     }
@@ -294,7 +309,7 @@ function buildReport(summaries: SummaryJson[]): string {
       const delta = sotaBest != null ? DELTA_MARKER(DELTA(run.passRate, sotaBest)) : 'n/a';
       lines.push(
         `| **handoff** — ${run.model} | **${PCT(run.passRate)}** | \`${pBar(run.passRate)}\` ` +
-        `| **${delta}** | ${run.timestamp.slice(0, 10)} |`,
+          `| **${delta}** | ${run.timestamp.slice(0, 10)} |`,
       );
     }
     lines.push('');
@@ -314,7 +329,7 @@ function buildReport(summaries: SummaryJson[]): string {
             handoffRate != null ? DELTA_MARKER(DELTA(handoffRate, slice.best.passRate)) : '—';
           lines.push(
             `| ${diff} | ${slice.best.agent} — ${slice.best.model} ` +
-            `| ${PCT(slice.best.passRate)} | ${handoffStr} | ${deltaStr} |`,
+              `| ${PCT(slice.best.passRate)} | ${handoffStr} | ${deltaStr} |`,
           );
         }
       }
@@ -336,7 +351,7 @@ function buildReport(summaries: SummaryJson[]): string {
             handoffRate != null ? DELTA_MARKER(DELTA(handoffRate, slice.best.passRate)) : '—';
           lines.push(
             `| ${domain} | ${slice.best.agent} — ${slice.best.model} ` +
-            `| ${PCT(slice.best.passRate)} | ${handoffStr} | ${deltaStr} |`,
+              `| ${PCT(slice.best.passRate)} | ${handoffStr} | ${deltaStr} |`,
           );
         }
       }
@@ -346,13 +361,15 @@ function buildReport(summaries: SummaryJson[]): string {
     // Run metadata
     if (runs.length > 0) {
       lines.push('<details><summary>Run metadata</summary>\n');
-      lines.push('| Benchmark | Model | Backend | Tasks | Avg turns | Avg tool calls | Avg duration | Timestamp |');
+      lines.push(
+        '| Benchmark | Model | Backend | Tasks | Avg turns | Avg tool calls | Avg duration | Timestamp |',
+      );
       lines.push('|---|---|---|---|---|---|---|---|');
       for (const run of runs) {
         lines.push(
           `| ${run.benchmark} | ${run.model} | ${run.backend} | ${run.totalTasks} ` +
-          `| ${run.avgTurns.toFixed(1)} | ${run.avgToolCalls.toFixed(1)} ` +
-          `| ${(run.avgDurationMs / 1000).toFixed(1)}s | ${run.timestamp.slice(0, 19)} |`,
+            `| ${run.avgTurns.toFixed(1)} | ${run.avgToolCalls.toFixed(1)} ` +
+            `| ${(run.avgDurationMs / 1000).toFixed(1)}s | ${run.timestamp.slice(0, 19)} |`,
         );
       }
       lines.push('\n</details>\n');
@@ -387,10 +404,18 @@ function buildReport(summaries: SummaryJson[]): string {
   lines.push('');
   lines.push('## Notes on methodology');
   lines.push('');
-  lines.push('- **Scoring:** All adapters use exact-match or ±5% relative numeric tolerance via `scoreAnswer()` in `src/adapters/runner.ts`.');
-  lines.push('- **Timeouts:** Each task runs up to 5 min (MLAgentBench: 15 min), with up to 3 outer turns if the agent hits the 10-round tool-call cap without submitting.');
-  lines.push('- **SOTA caveats:** Published results used the original benchmark\'s evaluation harness and often a different model API (GPT-4o, Claude API). handoff runs against a local Ollama model, so the model quality gap dominates.');
-  lines.push('- **Not apples-to-apples:** SOTA agents may have internet access, larger context windows, or benchmark-specific prompting strategies. These comparisons show the space, not a controlled ablation.');
+  lines.push(
+    '- **Scoring:** All adapters use exact-match or ±5% relative numeric tolerance via `scoreAnswer()` in `src/adapters/runner.ts`.',
+  );
+  lines.push(
+    '- **Timeouts:** Each task runs up to 5 min (MLAgentBench: 15 min), with up to 3 outer turns if the agent hits the 10-round tool-call cap without submitting.',
+  );
+  lines.push(
+    "- **SOTA caveats:** Published results used the original benchmark's evaluation harness and often a different model API (GPT-4o, Claude API). handoff runs against a local Ollama model, so the model quality gap dominates.",
+  );
+  lines.push(
+    '- **Not apples-to-apples:** SOTA agents may have internet access, larger context windows, or benchmark-specific prompting strategies. These comparisons show the space, not a controlled ablation.',
+  );
   lines.push('');
 
   return lines.join('\n');
@@ -404,7 +429,8 @@ function parseCliArgs(argv: string[]): Record<string, string | undefined> {
     const a = argv[i]!;
     if (a.startsWith('--')) {
       const key = a.slice(2);
-      out[key] = argv[i + 1]?.startsWith('--') || argv[i + 1] == null ? 'true' : (argv[++i] ?? 'true');
+      out[key] =
+        argv[i + 1]?.startsWith('--') || argv[i + 1] == null ? 'true' : (argv[++i] ?? 'true');
     }
   }
   return out;
@@ -412,9 +438,7 @@ function parseCliArgs(argv: string[]): Record<string, string | undefined> {
 
 async function main(): Promise<void> {
   const args = parseCliArgs(process.argv.slice(2));
-  const resultsDir = resolve(
-    args['results-dir'] ?? join(REPO_ROOT, 'benchmarks', 'results'),
-  );
+  const resultsDir = resolve(args['results-dir'] ?? join(REPO_ROOT, 'benchmarks', 'results'));
   const benchmarkFilter = args['benchmark'];
   const outputPath = args['output'];
 

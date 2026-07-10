@@ -347,7 +347,8 @@ export function registerResearchTools(registry: ToolRegistry): void {
 
       const body =
         result.text.length > limit
-          ? result.text.slice(0, limit) + `\n\n… [truncated ${result.text.length - limit} more chars — raise max_chars]`
+          ? result.text.slice(0, limit) +
+            `\n\n… [truncated ${result.text.length - limit} more chars — raise max_chars]`
           : result.text;
       return `arXiv:${arxivId} — LaTeX source (${result.name}):\n\n${body}`;
     },
@@ -431,7 +432,7 @@ export function registerResearchTools(registry: ToolRegistry): void {
     description:
       "Record a free-form note or insight in the active project's lab notebook " +
       '(NOTEBOOK.md). Use this to capture an idea, a decision, a TODO, or an ' +
-      'observation worth keeping — anything that isn\'t already logged automatically ' +
+      "observation worth keeping — anything that isn't already logged automatically " +
       'by running an experiment or citing a paper. Set kind="insight" for a key ' +
       'realization (💡), otherwise it is filed as a note (📝).',
     sensitive: true,
@@ -451,7 +452,8 @@ export function registerResearchTools(registry: ToolRegistry): void {
       const note = String(text ?? '').trim();
       if (!note) return 'Nothing to record — provide the note text.';
       const meta = getActiveProject();
-      if (!meta) return 'No active project. Open or create one first (open_project / create_project).';
+      if (!meta)
+        return 'No active project. Open or create one first (open_project / create_project).';
       appendNotebook(meta.slug, {
         type: kind === 'insight' ? 'insight' : 'note',
         summary: note,

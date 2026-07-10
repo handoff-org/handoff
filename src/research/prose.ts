@@ -17,12 +17,34 @@ import { parseBibKeys } from './bibtex.js';
 
 // Hedge/filler words that usually weaken scientific prose.
 const WEASEL_WORDS = [
-  'very', 'quite', 'fairly', 'rather', 'somewhat', 'really', 'basically',
-  'actually', 'simply', 'just', 'clearly', 'obviously', 'essentially',
-  'arguably', 'relatively', 'virtually', 'effectively', 'largely', 'various',
-  'several', 'numerous', 'a number of', 'a variety of',
+  'very',
+  'quite',
+  'fairly',
+  'rather',
+  'somewhat',
+  'really',
+  'basically',
+  'actually',
+  'simply',
+  'just',
+  'clearly',
+  'obviously',
+  'essentially',
+  'arguably',
+  'relatively',
+  'virtually',
+  'effectively',
+  'largely',
+  'various',
+  'several',
+  'numerous',
+  'a number of',
+  'a variety of',
 ];
-const WEASEL_RE = new RegExp(`\\b(${WEASEL_WORDS.map((w) => w.replace(/ /g, '\\s+')).join('|')})\\b`, 'gi');
+const WEASEL_RE = new RegExp(
+  `\\b(${WEASEL_WORDS.map((w) => w.replace(/ /g, '\\s+')).join('|')})\\b`,
+  'gi',
+);
 
 // Passive-voice heuristic: a "be" verb followed by a past participle. Curated
 // irregular participles + the regular "-ed" pattern. Labelled a *hint* because
@@ -84,7 +106,9 @@ export function refsIn(text: string): string[] {
 
 /** All `\cite`-family keys in a chunk of LaTeX (comma lists expanded). */
 export function citeKeysIn(text: string): string[] {
-  return uniqueMatches(CITE_RE, text).flatMap((k) => k.split(',').map((s) => s.trim())).filter(Boolean);
+  return uniqueMatches(CITE_RE, text)
+    .flatMap((k) => k.split(',').map((s) => s.trim()))
+    .filter(Boolean);
 }
 
 // ── Report ──────────────────────────────────────────────────────────────────
@@ -136,20 +160,44 @@ export function checkProse(slug: string): ProseReport {
 
       // TODO markers on the raw line (comments included).
       for (const m of raw.matchAll(TODO_RE)) {
-        issues.push({ kind: 'todo', severity: 'warn', message: `leftover ${m[1]} marker`, file, line });
+        issues.push({
+          kind: 'todo',
+          severity: 'warn',
+          message: `leftover ${m[1]} marker`,
+          file,
+          line,
+        });
       }
 
       // Prose checks on stripped text.
       const prose = stripLatex(raw);
       if (!prose) return;
       for (const w of weaselHits(prose)) {
-        issues.push({ kind: 'weasel', severity: 'hint', message: `weasel/hedge word "${w}"`, file, line });
+        issues.push({
+          kind: 'weasel',
+          severity: 'hint',
+          message: `weasel/hedge word "${w}"`,
+          file,
+          line,
+        });
       }
       for (const p of passiveHits(prose)) {
-        issues.push({ kind: 'passive', severity: 'hint', message: `possible passive voice "${p}"`, file, line });
+        issues.push({
+          kind: 'passive',
+          severity: 'hint',
+          message: `possible passive voice "${p}"`,
+          file,
+          line,
+        });
       }
       for (const d of dupWordHits(prose)) {
-        issues.push({ kind: 'dup-word', severity: 'warn', message: `doubled word "${d} ${d}"`, file, line });
+        issues.push({
+          kind: 'dup-word',
+          severity: 'warn',
+          message: `doubled word "${d} ${d}"`,
+          file,
+          line,
+        });
       }
     });
   }
@@ -226,7 +274,7 @@ export function formatWritingReport(report: ProseReport, projectTitle: string): 
   if (!report.bibFound) {
     lines.push('', '(no refs.bib found — citation checks skipped)');
   }
-  lines.push('', 'Hints (passive voice, hedge words) are heuristic — review, don\'t auto-fix.');
+  lines.push('', "Hints (passive voice, hedge words) are heuristic — review, don't auto-fix.");
   return lines.join('\n');
 }
 
@@ -238,11 +286,22 @@ export type ScaffoldKind = 'default' | 'empirical';
 export function scaffoldSections(kind: ScaffoldKind = 'default'): string {
   const sections =
     kind === 'empirical'
-      ? ['Introduction', 'Related Work', 'Method', 'Experimental Setup', 'Results', 'Discussion', 'Conclusion']
+      ? [
+          'Introduction',
+          'Related Work',
+          'Method',
+          'Experimental Setup',
+          'Results',
+          'Discussion',
+          'Conclusion',
+        ]
       : ['Introduction', 'Related Work', 'Method', 'Experiments', 'Results', 'Conclusion'];
   return sections
     .map((title) => {
-      const label = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const label = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
       return `\\section{${title}}\n\\label{sec:${label}}\n\n% TODO: write ${title}\n`;
     })
     .join('\n');

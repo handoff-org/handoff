@@ -28,3 +28,6 @@ tmp/
 benchmarks/data/
 benchmarks/results/
 benchmarks/work/
+
+# Debug pass logs
+debug/logs/

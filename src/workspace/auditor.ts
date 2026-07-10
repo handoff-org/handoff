@@ -243,7 +243,7 @@ function normalise(text: string): string {
 // ── Audit report formatter ────────────────────────────────────────────────────
 
 export function formatAuditReport(result: AuditResult, projectTitle: string): string {
-  const { scanned, newCount, existingCount, newClaims, allClaims } = result;
+  const { scanned, newCount, existingCount, allClaims } = result;
   const lines: string[] = [`Paper audit — ${projectTitle}`];
 
   if (scanned.length === 0) {

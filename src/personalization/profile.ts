@@ -154,7 +154,7 @@ export function defaultProfile(now: string): AdaptiveProfile {
  * versions we can't confidently migrate become a fresh profile (callers back up
  * the original file first). Returns null when the input can't be salvaged.
  */
-export function migrate(raw: unknown, now: string): AdaptiveProfile | null {
+export function migrate(raw: unknown, _now: string): AdaptiveProfile | null {
   if (
     raw &&
     typeof raw === 'object' &&

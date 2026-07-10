@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Text } from 'ink';
 import { homedir, userInfo } from 'os';
 import { spawnSync } from 'child_process';
 import type { Theme } from '../config/theme.js';

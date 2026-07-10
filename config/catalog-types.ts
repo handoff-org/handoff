@@ -149,10 +149,4 @@ export const SERVER_QUANT: QuantOption = {
   notes: 'Quantization is chosen by the server/provider, not handoff.',
 };
 
-/** Ollama quant set: real, per-model tags exist for these; fall back to default. */
-const OLLAMA_QUANTS: QuantOption[] = [Q4, Q5, Q8, DEFAULT_QUANT];
-const MLX_QUANTS: QuantOption[] = [MLX4, MLX8];
-const GGUF_QUANTS: QuantOption[] = [Q4, Q5, Q8, FP16];
-const SERVER_QUANTS: QuantOption[] = [SERVER_QUANT];
-
 export const CATALOG_VERSION = '2026-07-03';

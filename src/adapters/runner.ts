@@ -1,5 +1,5 @@
 import { mkdirSync, appendFileSync, realpathSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -122,7 +122,9 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
           // so it can read the error and adapt, matching the builtin's forgiving shape.
           const e = err as { stdout?: string; stderr?: string; message?: string; killed?: boolean };
           const parts = [e.stdout, e.stderr].filter(Boolean).join('\n--- stderr ---\n');
-          const note = e.killed ? `(command exceeded ${shellTimeout}ms and was killed)` : (e.message ?? 'command failed');
+          const note = e.killed
+            ? `(command exceeded ${shellTimeout}ms and was killed)`
+            : (e.message ?? 'command failed');
           return parts ? `${parts}\n--- error ---\n${note}` : note;
         }
       },
@@ -160,7 +162,8 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
     let history: import('../agent/model.js').Message[] = [];
     for (let outer = 0; outer < MAX_OUTER_TURNS; outer++) {
       if (ac.signal.aborted || submittedAnswer !== null) break;
-      const userMsg = outer === 0 ? task.prompt : 'Continue. Call submit_answer when you have the answer.';
+      const userMsg =
+        outer === 0 ? task.prompt : 'Continue. Call submit_answer when you have the answer.';
       for await (const ev of runAgentLoop(userMsg, history, model, registry, {
         signal: ac.signal,
         approve: () => Promise.resolve(true),
@@ -169,12 +172,16 @@ export async function runTask(opts: RunTaskOpts): Promise<TaskResult> {
         if (ev.type === 'tool_call') {
           totalToolCalls++;
           if (VERBOSE) {
-            const preview = String(ev.args ?? '').replace(/\s+/g, ' ').slice(0, 120);
+            const preview = String(ev.args ?? '')
+              .replace(/\s+/g, ' ')
+              .slice(0, 120);
             process.stderr.write(`    → ${ev.name}(${preview})\n`);
           }
         }
         if (VERBOSE && ev.type === 'tool_result') {
-          const out = String(ev.result ?? '').replace(/\s+/g, ' ').slice(0, 160);
+          const out = String(ev.result ?? '')
+            .replace(/\s+/g, ' ')
+            .slice(0, 160);
           process.stderr.write(`      ⇐ ${out}\n`);
         }
         if (VERBOSE && ev.type === 'message_end' && ev.content?.trim()) {
@@ -332,10 +339,18 @@ export async function loadModelAndConfig(
   if (args?.['base-url']) {
     // Apply to whichever backend is active
     switch (config.backend) {
-      case 'ollama':    config.ollamaBaseUrl   = args['base-url']; break;
-      case 'vllm':      config.vllmBaseUrl      = args['base-url']; break;
-      case 'llama_cpp': config.llamaCppBaseUrl  = args['base-url']; break;
-      case 'mlx':       config.mlxBaseUrl       = args['base-url']; break;
+      case 'ollama':
+        config.ollamaBaseUrl = args['base-url'];
+        break;
+      case 'vllm':
+        config.vllmBaseUrl = args['base-url'];
+        break;
+      case 'llama_cpp':
+        config.llamaCppBaseUrl = args['base-url'];
+        break;
+      case 'mlx':
+        config.mlxBaseUrl = args['base-url'];
+        break;
     }
   }
 
