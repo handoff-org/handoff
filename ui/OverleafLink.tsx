@@ -85,7 +85,6 @@ export function OverleafLink({ theme, onSubmit, onCancel }: Props) {
       {field('Overleaf project link', url, focus === 0)}
       {field('Git authentication token', token, focus === 1, true)}
       {error ? <Text color={theme.error}>{error}</Text> : null}
-      <Text dimColor>▶ Setup walkthrough: handoff-org.github.io/handoff/overleaf</Text>
       <Text dimColor>
         Tab to switch · Enter to {focus === 0 ? 'continue' : 'connect'} · Esc to cancel
       </Text>

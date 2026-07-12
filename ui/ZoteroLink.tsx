@@ -86,7 +86,6 @@ export function ZoteroLink({ theme, onSubmit, onCancel }: Props) {
       {field('Zotero Web API key', apiKey, focus === 0, true)}
       {field('Numeric user id', userId, focus === 1)}
       {error ? <Text color={theme.error}>{error}</Text> : null}
-      <Text dimColor>▶ Setup walkthrough: handoff-org.github.io/handoff/integrations#zotero</Text>
       <Text dimColor>
         Tab to switch · Enter to {focus === 0 ? 'continue' : 'connect'} · Esc to cancel
       </Text>

@@ -87,9 +87,6 @@ export function OpenReviewLink({ theme, onSubmit, onCancel }: Props) {
       {field('Password', password, focus === 1, true)}
       {error ? <Text color={theme.error}>{error}</Text> : null}
       <Text dimColor>
-        ▶ Setup walkthrough: handoff-org.github.io/handoff/integrations#openreview
-      </Text>
-      <Text dimColor>
         Tab to switch · Enter to {focus === 0 ? 'continue' : 'connect'} · Esc to cancel
       </Text>
     </Box>
