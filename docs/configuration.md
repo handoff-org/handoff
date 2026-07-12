@@ -33,6 +33,10 @@ The wizard and in-app commands write `config.json` for you — you rarely need t
 | `mlxBaseUrl` | string | `http://localhost:8080` | MLX endpoint. |
 | `vllmBaseUrl` | string | `http://localhost:8000` | vLLM endpoint. |
 | `hfToken` | string | — | HuggingFace API token. |
+| `zoteroApiKey` | string | — | Zotero Web API key (enables the [Zotero connector](integrations.md#zotero)). |
+| `zoteroUserId` | string | — | Zotero numeric user id (personal library). |
+| `openreviewUsername` | string | — | OpenReview email or `~profile id` (enables the [OpenReview connector](integrations.md#openreview)). |
+| `openreviewPassword` | string | — | OpenReview password. Stored locally, like `hfToken`. |
 | `theme` | string | `synthwave` | Color theme. |
 | `mode` | `permissions` \| `auto` | `permissions` | Tool-approval mode. |
 | `focus` | `research` \| `general` | `research` | Research mode or off-work. Toggle with `~`. |
@@ -62,6 +66,10 @@ The wizard and in-app commands write `config.json` for you — you rarely need t
 | `HANDOFF_REDUCED_MOTION` | holds the mascot still, independent of config |
 | `NO_COLOR` | monochrome output |
 | `HF_TOKEN` | `hfToken` |
+| `HANDOFF_ZOTERO_API_KEY` | `zoteroApiKey` |
+| `HANDOFF_ZOTERO_USER_ID` | `zoteroUserId` |
+| `HANDOFF_OPENREVIEW_USERNAME` | `openreviewUsername` |
+| `HANDOFF_OPENREVIEW_PASSWORD` | `openreviewPassword` |
 
 ```sh
 # Try a bigger model for one session without changing saved config:
@@ -152,8 +160,15 @@ it sets `OLLAMA_MAX_LOADED_MODELS=2` so both tiers stay warm.
 
 ## Sessions
 
-handoff saves your conversation per project. Restore it with `/resume` or
-`handoff --resume`.
+handoff saves your conversation so you can pick it back up. Restore the most recent one
+with `/resume` or `handoff --resume`.
+
+Every run is also **archived** under `~/.handoff/sessions/` as indented JSON:
+
+- `last.json` — the latest state, used by `/resume`.
+- `session-<timestamp>.json` — one file per run (named by the run's start time), kept so
+  your past conversations aren't overwritten. Secret-looking tool arguments (e.g. an
+  Overleaf token) are redacted before anything is written to disk.
 
 ## File layout
 
@@ -162,6 +177,7 @@ handoff saves your conversation per project. Restore it with `/resume` or
 ├── config.json
 ├── profile.json        # personalization profile
 ├── skills/
+├── sessions/           # last.json (resume) + timestamped run archives
 ├── research/papers/
 └── projects/<name>/
     ├── literature/

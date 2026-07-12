@@ -27,6 +27,8 @@ your own machine. Cloud is only ever used after you explicitly opt in.
 | 🔬 **Literature** | Search OpenAlex & arXiv live, build `.bib` files, fact-check claims with `/research`. |
 | 🧪 **Experiments** | Each Python run gets an isolated [uv](https://docs.astral.sh/uv/) project and a reproducible capsule — code, env, metrics, `repro.sh`. |
 | 📝 **Paper** | Start from ACL, NeurIPS, or a blank template. Edit in place with a diff box. Two-way Overleaf sync. |
+| 🔗 **Integrations** | Annotate Zotero papers with `/zotero-prep`; fetch and answer OpenReview reviews. |
+| 👁 **Vision** | On a multimodal model, read figures and PDF pages with `view_image` / `view_pdf_page`. |
 | ✅ **Provenance** | Claim ledger + `/audit-paper` + `/handoff` transfer packets keep your results traceable. |
 
 ## Install
@@ -55,5 +57,6 @@ Package: **`ownhandoff`** · Command: **`handoff`**
 | [Configuration](configuration.md) | Config file, env vars, backends, themes. |
 | [Claims & handoff](claims-and-handoff.md) | Claim ledger, `/audit-paper`, transfer packets. |
 | [Overleaf sync](overleaf.md) | Two-way sync, tokens, troubleshooting. |
+| [Zotero & OpenReview](integrations.md) | Annotate papers, fetch & answer reviews. |
 | [Skills](skills.md) | Save and replay your own workflows. |
 | [Architecture](architecture.md) | Contributor's tour of the codebase. |

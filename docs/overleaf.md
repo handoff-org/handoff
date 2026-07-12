@@ -31,6 +31,8 @@ The token is handled as a sensitive credential: it's masked in the UI, stored on
 `paper/.git/config`, and redacted from any git output shown in the transcript. handoff
 never prints it back.
 
+![Linking an Overleaf project in handoff](media/overleaf.gif)
+
 ## How sync works
 
 Once linked, syncing is automatic and bidirectional:

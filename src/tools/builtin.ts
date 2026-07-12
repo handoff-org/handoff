@@ -6,7 +6,7 @@ import type { ToolRegistry } from './registry.js';
 import { overleafWriteGuard } from '../workspace/overleaf.js';
 import { resolveWorkspacePath, isWithinProject } from '../workspace/project.js';
 import { grepFiles, globFiles } from './search.js';
-import { checkFetchUrl } from './ssrf.js';
+import { safeFetch } from './ssrf.js';
 import { htmlToText, truncate, parseDuckDuckGoHtml, formatSearchResults } from './web.js';
 
 const execAsync = promisify(exec);
@@ -16,7 +16,6 @@ const execAsync = promisify(exec);
 const WEB_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-const MAX_REDIRECTS = 5;
 
 export function registerBuiltins(registry: ToolRegistry): void {
   registry.register({
@@ -261,44 +260,26 @@ export function registerBuiltins(registry: ToolRegistry): void {
     },
     async execute({ url, max_chars }) {
       const limit = max_chars ? Number(max_chars) : 12_000;
-      // Follow redirects manually so each hop is re-checked against the SSRF guard —
-      // otherwise a page could redirect to localhost / a metadata endpoint and slip
-      // past the initial check.
-      let current = String(url);
-      for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-        const bad = checkFetchUrl(current);
-        if (bad) return bad;
-        let res: Response;
-        try {
-          res = await fetch(current, {
-            redirect: 'manual',
-            headers: { 'User-Agent': WEB_UA, Accept: 'text/html,application/xhtml+xml,*/*' },
-          });
-        } catch (err) {
-          return `Fetch failed: ${err instanceof Error ? err.message : String(err)}`;
-        }
-        if (res.status >= 300 && res.status < 400) {
-          const loc = res.headers.get('location');
-          if (!loc) return `HTTP ${res.status} with no Location header.`;
-          try {
-            current = new URL(loc, current).toString();
-          } catch {
-            return `HTTP ${res.status} with unparseable redirect: ${loc}`;
-          }
-          continue;
-        }
-        if (!res.ok) return `HTTP ${res.status}: ${res.statusText}`;
-        const ct = (res.headers.get('content-type') ?? '').toLowerCase();
-        const body = await res.text();
-        if (ct.includes('html') || /^\s*<(!doctype|html)\b/i.test(body)) {
-          return truncate(htmlToText(body), limit);
-        }
-        if (ct.includes('json') || ct.includes('xml') || ct.startsWith('text/') || !ct) {
-          return truncate(body, limit);
-        }
-        return `(${ct} — ${body.length} bytes; not text. For PDFs use read_pdf.)`;
+      // safeFetch re-checks the SSRF guard on every redirect hop, so a page can't
+      // redirect to localhost / a metadata endpoint and slip past the initial check.
+      let res: Response;
+      try {
+        res = await safeFetch(String(url), {
+          headers: { 'User-Agent': WEB_UA, Accept: 'text/html,application/xhtml+xml,*/*' },
+        });
+      } catch (err) {
+        return err instanceof Error ? err.message : String(err);
       }
-      return `Refused: too many redirects (>${MAX_REDIRECTS}).`;
+      if (!res.ok) return `HTTP ${res.status}: ${res.statusText}`;
+      const ct = (res.headers.get('content-type') ?? '').toLowerCase();
+      const body = await res.text();
+      if (ct.includes('html') || /^\s*<(!doctype|html)\b/i.test(body)) {
+        return truncate(htmlToText(body), limit);
+      }
+      if (ct.includes('json') || ct.includes('xml') || ct.startsWith('text/') || !ct) {
+        return truncate(body, limit);
+      }
+      return `(${ct} — ${body.length} bytes; not text. For PDFs use read_pdf.)`;
     },
   });
 
@@ -372,13 +353,16 @@ export function registerBuiltins(registry: ToolRegistry): void {
 
       // Download if URL.
       if (src.startsWith('http://') || src.startsWith('https://')) {
-        const bad = checkFetchUrl(src);
-        if (bad) return bad;
         const { tmpdir } = await import('os');
         const { join: pathJoin } = await import('path');
         const { writeFileSync } = await import('fs');
         const { randomUUID } = await import('crypto');
-        const res = await fetch(src);
+        let res: Response;
+        try {
+          res = await safeFetch(src); // SSRF-guarded on every redirect hop
+        } catch (err) {
+          return err instanceof Error ? err.message : String(err);
+        }
         if (!res.ok) return `HTTP ${res.status}: ${res.statusText}`;
         const buf = await res.arrayBuffer();
         // randomUUID (not Date.now) avoids collisions between concurrent fetches.

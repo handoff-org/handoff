@@ -1059,6 +1059,29 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     [config.systemPrompt],
   );
 
+  // Persist Zotero credentials straight to config (never through the model), and
+  // update in-memory config so the tools + /zotero status see them immediately.
+  const onZoteroLink = useCallback((apiKey: string, userId: string) => {
+    setMode('chat');
+    void writeStore({ zoteroApiKey: apiKey, zoteroUserId: userId });
+    setConfig((c) => ({ ...c, zoteroApiKey: apiKey, zoteroUserId: userId }));
+    addEntry({
+      kind: 'note',
+      content: `Zotero linked (user ${userId}). Try /zotero-prep <paper>, or ask me to list your library.`,
+    });
+  }, []);
+
+  // Persist OpenReview credentials straight to config (never through the model).
+  const onOpenReviewLink = useCallback((username: string, password: string) => {
+    setMode('chat');
+    void writeStore({ openreviewUsername: username, openreviewPassword: password });
+    setConfig((c) => ({ ...c, openreviewUsername: username, openreviewPassword: password }));
+    addEntry({
+      kind: 'note',
+      content: `OpenReview linked (${username}). Run /openreview to see your submissions and reviews.`,
+    });
+  }, []);
+
   // Build a diagnostic report for `/model doctor` and show it as a note.
   const runModelDoctor = useCallback(async () => {
     const hardware = detectHardware();
@@ -1736,6 +1759,63 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     [runTurn],
   );
 
+  // /zotero — show status if linked, else open the link form (key stays out of chat).
+  const handleZotero = useCallback(() => {
+    if (config.zoteroApiKey && config.zoteroUserId) {
+      addEntry({
+        kind: 'note',
+        content: `Zotero linked (user ${config.zoteroUserId}). Use /zotero-prep <paper> or ask me to list your library.`,
+      });
+      return;
+    }
+    setMode('zotero_link');
+  }, [config.zoteroApiKey, config.zoteroUserId]);
+
+  // /zotero-prep — guided turn: read a Zotero paper and attach commentary (note + highlights).
+  const handleZoteroPrep = useCallback(
+    (argStr: string) => {
+      if (!config.zoteroApiKey || !config.zoteroUserId) {
+        addEntry({ kind: 'note', content: 'Zotero is not linked. Run /zotero first.' });
+        return;
+      }
+      const target = argStr.trim();
+      const display = `/zotero-prep${target ? ' ' + target : ''}`;
+      const instructions = [
+        "Annotate a paper in the user's Zotero library by adding in-PDF HIGHLIGHTS with comments — highlight the important sentences directly on the PDF and explain why each matters. Highlights are the deliverable, not a separate note.",
+        target
+          ? `The user identified the paper as: "${target}". If that looks like a Zotero item key, use it directly; otherwise call zotero_list_papers with it as the query and pick the best match (ask the user if it's ambiguous).`
+          : 'Call zotero_list_papers to show the library, then ask the user which paper to prep.',
+        'Steps: (1) zotero_read_paper on the chosen key to get the PDF text AND any existing annotations — do not duplicate those. (2) Pick the 4–6 most important sentences (method, key result, limitation, or a link to related work). (3) REQUIRED: call zotero_add_highlights with each as "exact quote :: why it matters". Each quote MUST be a SHORT, CONTIGUOUS, verbatim phrase copied straight from the PDF text — never use "…", never stitch together distant sentences, and never abbreviate (they cannot be located otherwise). Prefer one clean clause per highlight. (4) Report how many highlights landed, and if any could not be located, retry those with a shorter verbatim phrase. (5) Only add a zotero_add_note as well if the user explicitly asks for a written summary.',
+      ].join('\n\n');
+      void runTurn(display, instructions);
+    },
+    [config.zoteroApiKey, config.zoteroUserId, runTurn],
+  );
+
+  // /openreview — link if needed, else a guided turn over submissions + reviews.
+  const handleOpenReview = useCallback(
+    (argStr: string) => {
+      if (!config.openreviewUsername || !config.openreviewPassword) {
+        setMode('openreview_link');
+        return;
+      }
+      const target = argStr.trim();
+      const display = `/openreview${target ? ' ' + target : ''}`;
+      const instructions = [
+        'Help the user with their OpenReview submissions and reviewer feedback.',
+        'Step 1: call openreview_my_submissions to list their submissions (each has a forum id).',
+        target
+          ? `The user mentioned: "${target}". Match it to one of the listed submissions (by title or forum id); ask them if it's ambiguous.`
+          : 'Ask which submission to look at (unless there is only one).',
+        'Step 2: call openreview_reviews with that forum id to fetch the reviews, official comments, meta-review, and decision.',
+        "Step 3: summarize each reviewer's main points concisely — strengths, weaknesses, questions, and any rating/confidence.",
+        "Step 4: ONLY if the user asks you to address or respond to the reviews, draft a courteous, point-by-point rebuttal grounded in the actual paper (read_pdf or the project's paper files where available). Do not fabricate results, and do not post anything to OpenReview — draft locally for the user to review.",
+      ].join('\n\n');
+      void runTurn(display, instructions);
+    },
+    [config.openreviewUsername, config.openreviewPassword, runTurn],
+  );
+
   const handleSubmit = useCallback(
     async (userInput: string) => {
       const trimmed = userInput.trim();
@@ -1777,6 +1857,18 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       }
       if (lower === '/overleaf') {
         handleOverleaf();
+        return;
+      }
+      if (lower === '/zotero') {
+        handleZotero();
+        return;
+      }
+      if (/^\/zotero-prep\b/i.test(trimmed)) {
+        handleZoteroPrep(trimmed.replace(/^\/zotero-prep\s*/i, ''));
+        return;
+      }
+      if (/^\/openreview\b/i.test(trimmed)) {
+        handleOpenReview(trimmed.replace(/^\/openreview\s*/i, ''));
         return;
       }
       if (lower === '/skills') {
@@ -1832,6 +1924,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       runSkill,
       handleProject,
       handleOverleaf,
+      handleZotero,
+      handleZoteroPrep,
+      handleOpenReview,
       handleHandoff,
       handleClaims,
       handleCapsules,
@@ -2240,6 +2335,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         mode: config.mode,
         toolCount,
         focus,
+        connections: {
+          overleaf: isOverleafLinked(),
+          zotero: !!(config.zoteroApiKey && config.zoteroUserId),
+          openreview: !!(config.openreviewUsername && config.openreviewPassword),
+        },
         ...(mascotRows ? { mascotRows } : {}),
         ...(activeProject ? { project: activeProject.title } : {}),
       }),
@@ -2247,6 +2347,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       config.backend,
       config.modelId,
       config.mode,
+      config.zoteroApiKey,
+      config.zoteroUserId,
+      config.openreviewUsername,
+      config.openreviewPassword,
       theme,
       width,
       toolCount,
@@ -2635,6 +2739,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       }}
       onProjectDelete={handleDeleteProject}
       onOverleafLink={onOverleafLink}
+      onZoteroLink={onZoteroLink}
+      onOpenReviewLink={onOpenReviewLink}
       onQuestionAnswer={(answer) => {
         question?.resolve(answer);
         setQuestion(null);
@@ -2644,14 +2750,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   if (mode !== 'chat' || question) return overlay;
 
   const modeLabel = config.mode === 'auto' ? 'hands-off ⚡' : 'hands-on 🔒';
-  const focusLabel =
-    focus === 'general' ? 'general' : activeProject ? activeProject.title : 'research';
-  const rightStatus =
-    clampedOffset > 0
-      ? `↑ scrolled ${clampedOffset} · PgDn latest`
-      : isLoading
-        ? 'esc to interrupt · PgUp/PgDn scroll'
-        : 'PgUp/PgDn scroll · enter send';
+  // Right side only carries a status when the transcript is scrolled up — the
+  // everyday shortcuts now live on a pinned line below the input box.
+  const rightStatus = clampedOffset > 0 ? `↑ scrolled ${clampedOffset} · PgDn latest` : '';
 
   const gapLines = Array.from({ length: INPUT_GAP }, (_, i) => <Text key={`gap${i}`}> </Text>);
 
@@ -2685,10 +2786,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       <Box paddingX={1} justifyContent="space-between">
         <Text>
           <Text dimColor>{modeLabel}</Text>
-          <Text dimColor>{'  ·  '}</Text>
-          <Text color={focus === 'general' ? theme.tool : undefined} dimColor={focus !== 'general'}>
-            {focusLabel}
-          </Text>
+          {focus === 'general' ? <Text color={theme.tool}>{'  ·  off-work'}</Text> : null}
         </Text>
         <Text dimColor>{rightStatus}</Text>
       </Box>
@@ -2701,6 +2799,25 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         <Text color={theme.user}>{isLoading ? spinner : '›'} </Text>
         <InputContent value={input} cursor={cursor} cursorOn={cursorOn} accent={theme.user} />
       </Box>
+
+      {/* Pinned shortcut hints, just below the input box. */}
+      {!menuActive && (
+        <Box paddingX={1}>
+          <Text>
+            <Text dimColor>Press </Text>
+            <Text color={theme.user}>esc</Text>
+            <Text dimColor> to interrupt</Text>
+            <Text dimColor>{'   ·   '}</Text>
+            <Text color={theme.user}>⇧Tab</Text>
+            <Text dimColor> hands-on/off</Text>
+            <Text dimColor>{'   ·   '}</Text>
+            <Text color={theme.user}>⇧~</Text>
+            <Text dimColor> focus ⇄ off-work</Text>
+            <Text dimColor>{'   ·   '}</Text>
+            <Text color={theme.user}>/help</Text>
+          </Text>
+        </Box>
+      )}
 
       {menuActive && (
         <Box paddingX={1} flexDirection="column">

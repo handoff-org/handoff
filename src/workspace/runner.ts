@@ -32,7 +32,7 @@ function shortId(): string {
 // ── Python environment setup ──────────────────────────────────────────────────
 
 let _uvAvail: boolean | null = null;
-function uvAvailable(): boolean {
+export function uvAvailable(): boolean {
   if (_uvAvail === null) {
     _uvAvail = spawnSync('uv', ['--version'], { encoding: 'utf-8' }).status === 0;
   }
@@ -182,7 +182,12 @@ export interface RunResult {
   setupNote: string;
   metrics: Record<string, number>;
   spawnError?: string;
+  /** New/changed figure files under results/ (paths relative to the project root). */
+  artifacts?: string[];
 }
+
+/** Figure/artifact extensions worth surfacing so the agent can view_image them. */
+const FIGURE_EXT = /\.(png|jpe?g|gif|webp|svg|pdf)$/i;
 
 /**
  * Execute a run and capture it as a reproducible capsule: snapshot results/
@@ -277,6 +282,11 @@ export function executeRun(slug: string, req: RunRequest): RunResult {
   const finishedAt = new Date().toISOString();
 
   const outputHashes = diffSnapshots(before, snapshotDir(resultsDir));
+  // Figures created/changed this run — surfaced so the agent can view_image them.
+  const artifacts = Object.keys(outputHashes)
+    .filter((p) => FIGURE_EXT.test(p))
+    .map((p) => join('results', p))
+    .sort();
   const metrics = parseMetrics(stdout, resultsDir);
   const capsuleEnv = captureEnv(env);
   const seeds = parseSeeds(stdout, capsuleEnv);
@@ -338,6 +348,7 @@ export function executeRun(slug: string, req: RunRequest): RunResult {
     setupNote,
     metrics,
     spawnError: r.error?.message,
+    ...(artifacts.length ? { artifacts } : {}),
   };
 }
 
@@ -429,6 +440,9 @@ export function registerRunnerTools(registry: ToolRegistry): void {
       if (res.stdout.trim()) parts.push(`stdout:\n${truncate(res.stdout, 600)}`);
       if (res.stderr.trim()) parts.push(`stderr:\n${truncate(res.stderr, 300)}`);
       if (res.spawnError) parts.push(`spawn error: ${res.spawnError}`);
+      if (res.artifacts?.length) {
+        parts.push(`figures: ${res.artifacts.join(', ')} — inspect one with view_image`);
+      }
       return parts.join('\n\n');
     },
   });

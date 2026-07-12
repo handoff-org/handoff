@@ -1,6 +1,8 @@
 // Minimal OpenAlex client (https://docs.openalex.org) — free, keyless, broad
 // coverage across every field. Used by the research tools.
 
+import { retryFetch } from '../util/http.js';
+
 const BASE = 'https://api.openalex.org/works';
 // OpenAlex's "polite pool" just wants a contact; no personal data embedded.
 const MAILTO = 'handoff-cli@users.noreply.github.com';
@@ -59,14 +61,7 @@ function toPaper(w: OAWork): Paper {
 }
 
 async function fetchWithRetry(url: string, maxAttempts = 3): Promise<Response> {
-  let lastStatus = 0;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
-    const res = await fetch(url);
-    if (res.ok || res.status < 500) return res;
-    lastStatus = res.status;
-  }
-  throw new Error(`OpenAlex request failed after ${maxAttempts} attempts (HTTP ${lastStatus})`);
+  return retryFetch(url, {}, maxAttempts);
 }
 
 export async function searchWorks(

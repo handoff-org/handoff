@@ -47,6 +47,11 @@ export interface BannerInfo {
   /** Work focus: 'general' is off-work (no project context). */
   focus?: 'research' | 'general';
   /**
+   * External-account connection status for this session, shown in a "Connections"
+   * monitor. Omit in preview contexts to hide the section.
+   */
+  connections?: { overleaf: boolean; zotero: boolean; openreview: boolean };
+  /**
    * A frame of the animated mascot: LEFT_INNER-wide colored rows, one per mascot
    * line. When present (two-column layout only) it replaces the static mascot.
    */
@@ -83,7 +88,18 @@ interface PanelRow {
  * below. Falls back to one column on narrow terminals. Lives in the transcript.
  */
 export function bannerLines(info: BannerInfo): React.ReactNode[] {
-  const { backend, modelId, theme, width, mode, toolCount, project, focus, mascotRows } = info;
+  const {
+    backend,
+    modelId,
+    theme,
+    width,
+    mode,
+    toolCount,
+    project,
+    focus,
+    connections,
+    mascotRows,
+  } = info;
   const mascotColor = rgbToHex(mix(hexToRgb(theme.mascot), [0, 0, 0], 0.22));
   const border = theme.border;
   // One accent throughout, so the masthead reads as a single, intentional voice
@@ -147,6 +163,19 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
     ],
   });
   const blank: PanelRow = { segs: [] };
+  // "Connections" monitor: a filled dot for a linked account, hollow for not.
+  const dot = (label: string, ok: boolean): Seg[] => [
+    { text: ok ? '●' : '○', color: ok ? accent : undefined, dim: !ok },
+    { text: ` ${label}  `, dim: true },
+  ];
+  const connRows: PanelRow[] = connections
+    ? [
+        blank,
+        { segs: [{ text: 'Connections', color: accent, bold: true }] },
+        { segs: [...dot('Overleaf', connections.overleaf), ...dot('Zotero', connections.zotero)] },
+        { segs: dot('OpenReview', connections.openreview) },
+      ]
+    : [];
   const infoRows: PanelRow[] = [
     { segs: [{ text: `Welcome back, ${USER_NAME}`, color: accent, bold: true }] },
     { segs: [{ text: 'local-first research', dim: true }] },
@@ -162,6 +191,7 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
       ],
     },
     { segs: [{ text: shortCwd(), dim: true }] },
+    ...connRows,
     blank,
     blank,
     blank,
@@ -169,28 +199,6 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
     cmd('/project new', 'start a study'),
     cmd('/research', 'check the lit'),
     cmd('/overleaf', 'sync Overleaf'),
-    blank,
-    blank,
-    blank,
-    { segs: [{ text: 'Shortcuts', color: accent, bold: true }] },
-    {
-      segs: [
-        { text: 'esc', color: accent },
-        { text: '   interrupt', dim: true },
-      ],
-    },
-    {
-      segs: [
-        { text: '⇧Tab', color: accent },
-        { text: '  hands-on / off', dim: true },
-      ],
-    },
-    {
-      segs: [
-        { text: '~', color: accent },
-        { text: '     toggle focus', dim: true },
-      ],
-    },
   ];
   void toolCount;
 
@@ -274,7 +282,7 @@ export function bannerLines(info: BannerInfo): React.ReactNode[] {
   }
 
   // Command hints, below the banner.
-  const cmds = ['/help', '/project', '/overleaf', '/general', '↑↓ scroll'];
+  const cmds = ['/help', '/project', '/overleaf', '/zotero', '↑↓ scroll'];
   const hints: Seg[] = [{ text: '  ' }];
   cmds.forEach((c, i) => {
     if (i) hints.push({ text: '   ', dim: true });

@@ -6,6 +6,12 @@ import { redactSecrets } from '../src/util/redact.js';
 
 const SESSION_DIR = join(homedir(), '.handoff', 'sessions');
 const LAST_FILE = join(SESSION_DIR, 'last.json');
+// One archive file per run, named by the run's start time (ms precision). It's
+// overwritten on each save so it always holds this run's latest state, while a
+// new run gets a new file — so every conversation is kept (not just the last),
+// for later analysis to improve the tools. `last.json` remains for /resume.
+const RUN_STAMP = new Date().toISOString().replace(/[:.]/g, '-');
+const ARCHIVE_FILE = join(SESSION_DIR, `session-${RUN_STAMP}.json`);
 
 export interface SavedSession {
   savedAt: string;
@@ -44,6 +50,13 @@ function redactEntries(entries: unknown[]): unknown[] {
   });
 }
 
+/** Write `data` as indented JSON, atomically (temp file + rename). */
+async function writeJsonAtomic(path: string, data: unknown): Promise<void> {
+  const tmp = `${path}.${process.pid}.tmp`;
+  await writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  await rename(tmp, path);
+}
+
 export async function saveSession(history: Message[], entries: unknown[]): Promise<void> {
   try {
     await mkdir(SESSION_DIR, { recursive: true });
@@ -52,11 +65,11 @@ export async function saveSession(history: Message[], entries: unknown[]): Promi
       history: redactHistory(history),
       entries: redactEntries(entries),
     };
-    // Atomic: write a temp file then rename, so a crash mid-write can't leave a
-    // truncated last.json that loses the whole conversation.
-    const tmp = `${LAST_FILE}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify(data), 'utf-8');
-    await rename(tmp, LAST_FILE);
+    // `last.json` powers /resume; the timestamped archive is the durable record of
+    // this run. Both are indented JSON so they're easy to read, and written
+    // atomically so a crash mid-write can't truncate them.
+    await writeJsonAtomic(LAST_FILE, data);
+    await writeJsonAtomic(ARCHIVE_FILE, data);
   } catch {
     // Persisting sessions is best-effort; never crash the app over it.
   }

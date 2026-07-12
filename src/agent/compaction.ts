@@ -103,6 +103,35 @@ function truncateTools(block: Block, cap: number): Block {
   );
 }
 
+/**
+ * Drop image attachments from turns before the current one. A vision tool's
+ * images are delivered on a synthetic `user` message right after the tool result
+ * (see src/agent/loop.ts); keeping every past image in history would re-upload
+ * the whole (often multi-MB) blob on every subsequent turn. The model has already
+ * seen prior-turn images, so we keep image bytes only from the current turn.
+ *
+ * The turn boundary is the last *image-less* user message — i.e. a real user
+ * prompt (users never attach images; only tools do). Anchoring there means the
+ * synthetic image-bearing user messages injected within the current turn don't
+ * themselves move the boundary, so all of this turn's images survive its
+ * multi-step tool loop, while prior turns' images are dropped. The tool's text
+ * result stays as the placeholder. Pure; returns a new array, never mutates.
+ */
+export function dropStaleImages(messages: Message[]): Message[] {
+  let anchor = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    if (m.role === 'user' && !m.images?.length) {
+      anchor = i;
+      break;
+    }
+  }
+  if (anchor < 0) return messages.slice(); // no plain user turn yet — nothing to anchor on
+  return messages.map((m, i) =>
+    i >= anchor || !m.images?.length ? m : { ...m, images: undefined },
+  );
+}
+
 export function compactHistory(messages: Message[], opts: CompactionOptions): Message[] {
   const cap = opts.toolCapChars ?? DEFAULT_TOOL_CAP;
   const summaryCap = opts.summaryCapChars ?? DEFAULT_SUMMARY_CAP;

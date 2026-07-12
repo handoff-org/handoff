@@ -32,7 +32,15 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
 - ✅ **Latest preprints** — `search_arxiv` hits arXiv directly, indexed within a day of
   submission. Accepts plain phrases or arXiv syntax (`cat:cs.LG`, `au:Vaswani`).
 - ✅ **Read PDFs** — `read_pdf` extracts text from a local file or URL
-  (`brew install poppler` required).
+  (`brew install poppler` required). To read a paper's **LaTeX source** (equations and
+  structure, not flattened text), `read_arxiv_source` fetches it straight from arXiv.
+- ✅ **See figures** — on a multimodal model, `view_pdf_page` renders a PDF page to an
+  image and `view_image` looks at any figure/plot (via PyMuPDF + [uv](https://docs.astral.sh/uv/);
+  no poppler). See [Commands → Vision](commands.md#vision-multimodal-models).
+- ✅ **Notes** — `/note <text>` and the `take_note` / `read_notebook` / `search_notes`
+  tools keep a searchable lab notebook (`NOTEBOOK.md`) per project.
+- ✅ **Reference manager** — link Zotero and let `/zotero-prep` read a paper and attach
+  your commentary (notes + best-effort highlights). See [Zotero & OpenReview](integrations.md).
 - ✅ **Cite** — `cite_paper <id>` adds a paper (OpenAlex `W…`, arXiv id, or DOI) to
   `paper/refs.bib` with a stable key and hands back the `\cite{key}` to drop in. Idempotent
   — citing the same paper twice never duplicates it — and it syncs to Overleaf with the paper.
@@ -74,9 +82,19 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
   the paper a single compilable document. See [Overleaf sync](overleaf.md).
 - ✅ **Frictionless edits** — `write_file` and `edit_file` both show a diff box; the
   model never pastes the full file back.
+- ✅ **Writing hygiene** — `check_writing` flags weasel words, passive voice, dangling
+  `\ref`s, and `\cite` keys missing from `refs.bib`; `scaffold_sections` drops in a
+  standard section skeleton.
 - ✅ **Citation insertion** — `cite_paper` pulls a cite key + BibTeX entry straight from
   the literature into `paper/refs.bib`; you then place the `\cite{key}` with `edit_file`.
 - ⭐ Section co-writing, compile/fix loop.
+
+## Address reviews
+
+- ✅ **OpenReview** — `/openreview` fetches your submissions and their reviews, comments,
+  meta-reviews, and decisions, summarizes each reviewer's points, and — on request — helps
+  draft point-by-point responses grounded in your paper. Read-only; nothing is posted back.
+  See [Zotero & OpenReview](integrations.md#openreview).
 
 ## Claims & transfer packets
 
@@ -95,4 +113,5 @@ Only `paper/` ever leaves your machine (via Overleaf). Everything else is privat
 ## Privacy
 
 Models run locally. The only outbound traffic: literature lookups you trigger, Overleaf
-sync for `paper/`, and — only if you explicitly opt in — a cloud model via HuggingFace.
+sync for `paper/`, the Zotero / OpenReview connectors you link, and — only if you
+explicitly opt in — a cloud model via HuggingFace.

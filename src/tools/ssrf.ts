@@ -168,3 +168,41 @@ export function checkFetchUrl(raw: string): string | null {
 
   return null;
 }
+
+/** Thrown by safeFetch when a URL (or a redirect hop) is refused or malformed. */
+export class SsrfError extends Error {}
+
+/**
+ * Fetch a URL with the SSRF guard applied to every hop. Redirects are followed
+ * manually and each Location is re-checked with checkFetchUrl, so a URL that
+ * passes the initial check can't 302 to localhost / a cloud-metadata endpoint /
+ * the LAN. Returns the final non-redirect Response; throws SsrfError when a hop
+ * is blocked, a redirect is malformed, or the redirect limit is exceeded. Network
+ * errors from fetch propagate as-is. Callers pass their own headers via `init`
+ * (its `redirect` is always overridden to 'manual').
+ */
+export async function safeFetch(
+  url: string,
+  init: RequestInit = {},
+  opts: { maxRedirects?: number } = {},
+): Promise<Response> {
+  const maxRedirects = opts.maxRedirects ?? 5;
+  let current = url;
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    const bad = checkFetchUrl(current);
+    if (bad) throw new SsrfError(bad);
+    const res = await fetch(current, { ...init, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) throw new SsrfError(`HTTP ${res.status} with no Location header.`);
+      try {
+        current = new URL(loc, current).toString();
+      } catch {
+        throw new SsrfError(`HTTP ${res.status} with unparseable redirect: ${loc}`);
+      }
+      continue;
+    }
+    return res;
+  }
+  throw new SsrfError(`Refused: too many redirects (>${maxRedirects}).`);
+}

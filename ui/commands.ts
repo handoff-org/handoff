@@ -9,6 +9,12 @@ export const COMMANDS: Command[] = [
   { name: '/research', desc: 'fact-check a claim against the literature' },
   { name: '/note', desc: 'jot a note in the project lab notebook  (/note <text>)' },
   { name: '/overleaf', desc: 'connect & sync your paper with Overleaf' },
+  { name: '/zotero', desc: 'connect your Zotero library' },
+  {
+    name: '/zotero-prep',
+    desc: 'highlight a Zotero paper: annotate key sentences in the PDF with comments  (/zotero-prep <paper>)',
+  },
+  { name: '/openreview', desc: 'fetch your submissions & reviewer feedback, help respond' },
   { name: '/compose-skill', desc: 'write a new skill in your editor' },
   { name: '/skill', desc: 'run a skill  (/skill <name>)' },
   { name: '/skills', desc: 'list your skills' },

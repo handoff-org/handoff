@@ -4,7 +4,10 @@ import { render } from 'ink';
 import { loadConfig, type Config } from '../config/schema.js';
 import { ToolRegistry } from './tools/registry.js';
 import { registerBuiltins } from './tools/builtin.js';
+import { registerVisionTools } from './tools/vision.js';
 import { registerResearchTools } from './research/tools.js';
+import { registerZoteroTools } from './research/zotero.js';
+import { registerOpenReviewTools } from './research/openreview.js';
 import { registerSkillTools } from './skills/tools.js';
 import { registerWorkspaceTools } from './workspace/tools.js';
 import { registerOverleafTools } from './workspace/overleaf.js';
@@ -34,7 +37,10 @@ function Root({ initialConfig, autoResume }: { initialConfig: Config; autoResume
   const registry = useMemo(() => {
     const r = new ToolRegistry();
     registerBuiltins(r);
+    registerVisionTools(r);
     registerResearchTools(r);
+    registerZoteroTools(r);
+    registerOpenReviewTools(r);
     registerSkillTools(r);
     registerWorkspaceTools(r);
     registerOverleafTools(r);

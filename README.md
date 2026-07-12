@@ -6,6 +6,8 @@
 | 🔬 **Literature** | `/research <claim>` fact-checks against OpenAlex & arXiv live. |
 | 🧪 **Experiments** | Each Python run gets an isolated uv project and a reproducible capsule. |
 | 📝 **Paper** | Start from ACL, NeurIPS, or blank. Two-way Overleaf sync. |
+| 🔗 **Integrations** | Zotero (annotate papers with `/zotero-prep`) and OpenReview (fetch & answer reviews). |
+| 👁 **Vision** | On a multimodal model, read figures & PDF pages with `view_image` / `view_pdf_page`. |
 | ✅ **Provenance** | Claim ledger + `/audit-paper` + `/handoff` packets keep results traceable. |
 
 ---
@@ -34,6 +36,7 @@ npm install -g ownhandoff
 | [Getting started](docs/getting-started.md) | Install, setup wizard, first session |
 | [Research workflow](docs/research-workflow.md) | Literature → experiments → paper |
 | [Commands](docs/commands.md) | Every slash command and key binding |
+| [Zotero & OpenReview](docs/integrations.md) | Annotate papers, fetch & answer reviews |
 | [Configuration](docs/configuration.md) | Config, backends, inference presets |
 | [Architecture](docs/architecture.md) | Contributor's tour |
 
