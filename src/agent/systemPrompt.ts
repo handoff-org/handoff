@@ -186,7 +186,9 @@ export function projectContext(meta: ProjectMeta | null): string {
     `Lab notebook: ${notebookPath} — consult it with read_file when history matters or before repeating an ` +
     `experiment; append insights with write_file (append="true"). Don't read it on trivial turns.\n` +
     `Runs: run_code captures each run as a reproducible capsule in runs/<id>/ (code, env, git, output hashes, ` +
-    `repro.sh). Record metrics via results/metrics.json or "METRIC name=value" lines so they're logged.`;
+    `repro.sh). Record metrics via results/metrics.json or "METRIC name=value" lines so they're logged.\n` +
+    `Vision: to actually see a figure — a plot run_code produced, a diagram, or a PDF page — use view_image ` +
+    `(image path/URL) or view_pdf_page (renders a PDF page); both need a multimodal model and are no-ops otherwise.`;
 
   if (meta.paperMode === 'overleaf') {
     const main = mainTexFile(p.paper);

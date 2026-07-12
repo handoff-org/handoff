@@ -19,6 +19,12 @@ export interface Message {
   tool_call_id?: string;
   /** On an assistant message: the tool calls it made this turn. */
   tool_calls?: ToolCallRequest[];
+  /**
+   * Base64-encoded images attached to this message (no `data:` prefix — Ollama's
+   * native format). Set by vision tools; only honored by multimodal models. The
+   * OpenAI-compat/HF backends re-wrap these into `content` image_url blocks.
+   */
+  images?: string[];
 }
 
 export interface ToolCall {
@@ -276,7 +282,7 @@ async function* streamOpenAICompat(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: config.modelId,
-        messages,
+        messages: messages.map(toOpenAIContent),
         tools,
         ...(config.maxNewTokens ? { max_tokens: config.maxNewTokens } : {}),
         stream: true,
@@ -413,10 +419,14 @@ export function nativeToolCallsToToolCalls(tcs: OllamaNativeToolCall[]): ToolCal
  */
 function toOllamaMessages(messages: Message[]): unknown[] {
   return messages.map((m) => {
+    // No tool calls: pass the message through as-is. Ollama's native /api/chat
+    // reads `images` (base64, no data: prefix) directly off any message, so a
+    // plain `return m` already carries attachments.
     if (!m.tool_calls?.length) return m;
     return {
       role: m.role,
       content: m.content,
+      ...(m.images?.length ? { images: m.images } : {}),
       tool_calls: m.tool_calls.map((tc) => {
         let args: Record<string, unknown> = {};
         try {
@@ -432,6 +442,41 @@ function toOllamaMessages(messages: Message[]): unknown[] {
       }),
     };
   });
+}
+
+/**
+ * Guess the image MIME from the head of a base64 string, so the OpenAI-compat
+ * `data:` URI declares the right type. Most vision servers sniff the bytes
+ * anyway, but a correct label costs nothing.
+ */
+function b64ImageMime(b64: string): string {
+  if (b64.startsWith('/9j/')) return 'image/jpeg';
+  if (b64.startsWith('R0lGOD')) return 'image/gif';
+  if (b64.startsWith('UklGR')) return 'image/webp';
+  return 'image/png'; // PNG (iVBOR…) and default
+}
+
+/**
+ * Serialize a message for the OpenAI-compatible backends (OpenAI-compat SSE, HF,
+ * vLLM, llama.cpp, MLX). Messages without images pass through unchanged; a
+ * message with `images` becomes the multimodal content-array form
+ * (`[{type:'text'}, {type:'image_url', image_url:{url:'data:…'}}]`). Role and
+ * tool linkage fields are preserved.
+ */
+export function toOpenAIContent(m: Message): unknown {
+  if (!m.images?.length) return m;
+  const parts: unknown[] = [];
+  if (m.content) parts.push({ type: 'text', text: m.content });
+  for (const b64 of m.images) {
+    parts.push({
+      type: 'image_url',
+      image_url: { url: `data:${b64ImageMime(b64)};base64,${b64}` },
+    });
+  }
+  const out: Record<string, unknown> = { role: m.role, content: parts };
+  if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
+  if (m.tool_calls) out.tool_calls = m.tool_calls;
+  return out;
 }
 
 /**
@@ -616,7 +661,7 @@ export class HFModel implements ChatModel {
           provider: 'auto',
           model: this.config.modelId,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          messages: messages as any,
+          messages: messages.map(toOpenAIContent) as any,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           tools: tools as any,
           ...(this.config.maxNewTokens ? { max_tokens: this.config.maxNewTokens } : {}),

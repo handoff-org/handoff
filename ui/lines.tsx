@@ -279,11 +279,9 @@ export function entryLines(
       // A titled panel listing every slash command — aligned name + dim desc.
       const c = theme.note;
       const nameW = Math.max(...COMMANDS.map((cmd) => cmd.name.length));
-      const innerCap = Math.max(20, Math.min(width - 4, 80));
-      const innerW = Math.min(
-        innerCap,
-        Math.max(' Commands'.length, ...COMMANDS.map((cmd) => 1 + nameW + 2 + cmd.desc.length)),
-      );
+      // Always fill the terminal width so descriptions have room and the columns
+      // line up. Total box width = innerW + 4 (the "│ " and " │" borders).
+      const innerW = Math.max(20, width - 4);
       const rows: React.ReactNode[] = [lead];
       rows.push(
         <Text key={`${keyBase}-htop`} color={c} dimColor>

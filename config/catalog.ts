@@ -42,6 +42,15 @@ export function findCatalogEntry(backend: BackendId, id: string): HandoffModelEn
 }
 
 /**
+ * True when the given model is known to accept image input (has the `multimodal`
+ * role in the catalog). Used to gate the vision tools: if the active model can't
+ * see, there's no point attaching images. Unknown/unlisted ids return false.
+ */
+export function isMultimodalModel(backend: BackendId, id: string): boolean {
+  return findCatalogEntry(backend, id)?.roles.includes('multimodal') ?? false;
+}
+
+/**
  * True when an Ollama id is an ambiguous/drifting tag we should nudge away from:
  * an explicit `:latest`, or a bare Ollama name with no tag at all (e.g. `ornith`).
  * HF repo ids (which contain "/") are never treated as ambiguous here.

@@ -1,34 +1,37 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { Theme } from '../config/theme.js';
-import { parseProjectId } from '../src/workspace/overleaf.js';
 import { sanitizeTyped } from './input.js';
 
 interface Props {
   theme: Theme;
-  onSubmit: (url: string, token: string) => void;
+  onSubmit: (username: string, password: string) => void;
   onCancel: () => void;
 }
 
-/** Two-field form to paste an Overleaf project link and a Git token. */
-export function OverleafLink({ theme, onSubmit, onCancel }: Props) {
-  const [url, setUrl] = useState('');
-  const [token, setToken] = useState('');
+/**
+ * Two-field form to link an OpenReview account: username (email or ~profile id)
+ * and password. Captured here and written straight to config so credentials
+ * never pass through the model or the chat transcript (mirrors ZoteroLink).
+ */
+export function OpenReviewLink({ theme, onSubmit, onCancel }: Props) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [focus, setFocus] = useState<0 | 1>(0);
   const [error, setError] = useState('');
 
   const submit = () => {
-    if (!parseProjectId(url.trim())) {
-      setError('That link doesn’t look like an Overleaf project (…overleaf.com/project/…).');
+    if (!username.trim()) {
+      setError('Enter your OpenReview email or ~profile id.');
       setFocus(0);
       return;
     }
-    if (!token.trim()) {
-      setError('Paste your Git authentication token.');
+    if (!password.trim()) {
+      setError('Enter your OpenReview password.');
       setFocus(1);
       return;
     }
-    onSubmit(url.trim(), token.trim());
+    onSubmit(username.trim(), password);
   };
 
   useInput((char, key) => {
@@ -43,15 +46,15 @@ export function OverleafLink({ theme, onSubmit, onCancel }: Props) {
       return;
     }
     if (key.backspace || key.delete) {
-      if (focus === 0) setUrl((v) => v.slice(0, -1));
-      else setToken((v) => v.slice(0, -1));
+      if (focus === 0) setUsername((v) => v.slice(0, -1));
+      else setPassword((v) => v.slice(0, -1));
       return;
     }
     if (char && !key.ctrl && !key.meta) {
       const clean = sanitizeTyped(char);
       if (!clean) return;
-      if (focus === 0) setUrl((v) => v + clean);
-      else setToken((v) => v + clean);
+      if (focus === 0) setUsername((v) => v + clean);
+      else setPassword((v) => v + clean);
     }
   });
 
@@ -74,18 +77,18 @@ export function OverleafLink({ theme, onSubmit, onCancel }: Props) {
   return (
     <Box flexDirection="column" padding={1} gap={1}>
       <Text bold color={theme.note}>
-        Connect this project to Overleaf
+        Connect your OpenReview account
       </Text>
       <Box flexDirection="column">
-        <Text dimColor>1. In Overleaf, open your project and copy its web link.</Text>
-        <Text dimColor>
-          2. Account Settings → Git Integration → Create Token, and paste it below.
-        </Text>
+        <Text dimColor>Used to fetch your submissions and reviewer feedback (read-only).</Text>
+        <Text dimColor>Stored locally in ~/.handoff/config.json — never sent to the model.</Text>
       </Box>
-      {field('Overleaf project link', url, focus === 0)}
-      {field('Git authentication token', token, focus === 1, true)}
+      {field('Email or ~profile id', username, focus === 0)}
+      {field('Password', password, focus === 1, true)}
       {error ? <Text color={theme.error}>{error}</Text> : null}
-      <Text dimColor>▶ Setup walkthrough: handoff-org.github.io/handoff/overleaf</Text>
+      <Text dimColor>
+        ▶ Setup walkthrough: handoff-org.github.io/handoff/integrations#openreview
+      </Text>
       <Text dimColor>
         Tab to switch · Enter to {focus === 0 ? 'continue' : 'connect'} · Esc to cancel
       </Text>

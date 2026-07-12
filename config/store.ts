@@ -61,6 +61,14 @@ export interface StoredConfig {
   routerThinkModelId?: string;
   /** How often to show the per-turn tier note. */
   routerNotes?: 'off' | 'changes' | 'always';
+  /** Zotero Web API key (https://www.zotero.org/settings/keys) — enables the Zotero connector. */
+  zoteroApiKey?: string;
+  /** Zotero numeric user id (personal library id, shown on the API-keys page). */
+  zoteroUserId?: string;
+  /** OpenReview login (email or ~profile id) — enables the OpenReview connector. */
+  openreviewUsername?: string;
+  /** OpenReview password. Stored locally in ~/.handoff/config.json (plaintext, like hfToken). */
+  openreviewPassword?: string;
 }
 
 export async function readStore(): Promise<StoredConfig> {

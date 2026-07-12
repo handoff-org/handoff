@@ -3,6 +3,8 @@ import { Box, Text } from 'ink';
 import { Select } from './Select.js';
 import { ThemePreview } from './ThemePreview.js';
 import { OverleafLink } from './OverleafLink.js';
+import { ZoteroLink } from './ZoteroLink.js';
+import { OpenReviewLink } from './OpenReviewLink.js';
 import { ProjectMenu } from './ProjectMenu.js';
 import { Question } from './Question.js';
 import { ModelMenu } from './ModelMenu.js';
@@ -36,7 +38,9 @@ export type OverlayMode =
   | 'mode_select'
   | 'project_select'
   | 'template_select'
-  | 'overleaf_link';
+  | 'overleaf_link'
+  | 'zotero_link'
+  | 'openreview_link';
 
 /** A model question awaiting the user's on-screen selection. */
 export interface PendingQuestion {
@@ -199,6 +203,8 @@ interface Props {
   onProjectCreate: (title: string) => void;
   onProjectDelete: (slug: string) => void;
   onOverleafLink: (url: string, token: string) => void;
+  onZoteroLink: (apiKey: string, userId: string) => void;
+  onOpenReviewLink: (username: string, password: string) => void;
   onQuestionAnswer: (answer: string) => void;
 }
 
@@ -240,6 +246,8 @@ export function Overlays({
   onProjectCreate,
   onProjectDelete,
   onOverleafLink,
+  onZoteroLink,
+  onOpenReviewLink,
   onQuestionAnswer,
 }: Props): React.ReactElement | null {
   if (mode === 'backend_select') {
@@ -517,6 +525,14 @@ export function Overlays({
 
   if (mode === 'overleaf_link') {
     return <OverleafLink theme={theme} onSubmit={onOverleafLink} onCancel={onCancel} />;
+  }
+
+  if (mode === 'zotero_link') {
+    return <ZoteroLink theme={theme} onSubmit={onZoteroLink} onCancel={onCancel} />;
+  }
+
+  if (mode === 'openreview_link') {
+    return <OpenReviewLink theme={theme} onSubmit={onOpenReviewLink} onCancel={onCancel} />;
   }
 
   if (question) {

@@ -15,14 +15,35 @@ autocomplete menu of the slash commands; `/help` shows the same list in-app.
 | `/project` | Open the project menu — switch, create, or delete. |
 | `/project new <name>` | Create a project and make it active in one step. |
 | `/research <claim>` | Fact-check a claim (or survey a topic) against scholarly sources via OpenAlex. Returns a SUPPORTED / CONTESTED / REFUTED / UNCLEAR verdict with citations. |
+| `/note <text>` | Jot a free-form note into the active project's lab notebook (`NOTEBOOK.md`). |
 | `/overleaf` | Link the active project's `paper/` to an Overleaf project and sync both ways. Run again on a linked project to force a sync. |
+| `/zotero` | Connect your Zotero library (Web API key + numeric user id). See [Zotero & OpenReview](integrations.md). |
+| `/zotero-prep <paper>` | Read a paper in your Zotero library and highlight its key sentences in the PDF, with a comment on each explaining why it matters. |
+| `/openreview` | Fetch your OpenReview submissions and reviewer feedback, and help draft responses. Read-only — nothing is posted back. |
 
 Beyond the slash commands, handoff drives the literature through **tools** it calls for you:
 `search_papers` / `search_arxiv` to find work, `get_paper` / `fetch_arxiv` / `read_pdf` to read
-it, and `cite_paper <id>` to add a paper to `paper/refs.bib` — it generates a stable BibTeX key,
+it, `read_arxiv_source` to read a paper's LaTeX source (equations and structure, not flattened
+text), and `cite_paper <id>` to add a paper to `paper/refs.bib` — it generates a stable BibTeX key,
 returns the `\cite{key}` to place with `edit_file`, and is idempotent (citing the same paper
 twice never duplicates the entry). Accepts an OpenAlex id (`W…`), an arXiv id (`2301.07041`), or a
-DOI. Requires an initialized paper (ask handoff to start one first).
+DOI. Requires an initialized paper (ask handoff to start one first). Note-taking tools
+(`take_note` / `read_notebook` / `search_notes`) and the writing linter (`check_writing`) round
+out the reading/writing surface.
+
+## Vision (multimodal models)
+
+On a model with vision (e.g. `gemma3:4b` / `gemma3:12b` — pull one, then `/model`), handoff can
+**see** images, not just read text:
+
+| Tool | What it does |
+|------|--------------|
+| `view_image` | Look at a local image or an image URL (PNG/JPEG/GIF/WebP). |
+| `view_pdf_page` | Render a PDF page to an image and view it — figures, tables, layout that flat text loses. |
+
+`run_code` also surfaces any figures it generates (`results/*.png`) so the agent can `view_image`
+them. On a non-vision model these tools return a "switch to a vision model" note instead of an
+image. PDF rendering uses PyMuPDF via [uv](https://docs.astral.sh/uv/) (no `poppler` needed).
 
 ## Experiments & reproducibility
 

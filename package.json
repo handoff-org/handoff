@@ -24,6 +24,7 @@
     "dev": "tsx src/index.tsx",
     "start": "tsx src/index.tsx",
     "mascot": "tsx src/mascotPreview.tsx",
+    "media": "for f in docs/media/*.tape; do vhs \"$f\"; done",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts test/*.test.tsx",
     "lint": "eslint .",

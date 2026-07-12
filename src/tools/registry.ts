@@ -1,3 +1,14 @@
+/**
+ * What a tool returns. The common case is plain text; a vision tool can also
+ * attach base64 images (no `data:` prefix) that the loop forwards to the model
+ * on the tool-result message. `execute` may return a bare string for
+ * convenience — the registry normalizes it to `{ text }`.
+ */
+export interface ToolResult {
+  text: string;
+  images?: string[];
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -16,7 +27,7 @@ export interface ToolDefinition {
   };
   /** Mutating/dangerous tools that should require approval in permissions mode. */
   sensitive?: boolean;
-  execute: (args: Record<string, unknown>) => Promise<string>;
+  execute: (args: Record<string, unknown>) => Promise<string | ToolResult>;
 }
 
 export interface ToolSchema {
@@ -46,14 +57,24 @@ export class ToolRegistry {
     }));
   }
 
-  async call(name: string, args: Record<string, unknown>): Promise<string> {
+  /**
+   * Run a tool and return its full result, including any attached images.
+   * The agent loop uses this so vision tools can forward images to the model.
+   */
+  async callFull(name: string, args: Record<string, unknown>): Promise<ToolResult> {
     const tool = this.tools.get(name);
-    if (!tool) return `Error: unknown tool "${name}"`;
+    if (!tool) return { text: `Error: unknown tool "${name}"` };
     try {
-      return await tool.execute(args);
+      const out = await tool.execute(args);
+      return typeof out === 'string' ? { text: out } : out;
     } catch (err) {
-      return `Error: ${err instanceof Error ? err.message : String(err)}`;
+      return { text: `Error: ${err instanceof Error ? err.message : String(err)}` };
     }
+  }
+
+  /** Run a tool and return just its text output. Convenience over `callFull`. */
+  async call(name: string, args: Record<string, unknown>): Promise<string> {
+    return (await this.callFull(name, args)).text;
   }
 
   list(): string[] {

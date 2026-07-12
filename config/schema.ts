@@ -78,6 +78,15 @@ export const ConfigSchema = z.object({
   routerThinkModelId: z.string().optional(),
   // How often to show the per-turn tier note: only on change (default), always, or never.
   routerNotes: z.enum(['off', 'changes', 'always']).default('changes'),
+  // Zotero connector credentials. Optional until the user links a library
+  // (/zotero) or sets the env overrides below. The API key never passes through
+  // the model — it's captured by the link form and written straight to config.
+  zoteroApiKey: z.string().optional(),
+  zoteroUserId: z.string().optional(),
+  // OpenReview connector credentials. Optional until the user links (/openreview)
+  // or sets the env overrides. Captured by the link form, not through the model.
+  openreviewUsername: z.string().optional(),
+  openreviewPassword: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -156,6 +165,10 @@ export async function loadConfig(): Promise<Config> {
     routerFastModelId: store.routerFastModelId,
     routerThinkModelId: store.routerThinkModelId,
     routerNotes: store.routerNotes,
+    zoteroApiKey: process.env['HANDOFF_ZOTERO_API_KEY'] ?? store.zoteroApiKey,
+    zoteroUserId: process.env['HANDOFF_ZOTERO_USER_ID'] ?? store.zoteroUserId,
+    openreviewUsername: process.env['HANDOFF_OPENREVIEW_USERNAME'] ?? store.openreviewUsername,
+    openreviewPassword: process.env['HANDOFF_OPENREVIEW_PASSWORD'] ?? store.openreviewPassword,
   };
   // A corrupt or hand-edited config.json (e.g. a wrong-typed value that survives
   // JSON.parse) must never brick startup. safeParse + fall back to all-defaults.

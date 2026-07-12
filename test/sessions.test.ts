@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 import { freshHome } from './helpers.js';
 
@@ -46,5 +46,21 @@ test("saveSession does not mutate the caller's live in-memory history", async ()
     history[0].tool_calls[0].function.arguments,
     ARGS,
     'live history must not be mutated',
+  );
+});
+
+test('saveSession writes a timestamped, indented archive of the run (not just last.json)', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await saveSession([{ role: 'user', content: 'hi' }] as any, []);
+  const dir = join(home, '.handoff', 'sessions');
+  const archive = (await readdir(dir)).find((f) => /^session-.*\.json$/.test(f));
+  assert.ok(archive, 'a timestamped session archive should be written');
+  const raw = await readFile(join(dir, archive!), 'utf-8');
+  assert.match(raw, /\n {2}"savedAt"/, 'archive JSON should be indented');
+  // last.json is indented too, for readability.
+  assert.match(
+    await readFile(lastFile, 'utf-8'),
+    /\n {2}"savedAt"/,
+    'last.json should be indented',
   );
 });
