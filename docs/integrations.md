@@ -34,7 +34,7 @@ the next time you open the paper in Zotero.
 The key is captured by the form and written straight to config — it never passes
 through the model or the transcript.
 
-![Linking a Zotero library in handoff](media/zotero.gif)
+![The Zotero API-keys page: create a private key and copy your numeric user ID](assets/zotero-api.png)
 
 ### What you get
 
@@ -81,8 +81,6 @@ responses grounded in your actual paper. **Read-only: handoff never posts to Ope
 1. Run `/openreview`.
 2. Enter your OpenReview **email (or `~profile id`)** and **password**. They're written
    straight to config, never through the model.
-
-![Linking an OpenReview account in handoff](media/openreview.gif)
 
 ### What you get
 
