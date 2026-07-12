@@ -24,6 +24,7 @@
     "dev": "tsx src/index.tsx",
     "start": "tsx src/index.tsx",
     "mascot": "tsx src/mascotPreview.tsx",
+    "docs:check": "tsx scripts/check-docs.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts test/*.test.tsx",
     "lint": "eslint .",

@@ -1,6 +1,6 @@
 ---
 title: Zotero & OpenReview
-nav_order: 7.5
+nav_order: 7
 ---
 
 # Zotero & OpenReview

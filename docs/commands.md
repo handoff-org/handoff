@@ -100,9 +100,9 @@ See [Claims & handoff](claims-and-handoff.md) for the full workflow.
 
 | Command | What it does |
 |---------|--------------|
-| `/model` | Switch the active model. The picker is hardware-aware — see [Choosing a model](models.html). Preset shortcuts: `/model cool\|fast\|balanced\|deep` (bundles context + output + keep-alive + prompt budget). Routing tier overrides (when [model routing](configuration.html#model-routing) is on): `/model fast` / `/model think` force the next turn's tier. Diagnostics: `/model doctor` (CPU-spill warning) and `/model benchmark` (synthetic speed + tool-call test; `--quick`, `--model <id>`). |
+| `/model` | Switch the active model. The picker is hardware-aware — see [Choosing a model](models.md). Preset shortcuts: `/model cool\|fast\|balanced\|deep` (bundles context + output + keep-alive + prompt budget). Routing tier overrides (when [model routing](configuration.md#model-routing) is on): `/model fast` / `/model think` force the next turn's tier. Diagnostics: `/model doctor` (CPU-spill warning) and `/model benchmark` (synthetic speed + tool-call test; `--quick`, `--model <id>`). |
 | `/settings` | Set the **inference preset** (cool / fast / balanced / deep), toggle **personalization**, change the color theme, toggle the banner mascot, set the **performance mode**, the **context window** (Ollama `num_ctx`), toggle **flash attention** / **KV-cache** type, or configure **model routing** (enable, fast/think model, routing-notes verbosity). |
-| `/profile` | View or manage what handoff has learned about your preferences (local only). `show` (default), `enable` / `disable`, `forget <key>`, `why <key>`, `export`, `reset` → `reset yes`. See [Personalization](configuration.html#personalization). |
+| `/profile` | View or manage what handoff has learned about your preferences (local only). `show` (default), `enable` / `disable`, `forget <key>`, `why <key>`, `export`, `reset` → `reset yes`. See [Personalization](configuration.md#personalization). |
 | `/mode` | Toggle hands-on (approve sensitive tools) / hands-off (auto). Also `/mode hands-on`, `/mode hands-off`. |
 | `/resume` | Restore the last session for the active project. |
 | `/clear` | Reset the conversation. |

@@ -39,13 +39,17 @@ heading_anchors: true
 aux_links:
   'handoff on GitHub':
     - 'https://github.com/handoff-org/handoff'
+  'Contributing':
+    - 'https://github.com/handoff-org/handoff/blob/master/.github/CONTRIBUTING.md'
 aux_links_new_tab: true
 
 # Small footer on every page.
 back_to_top: true
 back_to_top_text: 'Back to top'
 footer_content: >-
-  handoff · local-first research companion · <a href="https://github.com/handoff-org/handoff">GitHub</a>
+  handoff · private research you can prove ·
+  <a href="https://github.com/handoff-org/handoff">GitHub</a> ·
+  <a href="https://www.npmjs.com/package/ownhandoff">npm</a> · MIT License
 
 # Files Jekyll should not copy into the built site.
 exclude:

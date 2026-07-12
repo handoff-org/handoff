@@ -1,6 +1,6 @@
 ---
 title: Choosing a model
-nav_order: 6
+nav_order: 9
 ---
 
 # Choosing a model

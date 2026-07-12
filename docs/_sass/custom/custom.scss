@@ -1,4 +1,11 @@
-// Match page background to logo background (#1a1a1a)
+// handoff documentation — theme polish.
+//
+// This file only *tunes* the existing just-the-docs "dark" scheme: it keeps the
+// brand palette (page #1a1a1a, code #242424) and the theme's accent/link colours
+// untouched, and improves spacing, hierarchy, borders, tables, code blocks,
+// callouts, images, and the homepage hero. No new palette, no new identity.
+
+// Match page background to the logo background (#1a1a1a).
 $body-background-color: #1a1a1a;
 $sidebar-color: #1a1a1a;
 $code-background-color: #242424;
@@ -9,7 +16,7 @@ $code-background-color: #242424;
   --code-background-color: #242424;
 }
 
-// Force background on all major containers
+// Force the background on all major containers so the whole chrome matches.
 body,
 .side-bar,
 .main,
@@ -18,4 +25,94 @@ body,
 nav.site-nav,
 .site-footer {
   background-color: #1a1a1a !important;
+}
+
+// ── Neutral surfaces/borders derived from the existing palette ───────────────
+// (subtle greys only — not new brand colours)
+$hf-surface: #202024;
+$hf-border: #2c2c33;
+
+// ── Reading rhythm ───────────────────────────────────────────────────────────
+.main-content {
+  line-height: 1.6;
+}
+
+.main-content p,
+.main-content ul,
+.main-content ol,
+.main-content blockquote,
+.main-content table,
+.main-content .highlighter-rouge {
+  margin-bottom: 1rem;
+}
+
+// ── Heading hierarchy ────────────────────────────────────────────────────────
+.main-content h1 {
+  margin-bottom: 0.75rem;
+}
+
+.main-content h2 {
+  margin-top: 2.25rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid $hf-border;
+}
+
+.main-content h3 {
+  margin-top: 1.75rem;
+}
+
+// ── Blockquotes as calm, consistent callouts ─────────────────────────────────
+.main-content blockquote {
+  border-left: 3px solid #4b5563;
+  background: $hf-surface;
+  padding: 0.75rem 1rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.main-content blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+// ── Code: subtle frame on the existing dark surface ──────────────────────────
+.main-content div.highlighter-rouge,
+.main-content pre.highlight {
+  border: 1px solid $hf-border;
+  border-radius: 6px;
+}
+
+// ── Tables: light borders, emphasised header, scroll on narrow screens ───────
+.main-content table {
+  border: 1px solid $hf-border;
+}
+
+.main-content table th {
+  background: $hf-surface;
+}
+
+.main-content table th,
+.main-content table td {
+  border-color: $hf-border;
+}
+
+@media (max-width: 50rem) {
+  .main-content table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+// ── Images: responsive; frame screenshots so they read as intentional ────────
+.main-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.main-content img[src*='-api'] {
+  border: 1px solid $hf-border;
+}
+
+// ── Homepage hero ────────────────────────────────────────────────────────────
+.main-content img[alt='handoff'] {
+  margin-bottom: 1.5rem;
 }
