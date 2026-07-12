@@ -31,10 +31,10 @@ the next time you open the paper in Zotero.
    **once** — copy it.
 4. In handoff, run `/zotero` and paste the key + user id into the form.
 
+![The Zotero API-keys page — "Create new private key" and your numeric user ID](assets/zotero-api.png)
+
 The key is captured by the form and written straight to config — it never passes
 through the model or the transcript.
-
-![The Zotero API-keys page: create a private key and copy your numeric user ID](assets/zotero-api.png)
 
 ### What you get
 

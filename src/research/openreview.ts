@@ -41,6 +41,9 @@ export interface RawNote {
   id?: string;
   forum?: string;
   number?: number;
+  /** Creation / modification epochs (ms) — used to sort submissions newest-first. */
+  cdate?: number;
+  tmdate?: number;
   invitations?: string[];
   invitation?: string; // v1 fallback
   signatures?: string[];
@@ -223,35 +226,55 @@ export function registerOpenReviewTools(registry: ToolRegistry): void {
   registry.register({
     name: 'openreview_my_submissions',
     description:
-      'List the OpenReview submissions where the linked user is an author. Returns each ' +
-      "submission's forum id, title, and venue — use the forum id with openreview_reviews. " +
+      'List the OpenReview submissions where the linked user is an author, most recent first. ' +
+      "Returns each submission's forum id, title, and venue — use the forum id with " +
+      'openreview_reviews. Shows the 5 most recent by default; pass `limit` for more. ' +
       'Requires a linked OpenReview account (/openreview).',
-    parameters: { type: 'object', properties: {} },
-    async execute() {
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'string',
+          description: 'How many recent submissions to show (default 5)',
+        },
+      },
+    },
+    async execute({ limit }) {
       const creds = await openreviewCreds();
       if (!creds) return NOT_LINKED;
+      const n = Number(limit);
+      const max = Number.isFinite(n) && n > 0 ? Math.floor(n) : 5;
       try {
         const { token, profileId } = await login(creds);
         if (!profileId) {
           return 'Logged in, but could not determine your profile id. Try again, or set your ~profile id as the username.';
         }
         const res = await orFetch(
-          `/notes?content.authorids=${encodeURIComponent(profileId)}&limit=50`,
+          `/notes?content.authorids=${encodeURIComponent(profileId)}&limit=100`,
           token,
         );
         if (!res.ok) return `OpenReview error (HTTP ${res.status}).`;
-        const subs = parseSubmissions(await res.json());
+        const json = await res.json();
+        // Sort newest-first (cdate, else tmdate) so "the last N" is accurate
+        // regardless of the API's default ordering, then keep the most recent `max`.
+        const notes = ((json as { notes?: RawNote[] }).notes ?? [])
+          .slice()
+          .sort((a, b) => Number(b.cdate ?? b.tmdate ?? 0) - Number(a.cdate ?? a.tmdate ?? 0));
+        const subs = parseSubmissions({ notes: notes.slice(0, max) });
         if (!subs.length) {
           return `No submissions found for ${profileId}. (Blind or withdrawn papers may not be listed, and very new venues can lag.)`;
         }
-        return subs
-          .map(
-            (s) =>
-              `[${s.forum}] ${s.title}${s.number ? ` (#${s.number})` : ''}${
-                s.venue ? ` — ${s.venue}` : ''
-              }`,
-          )
-          .join('\n');
+        const lines = subs.map(
+          (s) =>
+            `[${s.forum}] ${s.title}${s.number ? ` (#${s.number})` : ''}${
+              s.venue ? ` — ${s.venue}` : ''
+            }`,
+        );
+        const hidden = notes.length - subs.length;
+        if (hidden > 0) {
+          lines.push(`… ${hidden} older not shown — pass limit=${notes.length} to see all.`);
+        }
+        return lines.join('\n');
       } catch (e) {
         return e instanceof Error ? e.message : String(e);
       }

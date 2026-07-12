@@ -27,11 +27,11 @@ interchangeably without copy-pasting.
    Paste the project link and the token into the form. handoff clones the project into
    your active project's `paper/` directory and switches the project to Overleaf mode.
 
+![Overleaf's Git integration settings — create a token under Account Settings → Git Integration](assets/overleaf-api.png)
+
 The token is handled as a sensitive credential: it's masked in the UI, stored only in
 `paper/.git/config`, and redacted from any git output shown in the transcript. handoff
 never prints it back.
-
-![Overleaf's Git integration settings: create a Git authentication token](assets/overleaf-api.png)
 
 ## How sync works
 
