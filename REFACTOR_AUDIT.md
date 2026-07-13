@@ -408,3 +408,33 @@ which is safer than a big-bang move. Naming dedupe + recursive discovery deliver
 the substantive "organized" win; the directory shuffle is cosmetic and left as a
 low-risk follow-up.
 
+### Phase 10 — Final verification ✅ (2026-07-13)
+
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | PASS |
+| `npm test` | 575 pass / 0 fail (was 568 at baseline; +7 new) |
+| `npm run lint` | 0 errors / 10 warnings (9 hook-deps in app.tsx tracked for the deferred split; 1 test `any`) |
+| `npm run format:check` | clean |
+| `npm run docs:check` | 12 pages OK |
+| `npm run qa:chat:smoke` | 22/22 |
+| `npm run check` | exits 0 (all of the above except qa) |
+| `npm run deadcode` (advisory) | 4 unused exports + 1 type + 1 intentional dup — all documented in STALE_CODE_AUDIT.md §E |
+| CLI smoke (`node bin/handoff.js --help`) | exits 0 (prints the TTY notice — it's a TUI, no headless `--help`; unchanged by this refactor) |
+
+**Definition-of-done status:**
+- ✅ Baseline failures fixed or documented.
+- ✅ `builtin.ts` split into focused modules with tests.
+- ✅ Tests run recursively; duplicate-named pairs disambiguated (coverage preserved).
+- ✅ Stale deletions documented (`STALE_CODE_AUDIT.md`) and acted on safely.
+- ✅ README / package metadata / docs consistent (research-agent identity).
+- ✅ CI covers typecheck, lint, format, docs, tests, QA smoke, dead-code (advisory).
+- ✅ Root hygiene files present (AGENTS, CHANGELOG, .env.example, .editorconfig, .gitattributes, dependabot, knip).
+- ✅ No user-facing command, research workflow, or local-first guarantee broken (QA 22/22; tool list byte-identical after the split).
+- ⏳ **`ui/app.tsx` NOT yet <800 LOC** (2941). Foundation laid (first-ever App
+  render test net + one safe extraction); the deep hook/handler/effect
+  decomposition is a documented, net-backed follow-up — deliberately not rushed
+  because app.tsx has no behavioral coverage and the TUI can't be driven
+  headlessly, so a big-bang split would risk silent regressions. This is the one
+  open item against the brief.
+
