@@ -293,3 +293,30 @@ ledger). Summary:
 
 `npm run check` green.
 
+### Phase 4 — Split builtin tools ✅ (2026-07-13)
+
+`src/tools/builtin.ts` **641 → 24 LOC** (thin aggregator). The 14 tools moved
+into focused modules under `src/tools/builtin/`, each owning its schema,
+validation, execution, and safety metadata:
+
+| Module | LOC | Tools |
+|---|---:|---|
+| `filesystem.ts` | 149 | read_file, write_file, edit_file, make_dir, list_dir |
+| `latex.ts` | 230 | compile_paper, fix_paper_errors (+ exported `runLatexCompile`/`applyLatexFixes`) |
+| `web.ts` | 100 | web_fetch, web_search |
+| `pdf.ts` | 87 | read_pdf |
+| `search.ts` | 73 | search_files, find_files |
+| `interaction.ts` | 37 | ask_user |
+| `shell.ts` | 35 | run_shell |
+
+`registerBuiltins` stays exported from `src/tools/builtin.ts` (unchanged import
+for `index.tsx`, `adapters/runner.ts`, `qa/harness.ts`), registering the groups
+in the **same order** as before so the model's tool list is unchanged. Security
+metadata (`sensitive: true`) and the workspace/SSRF guards moved with each tool.
+typecheck + 571 tests + 22/22 QA smoke green; format/lint clean.
+
+The brief's `tools/security/{paths,ssrf,redaction}` split was **not** done:
+`ssrf.ts` already isolates SSRF, path guards live in `workspace/project.ts`
+(`resolveWorkspacePath`/`isWithinProject`), and moving them would churn imports
+tree-wide for no behavior gain under the internal-reorg scope.
+
