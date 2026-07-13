@@ -2,25 +2,36 @@
 title: Home
 layout: default
 nav_order: 1
-description: "handoff — a local-first AI research companion for reading papers, running experiments, writing LaTeX, and tracking claims."
+description: "handoff — a local-first AI research companion for reading papers, running experiments, writing LaTeX, and tracking claims from your terminal."
 permalink: /
 ---
 
-![handoff]({{ '/assets/banner120.png' | relative_url }}){: style="width:100%; border-radius:8px; margin-bottom:1.5rem;"}
-
-# handoff
-
-**Private research you can prove.**
-{: .fs-6 .fw-500 }
-
-A local-first AI research companion that lives in your terminal — read papers, run
-experiments, write LaTeX, track every claim to its evidence, and hand off clean research
-context. The models run on *your* machine; nothing leaves your computer unless you say so.
-{: .fs-5 .fw-300 }
-
-[Get started](getting-started.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Commands](commands.md){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[GitHub](https://github.com/handoff-org/handoff){: .btn .fs-5 .mb-4 .mb-md-0 }
+<div class="hf-hero">
+  <div class="hf-hero-grid">
+    <div class="hf-hero-copy">
+      <span class="hf-eyebrow">Local-first · Terminal-native · Private</span>
+      <h1>handoff</h1>
+      <p class="hf-tagline">
+        Private research you can prove. Read papers, run experiments,
+        write LaTeX, and trace every claim to its evidence — models on
+        your machine, nothing leaves unless you say so.
+      </p>
+      <div class="hf-hero-ctas">
+        <a href="getting-started.html" class="btn btn-primary fs-5">Get started</a>
+        <a href="commands.html" class="btn fs-5">Commands</a>
+        <a href="https://github.com/handoff-org/handoff" class="btn fs-5">GitHub</a>
+      </div>
+      <div class="hf-hero-meta">
+        <span><span class="hf-meta-dot"></span>Runs locally on Ollama · llama.cpp · MLX</span>
+        <span>MIT license</span>
+        <span>TypeScript + Ink TUI</span>
+      </div>
+    </div>
+    <div>
+      {% include terminal-card.html %}
+    </div>
+  </div>
+</div>
 
 ---
 
@@ -37,48 +48,90 @@ irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/inst
 npm install -g ownhandoff
 ```
 
-Package **`ownhandoff`** · command **`handoff`**. Then run `handoff` and follow the setup
-wizard. See [Getting started](getting-started.md).
+Package **`ownhandoff`** · command **`handoff`**. Then run `handoff` and follow the setup wizard.
 
 ## What handoff does
 
-| | |
-|---|---|
-| 🔬 **Read** | Search OpenAlex & arXiv live, read PDFs and LaTeX source, build `.bib` files, and fact-check claims with `/research`. |
-| 🧪 **Run** | Each Python experiment runs in an isolated [uv](https://docs.astral.sh/uv/) project and is captured as a reproducible capsule — code, env, metrics, `repro.sh`. |
-| 📝 **Write** | Draft from ACL, NeurIPS, or a blank template, edit in place with a diff box, and sync two-way with Overleaf. |
-| ✅ **Prove** | A claim ledger, `/audit-paper`, `/provenance`, and `/handoff` packets keep every number traceable to its evidence. |
-| 🔗 **Integrate** | Annotate papers in Zotero, and fetch & answer reviews from OpenReview. |
+{% include feature-grid.html %}
 
 ## Why local-first
+
+<div class="hf-privacy-strip">
+  <span class="hf-badge">No cloud required</span>
+  <span class="hf-badge">Data stays on your machine</span>
+  <span class="hf-badge">Ollama · llama.cpp · MLX · vLLM</span>
+  <span class="hf-badge">HuggingFace opt-in only</span>
+  <span class="hf-badge">Open source · MIT</span>
+</div>
 
 handoff runs against [Ollama](https://ollama.com), llama.cpp, MLX, or vLLM on your own
 machine, so your literature, data, drafts, and conversations stay with you. A cloud model
 (HuggingFace) is only ever used **after you explicitly opt in** — and even then, only the
 context you send.
 
-## Core workflows
+## Core workflow
 
 ```text
-/project new Memory and Attention     # scaffold a private research workspace
-/research transformers need positional encodings   # fact-check against the literature
+/project new Memory and Attention       # scaffold a private research workspace
+/research transformers need positional encodings  # fact-check against the literature
 # …ask it to run experiments and draft your paper…
 /audit-paper                            # catalog every claim; flag the unsupported ones
 /handoff --for-me                       # a grounded summary of where the work stands
 ```
 
-## Next steps
+<div class="hf-cta-strip">
+  <div>
+    <p class="hf-cta-text">Ready to get started?</p>
+    <p class="hf-cta-sub">Install takes under a minute. First research session in five.</p>
+  </div>
+  <a href="getting-started.html" class="btn btn-primary">Get started →</a>
+</div>
 
-| | |
-|---|---|
-| [Getting started](getting-started.md) | Install, first launch, first project. |
-| [Research workflow](research-workflow.md) | Literature → experiments → results → paper. |
-| [Commands](commands.md) | Every slash command and key binding. |
-| [Claims & handoff](claims-and-handoff.md) | Claim ledger, `/audit-paper`, transfer packets. |
-| [Overleaf sync](overleaf.md) | Two-way LaTeX sync, tokens, troubleshooting. |
-| [Zotero & OpenReview](integrations.md) | Annotate papers, fetch & answer reviews. |
-| [Configuration](configuration.md) | Config file, env vars, backends, themes. |
-| [Choosing a model](models.md) | Fast local models, presets, doctor & benchmark. |
-| [Skills](skills.md) | Save and replay your own workflows. |
-| [Troubleshooting](troubleshooting.md) | Fixes for the common snags. |
-| [Architecture](architecture.md) | Contributor's tour of the codebase. |
+## Docs
+
+<div class="hf-docs-grid">
+  <a href="getting-started.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Getting started</p>
+    <p class="hf-docs-card__desc">Install, first launch, first project.</p>
+  </a>
+  <a href="research-workflow.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Research workflow</p>
+    <p class="hf-docs-card__desc">Literature → experiments → results → paper.</p>
+  </a>
+  <a href="commands.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Commands</p>
+    <p class="hf-docs-card__desc">Every slash command and key binding.</p>
+  </a>
+  <a href="claims-and-handoff.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Claims &amp; handoff</p>
+    <p class="hf-docs-card__desc">Claim ledger, audit, transfer packets.</p>
+  </a>
+  <a href="overleaf.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Overleaf sync</p>
+    <p class="hf-docs-card__desc">Two-way LaTeX sync, tokens, troubleshooting.</p>
+  </a>
+  <a href="integrations.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Zotero &amp; OpenReview</p>
+    <p class="hf-docs-card__desc">Annotate papers, fetch and answer reviews.</p>
+  </a>
+  <a href="configuration.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Configuration</p>
+    <p class="hf-docs-card__desc">Config file, env vars, backends, themes.</p>
+  </a>
+  <a href="models.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Choosing a model</p>
+    <p class="hf-docs-card__desc">Fast local models, presets, doctor &amp; benchmark.</p>
+  </a>
+  <a href="skills.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Skills</p>
+    <p class="hf-docs-card__desc">Save and replay your own workflows.</p>
+  </a>
+  <a href="troubleshooting.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Troubleshooting</p>
+    <p class="hf-docs-card__desc">Fixes for the common snags.</p>
+  </a>
+  <a href="architecture.html" class="hf-docs-card">
+    <p class="hf-docs-card__title">Architecture</p>
+    <p class="hf-docs-card__desc">Contributor's tour of the codebase.</p>
+  </a>
+</div>

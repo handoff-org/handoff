@@ -58,8 +58,10 @@ for (const file of mdFiles) {
   const body = stripFences(raw);
   const where = `docs/${file}`;
 
-  // One H1.
-  const h1s = body.split('\n').filter((l) => /^#\s+\S/.test(l)).length;
+  // One H1 — count both Markdown `# …` and HTML `<h1>…` forms.
+  const mdH1s = body.split('\n').filter((l) => /^#\s+\S/.test(l)).length;
+  const htmlH1s = (body.match(/<h1[\s>]/gi) ?? []).length;
+  const h1s = mdH1s + htmlH1s;
   if (h1s !== 1) errors.push(`${where}: expected exactly one H1, found ${h1s}`);
 
   // Placeholders.
