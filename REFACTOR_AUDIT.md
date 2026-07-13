@@ -386,3 +386,25 @@ integration/interactive, low-risk, unchanged by this refactor): Ctrl+C /
 uncaught-exception terminal cleanup (the `INPUT_MODES_OFF` / alt-screen restore
 effects in `app.tsx` + `index.tsx`).
 
+### Phase 5 — Test organization ✅ (2026-07-13)
+
+- **Recursive runner:** `npm test` glob `test/*.test.ts(x)` → `test/**/*.test.ts(x)`
+  (Node's `--test` expands `**` internally). Verified it still finds all 575
+  tests. `knip.json` test-entry and the eslint `test/**` lint were already
+  recursive.
+- **Dedupe naming** (the brief's suspected-duplicate pairs — distinct scope, so
+  renamed not deleted):
+  - `model-menu.test.tsx` → `modelMenu.render.test.tsx` (component render)
+  - `modelMenu.test.tsx` → `modelMenu.command.test.tsx` (`/model` command)
+  - `systemPrompt2.test.ts` → `systemPrompt.modes.test.ts` (modes + Overleaf)
+- **`test/README.md`** documents the conventions and the `unit/ integration/
+  e2e/ helpers/ fixtures/ mocks/` taxonomy.
+
+**Physical bucketing deferred (deliberate):** moving 67 files into subdirectories
+is pure churn with subjective categorization and, done wrong, silent
+relative-import breakage. The recursive runner means it can now happen
+**incrementally, one file at a time**, each move verified by the full suite —
+which is safer than a big-bang move. Naming dedupe + recursive discovery deliver
+the substantive "organized" win; the directory shuffle is cosmetic and left as a
+low-risk follow-up.
+
