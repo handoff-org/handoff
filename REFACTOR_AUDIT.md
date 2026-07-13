@@ -254,3 +254,22 @@ Kept `CONTRIBUTING.md`/`SECURITY.md` in `.github/` (a GitHub-recognized
 location; both are accurate) rather than duplicating to root — `AGENTS.md` links
 them. `npm run check` still exits 0.
 
+### Phase 7 — Docs + metadata alignment ✅ (2026-07-13)
+
+- **`package.json` description** rewritten from "Claude Code-style TUI coding
+  agent" → research-companion framing consistent with the README.
+- **Keywords** — dropped `coding-agent`/`agent`/`ai`; added `research`,
+  `research-agent`, `latex`, `reproducibility`, `science`.
+- **Stale org URLs fixed** — all `IParraMartin` / `iparramartin.github.io`
+  references (`.github/CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/config.yml`)
+  updated to `handoff-org` / `handoff-org.github.io`. Repo-wide sweep now finds
+  zero. README already used `handoff-org` + `ownhandoff` correctly.
+- **`.github/CONTRIBUTING.md`** pre-PR step updated to `npm run check` (the new
+  comprehensive gate).
+
+**Left intentionally:** `src/agent/systemPrompt.ts:102` ("Act as a coding agent
+through tools…") is an *operational* tool-use instruction (behavior, cached via
+`SYSTEM_PROMPT_VERSION`, asserted by a test), distinct from product positioning —
+out of scope for metadata alignment and risky to churn. README prose is already
+correctly positioned. `npm run check` green.
+

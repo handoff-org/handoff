@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://iparramartin.github.io/handoff
+    url: https://handoff-org.github.io/handoff
     about: Getting started, commands, configuration, and the research workflow.
   - name: Questions & discussion
-    url: https://github.com/IParraMartin/handoff/discussions
+    url: https://github.com/handoff-org/handoff/discussions
     about: Ask a question or share an idea (enable Discussions in the repo settings).

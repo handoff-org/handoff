@@ -10,7 +10,7 @@ handoff runs directly from TypeScript source — **there is no build step**. You
 **Node.js 18+**.
 
 ```sh
-git clone https://github.com/IParraMartin/handoff
+git clone https://github.com/handoff-org/handoff
 cd handoff
 npm install
 npm run dev        # launches the TUI from source (tsx src/index.tsx)
@@ -24,9 +24,12 @@ TTY). For a global `handoff` command pointing at your checkout, run
 ## Before you open a PR
 
 ```sh
-npm run typecheck   # tsc --noEmit
-npm test            # node:test suite (also gated by prepublishOnly)
+npm run check       # typecheck -> lint -> format:check -> docs:check -> test
 ```
+
+You can also run the pieces individually: `npm run typecheck`, `npm run lint`,
+`npm run format` (auto-fix), `npm run docs:check`, `npm test`, and
+`npm run qa:chat:smoke` (deterministic chat-simulation smoke test).
 
 Both must pass. If your change is user-facing, also launch the app and verify it by hand
 — many things (input handling, rendering) can't be fully covered by unit tests.

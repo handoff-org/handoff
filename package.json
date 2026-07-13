@@ -1,7 +1,7 @@
 {
   "name": "ownhandoff",
   "version": "0.1.0",
-  "description": "Own your data. A local-first, Claude Code-style TUI coding agent powered by your own Ollama models.",
+  "description": "Own your research. A local-first, terminal-native research companion: read papers, run experiments, write LaTeX, and trace every claim to its evidence — powered by models on your own machine.",
   "type": "module",
   "bin": {
     "handoff": "bin/handoff.js"
@@ -43,15 +43,17 @@
     "prepublishOnly": "npm run typecheck && npm test"
   },
   "keywords": [
+    "research",
+    "research-agent",
     "tui",
-    "agent",
-    "ai",
     "cli",
+    "terminal",
     "llm",
     "ollama",
     "local-first",
-    "terminal",
-    "coding-agent"
+    "latex",
+    "reproducibility",
+    "science"
   ],
   "author": "Inigo Parra",
   "license": "MIT",
