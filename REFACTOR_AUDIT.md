@@ -320,3 +320,39 @@ The brief's `tools/security/{paths,ssrf,redaction}` split was **not** done:
 (`resolveWorkspacePath`/`isWithinProject`), and moving them would churn imports
 tree-wide for no behavior gain under the internal-reorg scope.
 
+### Phase 3 — Split ui/app.tsx ⏳ IN PROGRESS (foundation laid) (2026-07-13)
+
+**Blocker discovered:** `ui/app.tsx` (2941 LOC) had **zero automated coverage**
+— the QA harness drives `runAgentLoop` directly (never renders `App`) and no
+test imported it. I also can't drive the TUI interactively (no TTY). Per the
+user's decision ("build test net first"), I started with a net.
+
+**Net built** — `test/app-render.test.tsx`: renders `App` via
+ink-testing-library with a mock registry, a `backend: 'llama_cpp'` config (skips
+the ollama model-prepare path), a never-resolving `fetch` stub (mount probes
+stay pending harmlessly), and `HANDOFF_REDUCED_MOTION` (no animation timers).
+Asserts App mounts, renders a non-empty frame with input chrome, and unmounts
+cleanly. This is the first-ever coverage of `app.tsx` and guards against render
+crashes / import errors / effect throws from any future extraction.
+
+**Key limitation:** a render smoke net catches *crashes*, not *logic/closure*
+regressions. Stdin keystroke simulation of slash commands did **not** work
+(custom input handling), so there is no behavioral dispatch net. That means only
+**pure** extractions (module-scope components, helpers, presentational JSX) are
+verifiably safe right now; extracting the closure-coupled hooks / command
+handlers / effects risks silent stale-closure or effect-timing bugs the net
+can't see.
+
+**Done under the net:** extracted the pure `InputContent` component →
+`ui/InputContent.tsx` (−~50 LOC), verified by typecheck + the render net.
+
+**Remaining (net-backed follow-up):** reaching the brief's <800 LOC target
+requires decomposing the hook/handler/effect graph (controllers for chat loop,
+command dispatch, project/model state; the `handleSubmit` router; session;
+terminal lifecycle) — and resolving the 9 `react-hooks/exhaustive-deps`
+warnings. Doing that safely needs a **behavioral** test net first (e.g. driving
+`handleSubmit` via an extracted pure command-router unit-tested exhaustively, or
+a working stdin harness). Deliberately **not** rushed here to avoid silently
+breaking the user's TUI — consistent with the internal-reorg / low-risk scope.
+`app.tsx` stands at 2941 LOC; `npm run check` green (574 tests).
+
