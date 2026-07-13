@@ -356,3 +356,33 @@ a working stdin harness). Deliberately **not** rushed here to avoid silently
 breaking the user's TUI — consistent with the internal-reorg / low-risk scope.
 `app.tsx` stands at 2941 LOC; `npm run check` green (574 tests).
 
+### Phase 9 — Security + safety hardening ✅ (2026-07-13)
+
+**Audit result: the safety posture is already strong and well-tested.** Each
+brief checklist item maps to existing coverage:
+
+| Safety property | Covered by |
+|---|---|
+| FS writes stay inside the workspace | `tools.test.ts` (write_file/make_dir refuse `../../` + absolute escapes; in-project write allowed) + `project.test.ts` (`resolveWorkspacePath`/`isWithinProject`) + `approval.test.ts` (incl. symlink escape) |
+| Shell / mutating tools require approval | `tools.test.ts` (`isSensitive` gating) |
+| SSRF (web_fetch / read_pdf) | `ssrf.test.ts` (11) + `tools.test.ts` (file://, link-local, metadata refused) |
+| Secret redaction | `redact.test.ts` (JSON keys, URL creds, bearer, hf_/sk-/gh_/AKIA) + `personalization-redaction.test.ts` + `sessions.test.ts` (redacted before archive) |
+| Corrupt config recovery | `config.test.ts` (invalid JSON tolerated, wrong-typed fallback, never rejects) |
+| Corrupt JSONL (lit notes / bindings / notebook) | `jsonl.test.ts` (`parseJsonl` skips only the corrupt line) |
+| Malformed / duplicate tool calls | qa scenarios `malformed-tool`, `duplicate-tool` + `loop.test.ts` + `edit_file` missing-string/file cases |
+| Single-document guard (Overleaf) | `overleaf.test.ts` (`overleafWriteGuard`) |
+| Non-TTY behavior | `ask_user` headless fallback (`builtin/interaction.ts`) |
+| Local-first defaults / cloud opt-in | `advisor` tests (cloud models not recommended without consent) |
+
+**Added** (genuine gap): `redact.test.ts` now locks in that handoff's actual
+opt-in connector credential keys — `zoteroApiKey`, `openreviewPassword` — are
+redacted by name, so a future regex tightening can't silently leak them. 575
+tests.
+
+No security regressions were introduced by the refactor (the Phase 4 tool split
+kept every `sensitive` flag and workspace/SSRF guard; `tools.test.ts` still
+passes against `registerBuiltins`). Not unit-tested (inherently
+integration/interactive, low-risk, unchanged by this refactor): Ctrl+C /
+uncaught-exception terminal cleanup (the `INPUT_MODES_OFF` / alt-screen restore
+effects in `app.tsx` + `index.tsx`).
+

@@ -18,6 +18,17 @@ test('leaves non-secret values intact', () => {
   assert.equal(redactSecrets(s), s);
 });
 
+test('masks handoff research-connector credentials (zoteroApiKey, openreviewPassword)', () => {
+  // These opt-in connector secrets flow through saved sessions/config; a regex
+  // tightening must never let their values leak. Assert the actual key names.
+  assert.match(
+    redactSecrets('{"zoteroApiKey":"P9NiFoyLeZu2bZNvvuQPDpKf"}'),
+    /"zoteroApiKey":"•••"/,
+  );
+  assert.match(redactSecrets('{"openreviewPassword":"hunter2"}'), /"openreviewPassword":"•••"/);
+  assert.doesNotMatch(redactSecrets('{"zoteroApiKey":"P9NiFoyLeZu2bZNvvuQPDpKf"}'), /P9Ni/);
+});
+
 test('masks a token embedded in a git URL', () => {
   assert.equal(
     redactSecrets('https://git:tok_SECRET@git.overleaf.com/abc'),
