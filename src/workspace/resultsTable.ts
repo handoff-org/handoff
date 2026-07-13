@@ -1,5 +1,6 @@
 import { basename } from 'path';
 import { escapeLatex } from '../agent/latex.js';
+import { summarizeMetric } from './statsReport.js';
 
 // Pure, I/O-free rendering of experiment results into paper-ready artifacts:
 // a metrics table (LaTeX booktabs + GitHub-flavored markdown) and figure blocks.
@@ -125,6 +126,84 @@ export function metricsTable(
   return {
     latex: latexTable(columnSpec, header, latexBody, caption, label),
     markdown: markdownTable(header, mdBody),
+  };
+}
+
+/**
+ * Like `metricsTable` but appends a cross-run statistics block (mean ± std and
+ * 95% CI) below the main table. The optional `baselineLabel` marks that row with
+ * "(baseline)" so the reader knows which system to compare against.
+ *
+ * In LaTeX the stats block is appended as `%`-prefixed comments below the table
+ * (copy into a `\\textit{…}` note or a separate tabular as needed).
+ * In markdown it renders as a second table.
+ */
+export function metricsTableWithStats(
+  rows: ResultRow[],
+  baselineLabel?: string,
+  opts: TableOptions = {},
+): { latex: string; markdown: string } {
+  const displayRows = baselineLabel
+    ? rows.map((r) => ({
+        ...r,
+        label: r.label === baselineLabel ? `${r.label} (baseline)` : r.label,
+      }))
+    : rows;
+
+  const { latex: baseLatex, markdown: baseMd } = metricsTable(displayRows, opts);
+  if (!rows.length) return { latex: baseLatex, markdown: baseMd };
+
+  const keys = opts.keys?.length ? opts.keys : unionKeys(rows);
+
+  const summaries = keys.map((k) => {
+    const vals = rows
+      .map((r) => r.metrics[k])
+      .filter((v): v is number => v !== undefined && Number.isFinite(v));
+    return { key: k, s: summarizeMetric(vals, k) };
+  });
+
+  const statsMdRows = summaries
+    .filter(({ s }) => s.n > 0)
+    .map(({ key, s }) => {
+      const meanStd =
+        s.n > 1 ? `${formatNumber(s.mean)} ± ${formatNumber(s.std)}` : formatNumber(s.mean);
+      const ci =
+        s.n > 1 ? `[${formatNumber(s.ci95Low)}, ${formatNumber(s.ci95High)}]` : '—';
+      return `| ${key} | ${meanStd} | ${ci} |`;
+    });
+
+  const statsLatexLines = summaries
+    .filter(({ s }) => s.n > 0)
+    .map(({ key, s }) => {
+      const meanStd =
+        s.n > 1 ? `${formatNumber(s.mean)} ± ${formatNumber(s.std)}` : formatNumber(s.mean);
+      const ci =
+        s.n > 1 ? `[${formatNumber(s.ci95Low)}, ${formatNumber(s.ci95High)}]` : '--';
+      return `%   ${key.padEnd(20)}  ${meanStd.padEnd(24)}  CI ${ci}`;
+    });
+
+  const latexStats = statsLatexLines.length
+    ? '\n% cross-run stats (n=' +
+      rows.length +
+      '):\n% ' +
+      'Metric'.padEnd(20) +
+      '  ' +
+      'Mean ± Std'.padEnd(24) +
+      '  95% CI\n' +
+      statsLatexLines.join('\n')
+    : '';
+
+  const mdStats =
+    statsMdRows.length
+      ? '\n\n**Cross-run stats (n=' +
+        rows.length +
+        '):**\n| Metric | Mean ± Std | 95% CI |\n|---|---|---|\n' +
+        statsMdRows.join('\n')
+      : '';
+
+  return {
+    latex: baseLatex + latexStats,
+    markdown: baseMd + mdStats,
   };
 }
 

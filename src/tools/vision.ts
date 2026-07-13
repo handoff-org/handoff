@@ -168,6 +168,43 @@ function renderPdfPageToPng(
   return { png: out };
 }
 
+/**
+ * Detect which inline-image terminal protocol is available.
+ * Returns 'iterm2', 'kitty', or null (unsupported).
+ */
+function detectTerminalImageSupport(): 'iterm2' | 'kitty' | null {
+  if (process.env['ITERM_SESSION_ID']) return 'iterm2';
+  if (process.env['TERM'] === 'xterm-kitty' || process.env['TERM_PROGRAM'] === 'WezTerm') {
+    return 'kitty';
+  }
+  return null;
+}
+
+/**
+ * Write an iTerm2 inline image escape sequence directly to stdout.
+ * The image appears inline in the terminal immediately, independently of the
+ * tool result the model sees.
+ */
+function displayItermImage(bytes: Buffer, name: string): void {
+  const b64 = bytes.toString('base64');
+  const seq =
+    `\x1b]1337;File=inline=1;size=${bytes.length};` +
+    `name=${Buffer.from(name).toString('base64')};` +
+    `width=80%;preserveAspectRatio=1:${b64}\x07`;
+  process.stdout.write(seq);
+}
+
+/**
+ * Write a kitty terminal graphics escape sequence (simplest chunked form).
+ * Sends the full image in one APC chunk with format=100 (PNG raw).
+ */
+function displayKittyImage(bytes: Buffer): void {
+  const b64 = bytes.toString('base64');
+  // a=T = display directly, f=100 = PNG format, m=0 = no more chunks
+  const seq = `\x1b_Ga=T,f=100,m=0;${b64}\x1b\\`;
+  process.stdout.write(seq + '\n');
+}
+
 export function registerVisionTools(registry: ToolRegistry): void {
   // ── view_image ─────────────────────────────────────────────────────────────
   registry.register({
@@ -210,6 +247,104 @@ export function registerVisionTools(registry: ToolRegistry): void {
         checked.kind,
         note ? String(note) : undefined,
       );
+    },
+  });
+
+  // ── preview_figure ─────────────────────────────────────────────────────────
+  registry.register({
+    name: 'preview_figure',
+    description:
+      'Render a figure or PDF page inline in the terminal (iTerm2/kitty/WezTerm). ' +
+      'Displays the image directly in the terminal window without consuming model context. ' +
+      'Accepts a local image path (PNG/JPEG), a PDF path with an optional page number, ' +
+      'or a URL. Falls back gracefully in unsupported terminals with path + size info. ' +
+      'Does NOT send the image to the model — use view_image for that.',
+    sensitive: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        source: {
+          type: 'string',
+          description: 'Local path to an image or PDF, or an image URL',
+        },
+        page: {
+          type: 'string',
+          description: 'Page number to render for PDFs, 1-based (default 1)',
+        },
+      },
+      required: ['source'],
+    },
+    async execute({ source, page }) {
+      const src = String(source ?? '').trim();
+      if (!src) return 'Provide a `source` (image path, PDF path, or URL).';
+
+      const isPdf = /\.pdf$/i.test(src.split('?')[0]!);
+      let imageBytes: Buffer;
+      let imageName: string;
+
+      if (isPdf) {
+        if (!pymupdfAvailable()) {
+          return (
+            'uv is required to render PDF pages (PyMuPDF). ' +
+            'Install: https://docs.astral.sh/uv/\n' +
+            `File: ${src}`
+          );
+        }
+        let pdfPath = src;
+        let tempPdf: string | null = null;
+        if (src.startsWith('http://') || src.startsWith('https://')) {
+          let res: Response;
+          try {
+            res = await safeFetch(src);
+          } catch (err) {
+            return err instanceof Error ? err.message : String(err);
+          }
+          if (!res.ok) return `HTTP ${res.status}: ${res.statusText}`;
+          tempPdf = join(tmpdir(), `handoff-pdfprev-${randomUUID()}.pdf`);
+          writeFileSync(tempPdf, Buffer.from(await res.arrayBuffer()));
+          pdfPath = tempPdf;
+        }
+        const page1 = Math.max(1, Math.floor(Number(page ?? 1)) || 1);
+        let pngPath: string | null = null;
+        try {
+          const rendered = renderPdfPageToPng(pdfPath, page1, 150);
+          if ('error' in rendered) return rendered.error;
+          pngPath = rendered.png;
+          imageBytes = readFileSync(pngPath);
+          imageName = `${basename(src)} p.${page1}`;
+        } finally {
+          for (const p of [tempPdf, pngPath]) {
+            if (p && existsSync(p)) {
+              try { unlinkSync(p); } catch { /* best-effort */ }
+            }
+          }
+        }
+      } else {
+        const loaded = await loadImageBytes(src);
+        if ('error' in loaded) return loaded.error;
+        imageBytes = loaded.bytes;
+        imageName = loaded.name;
+      }
+
+      const protocol = detectTerminalImageSupport();
+
+      if (!protocol) {
+        return (
+          `Terminal inline images not supported (need iTerm2, kitty, or WezTerm).\n` +
+          `File: ${src}  (${Math.round(imageBytes.length / 1024)} KB)\n` +
+          `To view: open "${src}"`
+        );
+      }
+
+      if (protocol === 'iterm2') {
+        displayItermImage(imageBytes, imageName);
+      } else {
+        const checked = validateImage(imageBytes);
+        if ('error' in checked) return checked.error;
+        displayKittyImage(imageBytes);
+      }
+
+      return `Displayed "${imageName}" (${Math.round(imageBytes.length / 1024)} KB) via ${protocol} protocol.`;
     },
   });
 

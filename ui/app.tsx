@@ -106,6 +106,8 @@ import {
   applyProvenanceVerdicts,
   formatProvenanceReport,
 } from '../src/workspace/provenance.js';
+import { readLitNotes, formatLitNotesSummary } from '../src/research/litNotes.js';
+import { readBindings, formatBindingsSummary } from '../src/workspace/bindings.js';
 import { executeRun } from '../src/workspace/runner.js';
 import {
   readCapsule,
@@ -1038,6 +1040,42 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     }
   }, []);
 
+  /** Pure-display research pipeline commands (no LLM needed). */
+  const handleResearch = useCallback((cmd: string, argStr: string) => {
+    const meta = getActiveProject();
+    if (!meta) {
+      addEntry({ kind: 'note', content: 'no active project — create one with /project new <name>' });
+      return;
+    }
+    const slug = meta.slug;
+    try {
+      if (cmd === '/lit-notes') {
+        const id = argStr.trim();
+        if (id) {
+          const note = readLitNotes(slug).find((n) => n.paperId === id);
+          if (!note) {
+            addEntry({ kind: 'note', content: `No note for "${id}". Use /note-paper to create one.` });
+          } else {
+            const authors = note.authors.length > 2 ? `${note.authors[0]} et al.` : note.authors.join(', ');
+            const lines = [`${note.paperId}  [${note.status}]`, `  "${note.title}" — ${authors}, ${note.year}`, `  Relevance: ${note.relevanceSummary}`];
+            if (note.tags.length) lines.push(`  Tags: ${note.tags.join(', ')}`);
+            for (const p of note.keyPassages) lines.push(`  · "${p.quote.slice(0, 100)}${p.quote.length > 100 ? '…' : ''}"${p.comment ? ` — ${p.comment}` : ''}`);
+            addEntry({ kind: 'note', content: lines.join('\n') });
+          }
+        } else {
+          addEntry({ kind: 'note', content: formatLitNotesSummary(readLitNotes(slug), meta.title) });
+        }
+        return;
+      }
+      if (cmd === '/list-bindings') {
+        addEntry({ kind: 'note', content: formatBindingsSummary(readBindings(slug), meta.title) });
+        return;
+      }
+    } catch (e) {
+      addEntry({ kind: 'error', message: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
+
   const onOverleafLink = useCallback(
     (url: string, token: string) => {
       setMode('chat');
@@ -1909,6 +1947,64 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         handleCapsules(cmd, args);
         return;
       }
+      if (/^\/lit-notes\b/i.test(trimmed) || /^\/list-bindings\b/i.test(trimmed)) {
+        const spaceIdx = trimmed.indexOf(' ');
+        const cmd = (spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)).toLowerCase();
+        const args = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1);
+        handleResearch(cmd, args);
+        return;
+      }
+      if (/^\/note-paper\b/i.test(trimmed)) {
+        const id = trimmed.replace(/^\/note-paper\s*/i, '').trim();
+        void runTurn(trimmed, `Call note_paper with paper_id="${id}". Ask the user for relevance, key passages, and tags if not provided.`);
+        return;
+      }
+      if (/^\/snowball\b/i.test(trimmed)) {
+        const rest = trimmed.replace(/^\/snowball\s*/i, '').trim();
+        const parts = rest.split(/\s+/);
+        const id = parts[0] ?? '';
+        const dir = parts[1] ?? 'both';
+        void runTurn(trimmed, `Call snowball_citations with paper_id="${id}", direction="${dir}". Summarize the new papers found.`);
+        return;
+      }
+      if (/^\/lit-review\b/i.test(trimmed)) {
+        const tags = trimmed.replace(/^\/lit-review\s*/i, '').trim();
+        const tagArg = tags ? ` with tags [${tags.split(/[\s,]+/).filter(Boolean).map((t) => `"${t}"`).join(', ')}]` : '';
+        void runTurn(trimmed, `Call draft_lit_review${tagArg}. Return the LaTeX skeleton and evidence context.`);
+        return;
+      }
+      if (/^\/bind\b/i.test(trimmed)) {
+        const rest = trimmed.replace(/^\/bind\s*/i, '').trim();
+        void runTurn(trimmed, `Call bind_metric. Parse these space-separated arguments in order (file line raw run_id metric_key [claim_id]): ${rest}`);
+        return;
+      }
+      if (/^\/auto-link\b/i.test(trimmed)) {
+        void runTurn(trimmed, 'Call auto_link_number with no arguments. Report unlinked numbers and suggest bindings from run capsules.');
+        return;
+      }
+      if (/^\/stats\b/i.test(trimmed)) {
+        const rest = trimmed.replace(/^\/stats\s*/i, '').trim();
+        void runTurn(trimmed, `Call compute_stats. Parse these arguments (run_ids metric [baseline_run_ids]): ${rest}`);
+        return;
+      }
+      if (/^\/draft-section\b/i.test(trimmed)) {
+        const section = trimmed.replace(/^\/draft-section\s*/i, '').trim();
+        void runTurn(trimmed, `Call draft_section with section="${section}". Return the LaTeX skeleton and evidence.`);
+        return;
+      }
+      if (/^\/fix-paper\b/i.test(trimmed)) {
+        void runTurn(trimmed, 'Call fix_paper_errors. Iterate compile→fix cycles and report what was fixed each round.');
+        return;
+      }
+      if (/^\/preview-figure\b/i.test(trimmed)) {
+        const src = trimmed.replace(/^\/preview-figure\s*/i, '').trim();
+        void runTurn(trimmed, `Call preview_figure with source="${src}".`);
+        return;
+      }
+      if (/^\/verify-comparisons\b/i.test(trimmed)) {
+        void runTurn(trimmed, 'Call verify_comparison with no arguments. Check all comparison claims against run data and report HOLDS/FAILS/UNVERIFIED per claim.');
+        return;
+      }
       if (userInput.startsWith('/')) {
         if (runCommand(userInput)) return;
         addEntry({ kind: 'error', message: `unknown command: ${userInput}` });
@@ -1930,6 +2026,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       handleHandoff,
       handleClaims,
       handleCapsules,
+      handleResearch,
     ],
   );
 

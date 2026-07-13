@@ -103,3 +103,43 @@ export async function getWork(id: string): Promise<Paper> {
   if (!res.ok) throw new Error(`OpenAlex lookup failed for ${clean} (HTTP ${res.status})`);
   return toPaper((await res.json()) as OAWork);
 }
+
+/**
+ * Return the papers this work cites (its reference list).
+ * Fetches the `referenced_works` URI list then batch-resolves up to `limit` of them.
+ */
+export async function getReferencedWorks(id: string, limit = 15): Promise<Paper[]> {
+  const clean = shortId(id.trim());
+  const res = await fetchWithRetry(
+    `${BASE}/${clean}?select=referenced_works&mailto=${MAILTO}`,
+  );
+  if (!res.ok) throw new Error(`OpenAlex referenced_works failed for ${clean} (HTTP ${res.status})`);
+  const data = (await res.json()) as { referenced_works?: string[] };
+  const refs = (data.referenced_works ?? []).slice(0, Math.min(limit, 25));
+  if (!refs.length) return [];
+  const ids = refs.map(shortId).join('|');
+  const batchRes = await fetchWithRetry(
+    `${BASE}?filter=openalex_id:${ids}&per_page=${refs.length}&mailto=${MAILTO}`,
+  );
+  if (!batchRes.ok) return [];
+  const batchData = (await batchRes.json()) as { results?: OAWork[] };
+  return (batchData.results ?? []).map(toPaper);
+}
+
+/**
+ * Return papers that cite this work, sorted by citation count descending.
+ * Uses `GET /works?filter=cites:{id}`.
+ */
+export async function getCitingWorks(id: string, limit = 15): Promise<Paper[]> {
+  const clean = shortId(id.trim());
+  const params = new URLSearchParams({
+    filter: `cites:${clean}`,
+    sort: 'cited_by_count:desc',
+    per_page: String(Math.min(limit, 25)),
+    mailto: MAILTO,
+  });
+  const res = await fetchWithRetry(`${BASE}?${params.toString()}`);
+  if (!res.ok) throw new Error(`OpenAlex citing-works failed for ${clean} (HTTP ${res.status})`);
+  const data = (await res.json()) as { results?: OAWork[] };
+  return (data.results ?? []).map(toPaper);
+}

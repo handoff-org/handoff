@@ -3,6 +3,8 @@ import { join, basename } from 'path';
 import { projectDir } from '../workspace/project.js';
 import { stripLatex, findTexFiles } from '../workspace/auditor.js';
 import { parseBibKeys } from './bibtex.js';
+import { readLitNotes, formatLitNote } from './litNotes.js';
+import { searchNotebook } from './notebook.js';
 
 /**
  * Local, dependency-free prose/quality checks for a paper's LaTeX. Complements
@@ -276,6 +278,44 @@ export function formatWritingReport(report: ProseReport, projectTitle: string): 
   }
   lines.push('', "Hints (passive voice, hedge words) are heuristic — review, don't auto-fix.");
   return lines.join('\n');
+}
+
+// ── Lit-review context builder ───────────────────────────────────────────────
+
+/**
+ * Build a structured context block for draft_lit_review.
+ * Combines structured lit notes (optionally filtered by tag) with any
+ * literature-find entries recorded in the project notebook.
+ * The returned string is passed verbatim to the model as evidence to draw on.
+ */
+export function buildLitReviewContext(slug: string, tags?: string[]): string {
+  const allNotes = readLitNotes(slug);
+  const notes =
+    tags?.length
+      ? allNotes.filter((n) => tags.some((t) => n.tags.includes(t)))
+      : allNotes;
+
+  // Notebook literature-find entries are stored as markdown blocks with the
+  // "📄 Literature" label — search captures them all.
+  const nbEntries = searchNotebook(slug, '📄 Literature').slice(0, 20);
+
+  const parts: string[] = [];
+
+  if (notes.length) {
+    parts.push(`=== Structured Notes (${notes.length} paper${notes.length !== 1 ? 's' : ''}) ===`);
+    for (const n of notes) parts.push(formatLitNote(n));
+  }
+
+  if (nbEntries.length) {
+    parts.push(`\n=== Notebook Literature Finds (${nbEntries.length}) ===`);
+    for (const e of nbEntries) parts.push(e);
+  }
+
+  if (!parts.length) {
+    return '(no literature notes found — use note_paper to annotate papers first)';
+  }
+
+  return parts.join('\n\n');
 }
 
 // ── Section scaffolding ─────────────────────────────────────────────────────

@@ -18,6 +18,15 @@ import {
   mergeBibEntry,
   findExistingKey,
 } from './bibtex.js';
+import {
+  readLitNotes,
+  writeLitNote,
+  searchLitNotes,
+  formatLitNote,
+  formatLitNotesSummary,
+  type LitNote,
+} from './litNotes.js';
+import { snowball, type SnowballDirection } from './snowball.js';
 
 function snippet(text: string, n: number): string {
   if (!text) return '(no abstract available)';
@@ -505,6 +514,201 @@ export function registerResearchTools(registry: ToolRegistry): void {
       const hits = searchNotebook(meta.slug, q);
       if (hits.length === 0) return `No notebook entries mention "${q}".`;
       return `${hits.length} entr${hits.length === 1 ? 'y' : 'ies'} mentioning "${q}":\n\n${hits.join('\n\n---\n\n')}`;
+    },
+  });
+
+  // ── Structured lit notes ─────────────────────────────────────────────────────
+
+  registry.register({
+    name: 'note_paper',
+    description:
+      "Create or update a structured literature note for a paper in the project's " +
+      'lit notes (literature/notes.jsonl). Records key passages, relevance, tags, ' +
+      'and reading status — a searchable, structured record you can draw on when ' +
+      'drafting Related Work with draft_lit_review. Call after reading a paper.',
+    sensitive: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        paper_id: {
+          type: 'string',
+          description: 'Paper id — OpenAlex W…, arxiv:…, or DOI',
+        },
+        relevance: {
+          type: 'string',
+          description: 'One-sentence summary of why this paper is relevant to the project',
+        },
+        key_passages: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Key quotes or findings verbatim. Use "quote :: your comment" to attach a gloss, ' +
+            'e.g. "achieves 94.2% on CIFAR-10 :: state-of-the-art at time of writing".',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Topic tags for grouping and filtering (e.g. ["methodology", "baseline"])',
+        },
+        status: {
+          type: 'string',
+          enum: ['skimmed', 'read', 'summarized'],
+          description: 'How thoroughly you have read this paper (default: read)',
+        },
+      },
+      required: ['paper_id', 'relevance'],
+    },
+    async execute({ paper_id, relevance, key_passages, tags, status }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project.';
+      const id = String(paper_id ?? '').trim();
+      if (!id) return 'Provide a paper_id.';
+
+      const cached = await loadCachedPaper(id);
+      const existing = readLitNotes(meta.slug).find((n) => n.paperId === id);
+      const now = new Date().toISOString();
+
+      const note: LitNote = {
+        paperId: id,
+        title: cached?.title ?? existing?.title ?? id,
+        authors: cached?.authors ?? existing?.authors ?? [],
+        year: cached?.year ?? existing?.year ?? 0,
+        citeKey: existing?.citeKey,
+        keyPassages: Array.isArray(key_passages)
+          ? (key_passages as string[]).map((p) => {
+              const sep = String(p).indexOf(' :: ');
+              if (sep === -1) return { quote: String(p) };
+              return { quote: String(p).slice(0, sep), comment: String(p).slice(sep + 4) };
+            })
+          : existing?.keyPassages ?? [],
+        relevanceSummary: String(relevance),
+        tags: Array.isArray(tags) ? tags.map(String) : existing?.tags ?? [],
+        status: status === 'skimmed' || status === 'summarized' ? status : 'read',
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+      writeLitNote(meta.slug, note);
+      appendNotebook(meta.slug, {
+        type: 'literature-find',
+        summary: `Noted: **${note.title}** (${note.year || '?'}) — ${note.relevanceSummary}`,
+      });
+      return `Saved lit note for ${id}.\n\n${formatLitNote(note)}`;
+    },
+  });
+
+  registry.register({
+    name: 'read_paper_notes',
+    description:
+      "Read structured literature notes for the active project. " +
+      'Omit paper_id to list all notes; provide one to show full detail for that paper.',
+    parameters: {
+      type: 'object',
+      properties: {
+        paper_id: {
+          type: 'string',
+          description: 'Paper id to show in detail (omit to list all notes)',
+        },
+      },
+    },
+    async execute({ paper_id }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project.';
+      if (paper_id) {
+        const id = String(paper_id).trim();
+        const note = readLitNotes(meta.slug).find((n) => n.paperId === id);
+        if (!note) return `No note found for "${id}". Use note_paper to create one.`;
+        return formatLitNote(note);
+      }
+      return formatLitNotesSummary(readLitNotes(meta.slug), meta.title);
+    },
+  });
+
+  registry.register({
+    name: 'search_paper_notes',
+    description:
+      'Search structured literature notes for a term (matches title, relevance summary, tags, and key passages).',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search term' },
+      },
+      required: ['query'],
+    },
+    async execute({ query }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project.';
+      const q = String(query ?? '').trim();
+      if (!q) return 'Provide a search query.';
+      const hits = searchLitNotes(meta.slug, q);
+      if (hits.length === 0) return `No lit notes match "${q}".`;
+      const label = `${hits.length} note${hits.length !== 1 ? 's' : ''} matching "${q}"`;
+      return `${label}:\n\n${hits.map(formatLitNote).join('\n\n')}`;
+    },
+  });
+
+  // ── Citation snowballing ──────────────────────────────────────────────────────
+
+  registry.register({
+    name: 'snowball_citations',
+    description:
+      'Expand the citation graph from a seed paper using OpenAlex. ' +
+      'backward = papers it cites (its reference list); ' +
+      'forward = papers that cite it (its citing papers, sorted by impact); ' +
+      'both = backward first, then forward. ' +
+      'Only returns papers NOT already in the local cache (truly new finds), ' +
+      'and logs each to the notebook. Use after finding a key paper to discover related work.',
+    parameters: {
+      type: 'object',
+      properties: {
+        paper_id: {
+          type: 'string',
+          description: 'OpenAlex id of the seed paper (W…)',
+        },
+        direction: {
+          type: 'string',
+          enum: ['forward', 'backward', 'both'],
+          description:
+            'backward (default) = its reference list; forward = papers citing it; both = both directions',
+        },
+        depth: {
+          type: 'string',
+          description: '1 (default) or 2 — recurse one extra hop into each new paper found',
+        },
+        limit: {
+          type: 'string',
+          description: 'Max new papers to surface (default 15, max 20)',
+        },
+      },
+      required: ['paper_id'],
+    },
+    async execute({ paper_id, direction, depth, limit }) {
+      const meta = getActiveProject();
+      if (!meta) return 'No active project.';
+      const id = String(paper_id ?? '').trim();
+      if (!id) return 'Provide a paper_id.';
+
+      const dir: SnowballDirection =
+        direction === 'forward' ? 'forward' : direction === 'both' ? 'both' : 'backward';
+      const result = await snowball(
+        meta.slug,
+        id,
+        dir,
+        depth ? Math.max(1, Math.min(Number(depth) || 1, 2)) : 1,
+        limit ? Math.max(1, Math.min(Number(limit) || 15, 20)) : 15,
+      );
+
+      if (result.papers.length === 0) {
+        return (
+          `Snowball (${dir}) from ${id} found no new papers. ` +
+          `All candidates are already cached, or the paper has no indexed citations in OpenAlex.`
+        );
+      }
+
+      const lines = result.papers.map(formatResult);
+      return (
+        `Snowball (${dir}) from ${id}: ${result.papers.length} new paper${result.papers.length !== 1 ? 's' : ''}.\n\n` +
+        lines.join('\n\n')
+      );
     },
   });
 }
