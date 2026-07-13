@@ -24,6 +24,22 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  quality:
+    name: lint + format + docs
+    runs-on: ubuntu-latest
+    # Blocking: lint (no-unused-vars is an error), Prettier, and the docs linter
+    # all pass on master (see REFACTOR_AUDIT.md). Warnings do not fail the build.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run docs:check
+
   qa-smoke:
     name: qa chat-sim smoke
     runs-on: ubuntu-latest
@@ -43,11 +59,11 @@ jobs:
           path: qa/logs/
           if-no-files-found: ignore
 
-  lint:
-    name: lint + format (advisory)
+  deadcode:
+    name: dead-code (knip, advisory)
     runs-on: ubuntu-latest
-    # Advisory to start: report issues without blocking merges while the repo
-    # adopts Prettier formatting incrementally.
+    # Advisory until the Phase 8 cleanup lands (a handful of known unused exports
+    # remain — see STALE_CODE_AUDIT.md §E). Promote to blocking after that.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -56,5 +72,4 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
+      - run: npm run deadcode

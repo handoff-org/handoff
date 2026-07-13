@@ -230,3 +230,27 @@ No code deleted in this phase (inventory only). Scope decision confirmed with
 user: **internal reorg, no `apps/packages` workspace migration**; **commit each
 phase** on master.
 
+### Phase 6 — Repo hygiene + CI ✅ (2026-07-13)
+
+Added (all additive, no behavior change):
+- **`AGENTS.md`** — root coding-agent guide: product identity, the
+  `ownhandoff` (npm) vs `handoff` (CLI) distinction, layout map, tool model,
+  quality gates, conventions, and safety invariants.
+- **`CHANGELOG.md`** — Keep-a-Changelog, seeded Unreleased section.
+- **`.env.example`** — all optional `HANDOFF_*` / credential / UI env vars
+  (handoff is local-first; every var is optional, no dotenv loader).
+- **`.editorconfig`**, **`.gitattributes`** (LF normalization, binary + linguist rules).
+- **`.github/dependabot.yml`** — weekly npm (grouped) + github-actions updates.
+- **`knip.json` + `npm run deadcode`** — configured entries/test globs +
+  `ignoreExportsUsedInFile`, cutting knip from 86 noisy candidates to **9 real
+  items** (recorded in `STALE_CODE_AUDIT.md` §E for Phase 8).
+- **`@eslint/js`** added to devDependencies (was imported but unlisted); pinned
+  to `^9` to match eslint 9 (v10 conflicts).
+- **CI** (`.github/workflows/ci.yml`): `lint + format` job promoted from
+  advisory → **blocking** and extended with `docs:check` (all pass on master);
+  new advisory `deadcode` (knip) job.
+
+Kept `CONTRIBUTING.md`/`SECURITY.md` in `.github/` (a GitHub-recognized
+location; both are accurate) rather than duplicating to root — `AGENTS.md` links
+them. `npm run check` still exits 0.
+

@@ -74,6 +74,26 @@ could drop the `export` keyword — cosmetic, deferred, not tracked as stale.
 | `@eslint/js` unlisted dependency | Add to `devDependencies` (imported in `eslint.config.js`). |
 | knip has no config | Add `knip.json` declaring test globs + entry points so future runs are low-noise, and add a `knip`/`deadcode` npm script. |
 
+## E. Precise knip findings (after `knip.json` config, Phase 6)
+
+With `ignoreExportsUsedInFile: true` and proper entry/test globs, knip drops from
+86 noisy candidates to **9 real items**. None are referenced in tests (verified).
+Actioned in Phase 8:
+
+| Symbol | File | Decision |
+|---|---|---|
+| `getSystemRamGb`, `recommendModel` | `config/models.ts` | investigate vs `advisor.ts` (legacy reco path) |
+| `metricsTableWithStats` | `src/workspace/resultsTable.ts` | wire into `export_results` + test |
+| `noWriteOutsideHome` | `qa/chat-sim/assertions.ts` | unused QA assertion — wire into a scenario or remove |
+| `appendProfileEvent` | `src/personalization/store.ts` | unused — remove or wire |
+| `_resetHardwareCache` | `src/system/hardware.ts` | test-only reset hook, never imported — keep (test seam) or remove |
+| `formatCapsule` | `src/workspace/capsule.ts` | unused formatter — keep (API) or remove |
+| `ProfileNote` (type) | `src/personalization/profile.ts` | unused type — remove |
+| `EXIT_ALT` / `ALT_SCREEN_OFF` (duplicate export) | `ui/terminalControl.ts` | **real bug** — two names for one value; consolidate |
+
+`npm run deadcode` (knip) exits non-zero while these remain, so it stays an
+**advisory** tool (not part of the blocking `npm run check`) until Phase 8.
+
 ---
 
 ## Actionable summary (for Phase 8)
