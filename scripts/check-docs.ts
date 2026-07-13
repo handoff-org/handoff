@@ -24,6 +24,16 @@ function stripFences(md: string): string {
   return md.replace(/^```[\s\S]*?^```/gm, '');
 }
 
+/**
+ * Strip inline code spans (`…`) for the same reason we strip fenced blocks:
+ * their contents are literal/technical tokens, not prose. Without this, a doc
+ * legitimately describing a `%TODO:` LaTeX marker would trip the placeholder
+ * check. Prose placeholders (unbackticked "TODO: finish this") are still caught.
+ */
+function stripInlineCode(md: string): string {
+  return md.replace(/`[^`]*`/g, '');
+}
+
 /** kramdown/GitHub-style heading slug. */
 function slugify(text: string): string {
   return text
@@ -64,8 +74,10 @@ for (const file of mdFiles) {
   const h1s = mdH1s + htmlH1s;
   if (h1s !== 1) errors.push(`${where}: expected exactly one H1, found ${h1s}`);
 
-  // Placeholders.
-  const ph = body.match(/\b(TODO|FIXME|WIP|lorem)\b|coming soon/i);
+  // Placeholders — check prose only (inline code spans hold literal tokens
+  // like `%TODO:` that describe features, not unfinished documentation).
+  const prose = stripInlineCode(body);
+  const ph = prose.match(/\b(TODO|FIXME|WIP|lorem)\b|coming soon/i);
   if (ph) errors.push(`${where}: placeholder text found ("${ph[0]}")`);
 
   // Absolute local paths.

@@ -6,7 +6,7 @@ import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 import { freshHome, hasGit } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject, projectPaths } = await import('../src/workspace/project.js');
 const { executeRun } = await import('../src/workspace/runner.js');
 const { readLedger } = await import('../src/workspace/ledger.js');

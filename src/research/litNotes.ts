@@ -59,8 +59,7 @@ export function searchLitNotes(slug: string, term: string): LitNote[] {
 
 /** Format one note for display in the transcript. */
 export function formatLitNote(n: LitNote): string {
-  const authors =
-    n.authors.length > 2 ? `${n.authors[0]} et al.` : n.authors.join(', ');
+  const authors = n.authors.length > 2 ? `${n.authors[0]} et al.` : n.authors.join(', ');
   const lines: string[] = [
     `${n.paperId}  [${n.status}]`,
     `  "${n.title}" — ${authors}, ${n.year}${n.citeKey ? `  \\cite{${n.citeKey}}` : ''}`,
@@ -68,7 +67,9 @@ export function formatLitNote(n: LitNote): string {
   ];
   if (n.tags.length) lines.push(`  Tags: ${n.tags.join(', ')}`);
   for (const p of n.keyPassages) {
-    lines.push(`  · "${p.quote.slice(0, 100)}${p.quote.length > 100 ? '…' : ''}"${p.comment ? ` — ${p.comment}` : ''}`);
+    lines.push(
+      `  · "${p.quote.slice(0, 100)}${p.quote.length > 100 ? '…' : ''}"${p.comment ? ` — ${p.comment}` : ''}`,
+    );
   }
   return lines.join('\n');
 }

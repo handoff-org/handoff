@@ -34,12 +34,17 @@ export async function snowball(
   const seen = new Set<string>([paperId]);
   const results: Paper[] = [];
 
-  async function expand(id: string, dir: 'forward' | 'backward', currentDepth: number): Promise<void> {
+  async function expand(
+    id: string,
+    dir: 'forward' | 'backward',
+    currentDepth: number,
+  ): Promise<void> {
     if (results.length >= clampedLimit) return;
 
-    const candidates = dir === 'backward'
-      ? await getReferencedWorks(id, clampedLimit)
-      : await getCitingWorks(id, clampedLimit);
+    const candidates =
+      dir === 'backward'
+        ? await getReferencedWorks(id, clampedLimit)
+        : await getCitingWorks(id, clampedLimit);
 
     const fresh: Paper[] = [];
     for (const p of candidates) {

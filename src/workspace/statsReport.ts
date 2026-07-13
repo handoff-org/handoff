@@ -5,18 +5,42 @@
 // Student's t critical values for 95% two-tailed CI (df = n-1, 1-indexed so
 // T_TABLE[df] = t_{0.975,df}). Values for df 1–30; beyond that use 1.96.
 const T_TABLE: Record<number, number> = {
-  1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
-  6: 2.447,  7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
-  11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
-  16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
-  21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060,
-  26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042,
+  1: 12.706,
+  2: 4.303,
+  3: 3.182,
+  4: 2.776,
+  5: 2.571,
+  6: 2.447,
+  7: 2.365,
+  8: 2.306,
+  9: 2.262,
+  10: 2.228,
+  11: 2.201,
+  12: 2.179,
+  13: 2.16,
+  14: 2.145,
+  15: 2.131,
+  16: 2.12,
+  17: 2.11,
+  18: 2.101,
+  19: 2.093,
+  20: 2.086,
+  21: 2.08,
+  22: 2.074,
+  23: 2.069,
+  24: 2.064,
+  25: 2.06,
+  26: 2.056,
+  27: 2.052,
+  28: 2.048,
+  29: 2.045,
+  30: 2.042,
 };
 
 function tCritical(df: number): number {
   if (df <= 0) return Infinity;
   if (df <= 30) return T_TABLE[df] ?? 2.042;
-  return 1.960; // Gaussian approximation for large n
+  return 1.96; // Gaussian approximation for large n
 }
 
 export interface StatsSummary {
@@ -33,7 +57,16 @@ export interface StatsSummary {
 export function summarizeMetric(values: number[], metricKey = ''): StatsSummary {
   const n = values.length;
   if (n === 0) {
-    return { metricKey, n: 0, mean: NaN, std: NaN, ci95Low: NaN, ci95High: NaN, min: NaN, max: NaN };
+    return {
+      metricKey,
+      n: 0,
+      mean: NaN,
+      std: NaN,
+      ci95Low: NaN,
+      ci95High: NaN,
+      min: NaN,
+      max: NaN,
+    };
   }
   const mean = values.reduce((a, b) => a + b, 0) / n;
   const variance = n > 1 ? values.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1) : 0;
@@ -60,7 +93,8 @@ export interface ComparisonStats {
 }
 
 function pooledStd(t: number[], b: number[]): number {
-  const nt = t.length, nb = b.length;
+  const nt = t.length,
+    nb = b.length;
   if (nt + nb <= 2) return 1;
   const mt = t.reduce((a, x) => a + x, 0) / nt;
   const mb = b.reduce((a, x) => a + x, 0) / nb;
@@ -86,7 +120,8 @@ export function compareMetrics(
   const baselineMean = baseline.reduce((a, b) => a + b, 0) / (baseline.length || 1);
   const ps = pooledStd(treatment, baseline);
   const cohensD = ps > 0 ? (treatmentMean - baselineMean) / ps : 0;
-  const percentDiff = baselineMean !== 0 ? ((treatmentMean - baselineMean) / Math.abs(baselineMean)) * 100 : 0;
+  const percentDiff =
+    baselineMean !== 0 ? ((treatmentMean - baselineMean) / Math.abs(baselineMean)) * 100 : 0;
   return {
     metricKey,
     treatmentN: treatment.length,
@@ -99,7 +134,7 @@ export function compareMetrics(
   };
 }
 
-function fmt(n: number, places = 3): string {
+function fmt(n: number): string {
   if (!Number.isFinite(n)) return '—';
   return n.toPrecision(4).replace(/\.?0+$/, '');
 }

@@ -6,7 +6,7 @@ import { join } from 'path';
 import { spawnSync } from 'child_process';
 import { freshHome, makeBareRemote, git, hasGit } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject, updateProject, projectPaths } = await import('../src/workspace/project.js');
 const { bibFileIn, overleafWriteGuard, isOverleafLinked, autoSyncOverleaf, autoPullOverleaf } =
   await import('../src/workspace/overleaf.js');

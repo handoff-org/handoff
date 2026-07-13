@@ -110,10 +110,9 @@ export async function getWork(id: string): Promise<Paper> {
  */
 export async function getReferencedWorks(id: string, limit = 15): Promise<Paper[]> {
   const clean = shortId(id.trim());
-  const res = await fetchWithRetry(
-    `${BASE}/${clean}?select=referenced_works&mailto=${MAILTO}`,
-  );
-  if (!res.ok) throw new Error(`OpenAlex referenced_works failed for ${clean} (HTTP ${res.status})`);
+  const res = await fetchWithRetry(`${BASE}/${clean}?select=referenced_works&mailto=${MAILTO}`);
+  if (!res.ok)
+    throw new Error(`OpenAlex referenced_works failed for ${clean} (HTTP ${res.status})`);
   const data = (await res.json()) as { referenced_works?: string[] };
   const refs = (data.referenced_works ?? []).slice(0, Math.min(limit, 25));
   if (!refs.length) return [];

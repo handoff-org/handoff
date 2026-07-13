@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { freshHome } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject, projectPaths } = await import('../src/workspace/project.js');
 const { ToolRegistry } = await import('../src/tools/registry.js');
 const { registerWorkspaceTools } = await import('../src/workspace/tools.js');

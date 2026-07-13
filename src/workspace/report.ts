@@ -5,17 +5,25 @@ import { getActiveProject, projectPaths } from './project.js';
 import { listCapsules, readCapsule, getPromoted, type Capsule } from './capsule.js';
 import { mainTexFile } from './overleaf.js';
 import { appendNotebook } from '../research/notebook.js';
-import { metricsTable, metricsTableWithStats, figureBlock, isFigureFile, sanitizeRef } from './resultsTable.js';
-import { checkProvenance, applyProvenanceVerdicts, formatProvenanceReport, extractNumbers, numbersMatch } from './provenance.js';
-import { checkProse, formatWritingReport, scaffoldSections, buildLitReviewContext } from '../research/prose.js';
+import { metricsTable, figureBlock, isFigureFile, sanitizeRef } from './resultsTable.js';
+import {
+  checkProvenance,
+  applyProvenanceVerdicts,
+  formatProvenanceReport,
+  extractNumbers,
+  numbersMatch,
+} from './provenance.js';
+import {
+  checkProse,
+  formatWritingReport,
+  scaffoldSections,
+  buildLitReviewContext,
+} from '../research/prose.js';
 import { findTexFiles } from './auditor.js';
-import { readLitNotes, formatLitNotesSummary } from '../research/litNotes.js';
 import {
   readBindings,
   appendBinding,
-  removeBinding,
   newBindingId,
-  formatBindingRow,
   formatBindingsSummary,
   type MetricBinding,
 } from './bindings.js';
@@ -274,7 +282,10 @@ export function registerReportTools(registry: ToolRegistry): void {
           description: 'Paper-relative path, e.g. "paper/main.tex"',
         },
         line: { type: 'string', description: 'Line number (1-based)' },
-        raw: { type: 'string', description: 'The number exactly as written in the paper, e.g. "92.1"' },
+        raw: {
+          type: 'string',
+          description: 'The number exactly as written in the paper, e.g. "92.1"',
+        },
         run_id: { type: 'string', description: 'Run capsule id that produced this value' },
         metric_key: { type: 'string', description: 'Metric key from the capsule, e.g. "accuracy"' },
         claim_id: {
@@ -325,7 +336,7 @@ export function registerReportTools(registry: ToolRegistry): void {
   registry.register({
     name: 'list_bindings',
     description:
-      "List all metric bindings for the active project. Each row shows the binding id, " +
+      'List all metric bindings for the active project. Each row shows the binding id, ' +
       'file:line, the raw value as written, run id, and metric key. ' +
       'Confirmed bindings (confidence=1) are marked ✓; auto-suggested ones show their confidence.',
     parameters: { type: 'object', properties: {} },
@@ -370,16 +381,14 @@ export function registerReportTools(registry: ToolRegistry): void {
       if (!meta) return 'No active project.';
 
       const { capsules: treatCapsules } = resolveRuns(meta.slug, String(run_ids));
-      if (treatCapsules.length === 0)
-        return 'No runs found for the given run_ids.';
+      if (treatCapsules.length === 0) return 'No runs found for the given run_ids.';
 
       const key = String(metric);
       const treatVals = treatCapsules
         .map((c) => c.metrics[key])
         .filter((v): v is number => v !== undefined && Number.isFinite(v));
 
-      if (treatVals.length === 0)
-        return `Metric "${key}" not found in any of the selected runs.`;
+      if (treatVals.length === 0) return `Metric "${key}" not found in any of the selected runs.`;
 
       const summary = summarizeMetric(treatVals, key);
       const pct = is_percent === 'true' || is_percent === true;
@@ -425,9 +434,7 @@ export function registerReportTools(registry: ToolRegistry): void {
       if (!texFiles.length) return 'No .tex files found in paper/. Add your LaTeX and retry.';
 
       const existingBindings = readBindings(meta.slug);
-      const boundKeys = new Set(
-        existingBindings.map((b) => `${b.file}:${b.line}:${b.raw}`),
-      );
+      const boundKeys = new Set(existingBindings.map((b) => `${b.file}:${b.line}:${b.raw}`));
 
       // Collect all numbers from tex files that aren't already bound.
       const candidates: { file: string; line: number; raw: string; value: number }[] = [];
@@ -554,7 +561,10 @@ export function registerReportTools(registry: ToolRegistry): void {
       const parts: string[] = [];
 
       if (sec === 'related_work') {
-        const ctx = buildLitReviewContext(meta.slug, Array.isArray(tags) ? tags.map(String) : undefined);
+        const ctx = buildLitReviewContext(
+          meta.slug,
+          Array.isArray(tags) ? tags.map(String) : undefined,
+        );
         parts.push('=== Evidence: Literature ===', ctx);
 
         const skeleton = [
@@ -566,7 +576,6 @@ export function registerReportTools(registry: ToolRegistry): void {
           '',
         ].join('\n');
         parts.push('', '=== LaTeX Skeleton ===', skeleton);
-
       } else if (sec === 'experiments' || sec === 'results') {
         const { capsules: promoted } = resolveRuns(meta.slug, 'promoted');
         const capsulesToShow = promoted.length ? promoted : listCapsules(meta.slug).slice(-3);
@@ -607,7 +616,6 @@ export function registerReportTools(registry: ToolRegistry): void {
           '',
         ].join('\n');
         parts.push('', '=== LaTeX Skeleton ===', skeleton);
-
       } else {
         // Introduction, method, conclusion — draw from claims.
         const claims = readClaims(meta.slug);
@@ -620,10 +628,15 @@ export function registerReportTools(registry: ToolRegistry): void {
         const relevant = claims.filter((c: Claim) => relevantTypes.includes(c.type));
 
         if (relevant.length) {
-          parts.push(`=== Evidence: ${relevant.length} claim${relevant.length !== 1 ? 's' : ''} ===`);
+          parts.push(
+            `=== Evidence: ${relevant.length} claim${relevant.length !== 1 ? 's' : ''} ===`,
+          );
           for (const c of relevant) {
-            const icon = c.status === 'supported' ? '✓' : c.status === 'weakly_supported' ? '~' : '?';
-            parts.push(`  ${icon} [${c.type}] ${c.text.slice(0, 120)}${c.text.length > 120 ? '…' : ''}`);
+            const icon =
+              c.status === 'supported' ? '✓' : c.status === 'weakly_supported' ? '~' : '?';
+            parts.push(
+              `  ${icon} [${c.type}] ${c.text.slice(0, 120)}${c.text.length > 120 ? '…' : ''}`,
+            );
           }
         }
 
@@ -671,7 +684,8 @@ export function registerReportTools(registry: ToolRegistry): void {
         },
         max_words: {
           type: 'string',
-          description: 'Approximate target word count for the section (informational hint, default 400)',
+          description:
+            'Approximate target word count for the section (informational hint, default 400)',
         },
       },
     },

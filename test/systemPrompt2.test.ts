@@ -4,11 +4,10 @@ import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { freshHome } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject, updateProject, projectPaths } = await import('../src/workspace/project.js');
 const {
   buildSystem,
-  projectContext,
   starterTex,
   escapeLatex,
   sanitizeBibBase,

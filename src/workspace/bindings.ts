@@ -10,14 +10,14 @@ import { parseJsonl } from '../util/jsonl.js';
 
 export interface MetricBinding {
   id: string;
-  file: string;        // project-relative, e.g. "paper/main.tex"
+  file: string; // project-relative, e.g. "paper/main.tex"
   line: number;
-  raw: string;         // "92.1" as it appears in the paper
+  raw: string; // "92.1" as it appears in the paper
   value: number;
   runId: string;
   metricKey: string;
   claimId?: string;
-  confidence: number;  // 1.0 = user-confirmed; <1 = auto-suggested
+  confidence: number; // 1.0 = user-confirmed; <1 = auto-suggested
   boundAt: string;
 }
 

@@ -290,10 +290,9 @@ export function formatWritingReport(report: ProseReport, projectTitle: string): 
  */
 export function buildLitReviewContext(slug: string, tags?: string[]): string {
   const allNotes = readLitNotes(slug);
-  const notes =
-    tags?.length
-      ? allNotes.filter((n) => tags.some((t) => n.tags.includes(t)))
-      : allNotes;
+  const notes = tags?.length
+    ? allNotes.filter((n) => tags.some((t) => n.tags.includes(t)))
+    : allNotes;
 
   // Notebook literature-find entries are stored as markdown blocks with the
   // "📄 Literature" label — search captures them all.

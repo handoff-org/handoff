@@ -2,11 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { freshHome } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject } = await import('../src/workspace/project.js');
-const { readLitNotes, writeLitNote, searchLitNotes, litNotesPath } = await import(
-  '../src/research/litNotes.js'
-);
+const { readLitNotes, writeLitNote, searchLitNotes } = await import('../src/research/litNotes.js');
 
 const proj = createProject({ title: 'Test Lit Project' });
 const slug = proj.slug;
@@ -64,7 +62,10 @@ test('searchLitNotes finds by tag', () => {
 });
 
 test('searchLitNotes finds by key passage text', () => {
-  writeLitNote(slug, makeNote('W005', { keyPassages: [{ quote: 'self-attention mechanism improves performance' }] }));
+  writeLitNote(
+    slug,
+    makeNote('W005', { keyPassages: [{ quote: 'self-attention mechanism improves performance' }] }),
+  );
   const results = searchLitNotes(slug, 'self-attention');
   assert.ok(results.some((n) => n.paperId === 'W005'));
 });

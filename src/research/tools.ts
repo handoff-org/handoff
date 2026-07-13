@@ -580,9 +580,9 @@ export function registerResearchTools(registry: ToolRegistry): void {
               if (sep === -1) return { quote: String(p) };
               return { quote: String(p).slice(0, sep), comment: String(p).slice(sep + 4) };
             })
-          : existing?.keyPassages ?? [],
+          : (existing?.keyPassages ?? []),
         relevanceSummary: String(relevance),
-        tags: Array.isArray(tags) ? tags.map(String) : existing?.tags ?? [],
+        tags: Array.isArray(tags) ? tags.map(String) : (existing?.tags ?? []),
         status: status === 'skimmed' || status === 'summarized' ? status : 'read',
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
@@ -599,7 +599,7 @@ export function registerResearchTools(registry: ToolRegistry): void {
   registry.register({
     name: 'read_paper_notes',
     description:
-      "Read structured literature notes for the active project. " +
+      'Read structured literature notes for the active project. ' +
       'Omit paper_id to list all notes; provide one to show full detail for that paper.',
     parameters: {
       type: 'object',

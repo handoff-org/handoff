@@ -315,7 +315,11 @@ export function registerVisionTools(registry: ToolRegistry): void {
         } finally {
           for (const p of [tempPdf, pngPath]) {
             if (p && existsSync(p)) {
-              try { unlinkSync(p); } catch { /* best-effort */ }
+              try {
+                unlinkSync(p);
+              } catch {
+                /* best-effort */
+              }
             }
           }
         }

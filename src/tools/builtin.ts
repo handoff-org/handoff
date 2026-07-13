@@ -20,7 +20,10 @@ const WEB_UA =
 /** Shared compile helper: runs latexmk or pdflatex, returns success + error lines. */
 async function runLatexCompile(
   paperDir: string,
-): Promise<{ ok: true; pdfPath: string; output: string; errors: string[] } | { ok: false; pdfPath: string; output: string; errors: string[] }> {
+): Promise<
+  | { ok: true; pdfPath: string; output: string; errors: string[] }
+  | { ok: false; pdfPath: string; output: string; errors: string[] }
+> {
   const latexmkAvail = await execAsync('command -v latexmk', { timeout: 5_000 })
     .then(() => true)
     .catch(() => false);
@@ -61,7 +64,12 @@ async function runLatexCompile(
     const output = errorLines.length
       ? `Compilation failed. LaTeX errors:\n${errorLines.join('\n')}`
       : `Compilation failed:\n${raw.slice(0, 1000)}`;
-    return { ok: false, pdfPath: '', output, errors: errorLines.length ? errorLines : [raw.slice(0, 200)] };
+    return {
+      ok: false,
+      pdfPath: '',
+      output,
+      errors: errorLines.length ? errorLines : [raw.slice(0, 200)],
+    };
   }
 }
 
@@ -110,14 +118,8 @@ async function applyLatexFixes(paperDir: string, errors: string[]): Promise<stri
       for (const filePath of texFiles) {
         try {
           let src = await readFile(filePath, 'utf-8');
-          if (
-            !src.includes(`\\usepackage{${pkg}}`) &&
-            src.includes('\\usepackage{')
-          ) {
-            src = src.replace(
-              /(\\usepackage\{[^}]+\})/,
-              `$1\n\\usepackage{${pkg}}`,
-            );
+          if (!src.includes(`\\usepackage{${pkg}}`) && src.includes('\\usepackage{')) {
+            src = src.replace(/(\\usepackage\{[^}]+\})/, `$1\n\\usepackage{${pkg}}`);
             await writeFile(filePath, src, 'utf-8');
             applied.push(`Added \\usepackage{${pkg}} to ${filePath}`);
             break;
@@ -587,7 +589,12 @@ export function registerBuiltins(registry: ToolRegistry): void {
         log.push(`Round ${iter}: Compilation failed.`);
         const fixes = await applyLatexFixes(paperDir, result.errors);
         if (!fixes.length) {
-          log.push(`  No auto-fixable patterns found. Remaining errors:\n${result.errors.slice(0, 10).map((e) => `    ${e}`).join('\n')}`);
+          log.push(
+            `  No auto-fixable patterns found. Remaining errors:\n${result.errors
+              .slice(0, 10)
+              .map((e) => `    ${e}`)
+              .join('\n')}`,
+          );
           break;
         }
         log.push(...fixes.map((f) => `  Fixed: ${f}`));
@@ -595,7 +602,9 @@ export function registerBuiltins(registry: ToolRegistry): void {
         if (iter === maxIter) {
           const finalResult = await runLatexCompile(paperDir);
           if (finalResult.ok) {
-            log.push(`Round ${iter + 1}: Compiled successfully after fixes. PDF: ${finalResult.pdfPath}`);
+            log.push(
+              `Round ${iter + 1}: Compiled successfully after fixes. PDF: ${finalResult.pdfPath}`,
+            );
           } else {
             log.push(
               `Still failing after ${maxIter} rounds. Remaining errors:`,

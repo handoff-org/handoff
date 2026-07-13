@@ -30,7 +30,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run docs:check && npm test",
     "qa:chat": "tsx qa/chat-sim/runner.ts --all",
     "qa:chat:smoke": "tsx qa/chat-sim/runner.ts --smoke",
     "qa:chat:fuzz": "tsx qa/chat-sim/runner.ts --fuzz --iterations 50",

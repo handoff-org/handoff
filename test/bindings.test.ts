@@ -2,15 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { freshHome } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject } = await import('../src/workspace/project.js');
-const {
-  readBindings,
-  appendBinding,
-  removeBinding,
-  newBindingId,
-  bindingsPath,
-} = await import('../src/workspace/bindings.js');
+const { readBindings, appendBinding, removeBinding, newBindingId } =
+  await import('../src/workspace/bindings.js');
 
 const proj = createProject({ title: 'Test Bindings Project' });
 const slug = proj.slug;

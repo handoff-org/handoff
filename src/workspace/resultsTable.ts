@@ -167,8 +167,7 @@ export function metricsTableWithStats(
     .map(({ key, s }) => {
       const meanStd =
         s.n > 1 ? `${formatNumber(s.mean)} ± ${formatNumber(s.std)}` : formatNumber(s.mean);
-      const ci =
-        s.n > 1 ? `[${formatNumber(s.ci95Low)}, ${formatNumber(s.ci95High)}]` : '—';
+      const ci = s.n > 1 ? `[${formatNumber(s.ci95Low)}, ${formatNumber(s.ci95High)}]` : '—';
       return `| ${key} | ${meanStd} | ${ci} |`;
     });
 
@@ -177,8 +176,7 @@ export function metricsTableWithStats(
     .map(({ key, s }) => {
       const meanStd =
         s.n > 1 ? `${formatNumber(s.mean)} ± ${formatNumber(s.std)}` : formatNumber(s.mean);
-      const ci =
-        s.n > 1 ? `[${formatNumber(s.ci95Low)}, ${formatNumber(s.ci95High)}]` : '--';
+      const ci = s.n > 1 ? `[${formatNumber(s.ci95Low)}, ${formatNumber(s.ci95High)}]` : '--';
       return `%   ${key.padEnd(20)}  ${meanStd.padEnd(24)}  CI ${ci}`;
     });
 
@@ -193,13 +191,12 @@ export function metricsTableWithStats(
       statsLatexLines.join('\n')
     : '';
 
-  const mdStats =
-    statsMdRows.length
-      ? '\n\n**Cross-run stats (n=' +
-        rows.length +
-        '):**\n| Metric | Mean ± Std | 95% CI |\n|---|---|---|\n' +
-        statsMdRows.join('\n')
-      : '';
+  const mdStats = statsMdRows.length
+    ? '\n\n**Cross-run stats (n=' +
+      rows.length +
+      '):**\n| Metric | Mean ± Std | 95% CI |\n|---|---|---|\n' +
+      statsMdRows.join('\n')
+    : '';
 
   return {
     latex: baseLatex + latexStats,

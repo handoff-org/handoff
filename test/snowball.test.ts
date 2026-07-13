@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { freshHome } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { createProject } = await import('../src/workspace/project.js');
 const { snowball } = await import('../src/research/snowball.js');
 
@@ -51,7 +51,9 @@ test('snowball backward finds new papers', async (t) => {
     call++;
     if (call === 1) {
       // referenced_works response
-      return jsonRes({ referenced_works: ['https://openalex.org/WREF1', 'https://openalex.org/WREF2'] });
+      return jsonRes({
+        referenced_works: ['https://openalex.org/WREF1', 'https://openalex.org/WREF2'],
+      });
     }
     if (call === 2) {
       // batch resolve response
@@ -66,9 +68,7 @@ test('snowball backward finds new papers', async (t) => {
 });
 
 test('snowball forward finds new papers', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () =>
-    jsonRes({ results: [fakeOAWork('WFWD1')] }),
-  );
+  t.mock.method(globalThis, 'fetch', async () => jsonRes({ results: [fakeOAWork('WFWD1')] }));
   const result = await snowball(slug, 'WSEED', 'forward');
   assert.equal(result.papers.length, 1);
   assert.ok(result.papers[0]!.id.includes('WFWD1'));

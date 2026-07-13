@@ -1044,7 +1044,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const handleResearch = useCallback((cmd: string, argStr: string) => {
     const meta = getActiveProject();
     if (!meta) {
-      addEntry({ kind: 'note', content: 'no active project — create one with /project new <name>' });
+      addEntry({
+        kind: 'note',
+        content: 'no active project — create one with /project new <name>',
+      });
       return;
     }
     const slug = meta.slug;
@@ -1054,16 +1057,30 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         if (id) {
           const note = readLitNotes(slug).find((n) => n.paperId === id);
           if (!note) {
-            addEntry({ kind: 'note', content: `No note for "${id}". Use /note-paper to create one.` });
+            addEntry({
+              kind: 'note',
+              content: `No note for "${id}". Use /note-paper to create one.`,
+            });
           } else {
-            const authors = note.authors.length > 2 ? `${note.authors[0]} et al.` : note.authors.join(', ');
-            const lines = [`${note.paperId}  [${note.status}]`, `  "${note.title}" — ${authors}, ${note.year}`, `  Relevance: ${note.relevanceSummary}`];
+            const authors =
+              note.authors.length > 2 ? `${note.authors[0]} et al.` : note.authors.join(', ');
+            const lines = [
+              `${note.paperId}  [${note.status}]`,
+              `  "${note.title}" — ${authors}, ${note.year}`,
+              `  Relevance: ${note.relevanceSummary}`,
+            ];
             if (note.tags.length) lines.push(`  Tags: ${note.tags.join(', ')}`);
-            for (const p of note.keyPassages) lines.push(`  · "${p.quote.slice(0, 100)}${p.quote.length > 100 ? '…' : ''}"${p.comment ? ` — ${p.comment}` : ''}`);
+            for (const p of note.keyPassages)
+              lines.push(
+                `  · "${p.quote.slice(0, 100)}${p.quote.length > 100 ? '…' : ''}"${p.comment ? ` — ${p.comment}` : ''}`,
+              );
             addEntry({ kind: 'note', content: lines.join('\n') });
           }
         } else {
-          addEntry({ kind: 'note', content: formatLitNotesSummary(readLitNotes(slug), meta.title) });
+          addEntry({
+            kind: 'note',
+            content: formatLitNotesSummary(readLitNotes(slug), meta.title),
+          });
         }
         return;
       }
@@ -1956,7 +1973,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       }
       if (/^\/note-paper\b/i.test(trimmed)) {
         const id = trimmed.replace(/^\/note-paper\s*/i, '').trim();
-        void runTurn(trimmed, `Call note_paper with paper_id="${id}". Ask the user for relevance, key passages, and tags if not provided.`);
+        void runTurn(
+          trimmed,
+          `Call note_paper with paper_id="${id}". Ask the user for relevance, key passages, and tags if not provided.`,
+        );
         return;
       }
       if (/^\/snowball\b/i.test(trimmed)) {
@@ -1964,36 +1984,63 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         const parts = rest.split(/\s+/);
         const id = parts[0] ?? '';
         const dir = parts[1] ?? 'both';
-        void runTurn(trimmed, `Call snowball_citations with paper_id="${id}", direction="${dir}". Summarize the new papers found.`);
+        void runTurn(
+          trimmed,
+          `Call snowball_citations with paper_id="${id}", direction="${dir}". Summarize the new papers found.`,
+        );
         return;
       }
       if (/^\/lit-review\b/i.test(trimmed)) {
         const tags = trimmed.replace(/^\/lit-review\s*/i, '').trim();
-        const tagArg = tags ? ` with tags [${tags.split(/[\s,]+/).filter(Boolean).map((t) => `"${t}"`).join(', ')}]` : '';
-        void runTurn(trimmed, `Call draft_lit_review${tagArg}. Return the LaTeX skeleton and evidence context.`);
+        const tagArg = tags
+          ? ` with tags [${tags
+              .split(/[\s,]+/)
+              .filter(Boolean)
+              .map((t) => `"${t}"`)
+              .join(', ')}]`
+          : '';
+        void runTurn(
+          trimmed,
+          `Call draft_lit_review${tagArg}. Return the LaTeX skeleton and evidence context.`,
+        );
         return;
       }
       if (/^\/bind\b/i.test(trimmed)) {
         const rest = trimmed.replace(/^\/bind\s*/i, '').trim();
-        void runTurn(trimmed, `Call bind_metric. Parse these space-separated arguments in order (file line raw run_id metric_key [claim_id]): ${rest}`);
+        void runTurn(
+          trimmed,
+          `Call bind_metric. Parse these space-separated arguments in order (file line raw run_id metric_key [claim_id]): ${rest}`,
+        );
         return;
       }
       if (/^\/auto-link\b/i.test(trimmed)) {
-        void runTurn(trimmed, 'Call auto_link_number with no arguments. Report unlinked numbers and suggest bindings from run capsules.');
+        void runTurn(
+          trimmed,
+          'Call auto_link_number with no arguments. Report unlinked numbers and suggest bindings from run capsules.',
+        );
         return;
       }
       if (/^\/stats\b/i.test(trimmed)) {
         const rest = trimmed.replace(/^\/stats\s*/i, '').trim();
-        void runTurn(trimmed, `Call compute_stats. Parse these arguments (run_ids metric [baseline_run_ids]): ${rest}`);
+        void runTurn(
+          trimmed,
+          `Call compute_stats. Parse these arguments (run_ids metric [baseline_run_ids]): ${rest}`,
+        );
         return;
       }
       if (/^\/draft-section\b/i.test(trimmed)) {
         const section = trimmed.replace(/^\/draft-section\s*/i, '').trim();
-        void runTurn(trimmed, `Call draft_section with section="${section}". Return the LaTeX skeleton and evidence.`);
+        void runTurn(
+          trimmed,
+          `Call draft_section with section="${section}". Return the LaTeX skeleton and evidence.`,
+        );
         return;
       }
       if (/^\/fix-paper\b/i.test(trimmed)) {
-        void runTurn(trimmed, 'Call fix_paper_errors. Iterate compile→fix cycles and report what was fixed each round.');
+        void runTurn(
+          trimmed,
+          'Call fix_paper_errors. Iterate compile→fix cycles and report what was fixed each round.',
+        );
         return;
       }
       if (/^\/preview-figure\b/i.test(trimmed)) {
@@ -2002,7 +2049,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         return;
       }
       if (/^\/verify-comparisons\b/i.test(trimmed)) {
-        void runTurn(trimmed, 'Call verify_comparison with no arguments. Check all comparison claims against run data and report HOLDS/FAILS/UNVERIFIED per claim.');
+        void runTurn(
+          trimmed,
+          'Call verify_comparison with no arguments. Check all comparison claims against run data and report HOLDS/FAILS/UNVERIFIED per claim.',
+        );
         return;
       }
       if (userInput.startsWith('/')) {

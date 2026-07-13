@@ -5,15 +5,18 @@ import reactHooks from 'eslint-plugin-react-hooks';
 /**
  * Minimal ESLint for a TypeScript + React/Ink codebase. Formatting is owned by
  * Prettier (`npm run format`), so this config carries no stylistic rules — only
- * correctness-oriented ones. Most are `warn` (not `error`) so lint is advisory
- * and can be adopted incrementally rather than blocking the build on day one.
+ * correctness-oriented ones.
+ *
+ * `no-unused-vars` is an ERROR: unused imports/vars are a real correctness smell
+ * (they mask dead code and refactor leftovers). Everything else stays `warn`.
+ * The remaining warnings are `react-hooks/exhaustive-deps` in the UI, tracked
+ * for the ui/app.tsx refactor — see REFACTOR_AUDIT.md.
  */
 export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
       'dist/**',
-      'test/**', // tests aren't in the typecheck include either
       '**/*.d.ts',
       'src/ascii/**', // generated / art data tables
     ],
@@ -35,9 +38,11 @@ export default tseslint.config(
       'no-undef': 'off',
       // Advisory, not blocking — surface issues without failing everyone's build.
       '@typescript-eslint/no-explicit-any': 'warn',
+      // Error: unused imports/vars hide dead code and refactor leftovers.
+      // `_`-prefixed names are opt-out (deliberately-unused args/catch bindings).
       '@typescript-eslint/no-unused-vars': [
-        'warn',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'no-control-regex': 'off', // we intentionally match ESC / control bytes

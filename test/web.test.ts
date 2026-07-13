@@ -38,7 +38,7 @@ test('htmlToText decodes entities', () => {
 test('htmlToText collapses runaway whitespace and blank lines', () => {
   const text = htmlToText('<p>a</p>\n\n\n\n<p>b</p>   \t  <span>  c  </span>');
   assert.ok(!/\n{3,}/.test(text), 'no 3+ consecutive newlines');
-  assert.ok(!/  /.test(text), 'no double spaces');
+  assert.ok(!/ {2}/.test(text), 'no double spaces');
 });
 
 test('htmlToText collapses tabs to a single space (regular-whitespace char class)', () => {

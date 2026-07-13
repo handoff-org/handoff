@@ -25,7 +25,7 @@ test('summarizeMetric five values — known mean and CI', () => {
   // mean=0.9, values=[0.85,0.88,0.90,0.92,0.95]
   // std=sqrt(0.00145)≈0.03808, se≈0.01703, df=4, t=2.776 → margin≈0.0473
   // CI ≈ [0.852, 0.948]
-  const values = [0.85, 0.88, 0.90, 0.92, 0.95];
+  const values = [0.85, 0.88, 0.9, 0.92, 0.95];
   const s = summarizeMetric(values, 'f1');
   assert.equal(s.n, 5);
   assert.ok(approx(s.mean, 0.9, 0.001));
@@ -46,9 +46,9 @@ test('summarizeMetric large n uses Gaussian approximation (t≈1.96)', () => {
   assert.ok(approx(s.ci95High, 1.0));
 });
 
-test('compareMetrics returns Cohen\'s d and effect label', () => {
-  const treatment = [0.90, 0.92, 0.91, 0.93, 0.90];
-  const baseline  = [0.80, 0.82, 0.81, 0.83, 0.80];
+test("compareMetrics returns Cohen's d and effect label", () => {
+  const treatment = [0.9, 0.92, 0.91, 0.93, 0.9];
+  const baseline = [0.8, 0.82, 0.81, 0.83, 0.8];
   const c = compareMetrics(treatment, baseline, 'acc');
   assert.ok(c.cohensD > 0, 'treatment > baseline → positive d');
   assert.ok(c.percentDiff > 0);

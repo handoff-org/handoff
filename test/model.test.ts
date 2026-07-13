@@ -301,7 +301,6 @@ test('OllamaModel forwards a think:false override to /api/chat (retry path)', as
     return fakeRes({ body: streamOf(['{"message":{"content":"answer"},"done":true}\n']) });
   });
   const model = new OllamaModel(CFG);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, {
     think: false,
   })) {
@@ -457,7 +456,6 @@ test('OllamaModel replays tool-call arguments as an OBJECT, not a string (native
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ] as any;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for await (const _p of new OllamaModel(CFG).chatStream(history, undefined)) {
     void _p;
   }
@@ -480,9 +478,8 @@ const VLLM_CFG = {
 } as any;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function collectModel(model: { chatStream: Function }): Promise<any[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = [];
+async function collectModel(model: any): Promise<unknown[]> {
+  const parts: unknown[] = [];
   for await (const p of model.chatStream([{ role: 'user', content: 'hi' }], undefined))
     parts.push(p);
   return parts;

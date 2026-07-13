@@ -5,7 +5,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { freshHome } from './helpers.js';
 
-const home = freshHome();
+freshHome();
 const { loadSkills, findSkill } = await import('../src/skills/store.js');
 
 const SKILLS_DIR = join(homedir(), '.handoff', 'skills');
