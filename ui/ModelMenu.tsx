@@ -15,6 +15,7 @@ import {
 } from '../config/models.js';
 import { detectHardware, describeHardware } from '../src/system/hardware.js';
 import { advise, type PerformanceMode } from '../src/agent/advisor.js';
+import { effortLabel, type ThinkingEffort } from '../src/agent/thinkingEffort.js';
 import { sanitizeTyped } from './input.js';
 
 const VELVET = '#a855f7';
@@ -42,6 +43,10 @@ interface Props {
   /** Model ids a prior benchmark flagged slow / CPU-spilled (from the benchmark cache). */
   slowModels?: string[];
   prefersFastSmallModels?: boolean;
+  /** Current thinking-effort dial position; shown in the footer, cycled with ←/→. */
+  thinkingEffort?: ThinkingEffort;
+  /** Cycle the thinking-effort dial (dir=1 right/up a level, -1 left/down). */
+  onCycleEffort?: (dir: 1 | -1) => void;
   onSelect: (modelId: string, hasQuant: boolean) => void;
   onToggleFavourite: (modelId: string) => void;
   onCancel?: () => void;
@@ -175,6 +180,8 @@ export function ModelMenu({
   rejectedModels,
   slowModels,
   prefersFastSmallModels,
+  thinkingEffort,
+  onCycleEffort,
   onSelect,
   onToggleFavourite,
   onCancel,
@@ -314,6 +321,16 @@ export function ModelMenu({
     }
     if (key.downArrow) {
       setCursor((c) => (c + 1) % selectableIndices.length);
+      return;
+    }
+    // ←/→ cycle the thinking-effort dial (loops through low↔max). Only active
+    // when the host wired the handler (the /model menu); a no-op in setup.
+    if (key.leftArrow && onCycleEffort) {
+      onCycleEffort(-1);
+      return;
+    }
+    if (key.rightArrow && onCycleEffort) {
+      onCycleEffort(1);
       return;
     }
 
@@ -462,6 +479,14 @@ export function ModelMenu({
 
       {/* Footer */}
       <Box marginTop={1} flexDirection="column">
+        {thinkingEffort && (
+          <Box>
+            <Text dimColor>←/→ thinking effort: </Text>
+            <Text color="cyan" bold>
+              {effortLabel(thinkingEffort)}
+            </Text>
+          </Box>
+        )}
         <Text dimColor>
           ↑/↓ navigate · Enter select · F favourite{onCancel ? ' · Esc back' : ''}
         </Text>

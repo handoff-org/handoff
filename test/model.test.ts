@@ -75,6 +75,31 @@ test('ThinkFilter does not hold back a literal </div> as a partial tag', () => {
   assert.equal(f.flush(), '');
 });
 
+// --- ThinkFilter speculative mode (assumeThinking=true) ---------------------
+
+test('ThinkFilter speculative: buffers content and emits reasoning until </think>', () => {
+  const f = new ThinkFilter(true);
+  assert.deepEqual(f.push('I need to think'), { visible: '', reasoning: true });
+  assert.deepEqual(f.push(' about this'), { visible: '', reasoning: true });
+  const r = f.push('</think>The answer is 42');
+  assert.equal(r.visible, 'The answer is 42');
+  assert.equal(r.reasoning, false);
+  assert.equal(f.flush(), '');
+});
+
+test('ThinkFilter speculative: flush returns buffered content when no </think> seen', () => {
+  const f = new ThinkFilter(true);
+  f.push('Hello!');
+  assert.equal(f.flush(), 'Hello!');
+});
+
+test('ThinkFilter speculative: handles explicit <think> tag in stream (preamble visible)', () => {
+  const f = new ThinkFilter(true);
+  const r = f.push('preamble<think>reasoning</think>answer');
+  assert.equal(r.visible, 'preambleanswer');
+  assert.equal(f.flush(), '');
+});
+
 // --- stripReasoning ---------------------------------------------------------
 
 test('stripReasoning removes a complete <think>...</think> block', () => {
@@ -215,7 +240,10 @@ const CFG = {
 async function collect(model: OllamaModel): Promise<any[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parts: any[] = [];
-  for await (const p of model.chatStream([{ role: 'user', content: 'hi' }], undefined)) {
+  // think: false so these tests exercise direct streaming (no speculative buffering).
+  for await (const p of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, {
+    think: false,
+  })) {
     parts.push(p);
   }
   return parts;
@@ -252,7 +280,9 @@ test('nativeToolCallsToToolCalls keeps a string argument and skips nameless call
   assert.equal(calls[0]!.function.arguments, '{"a":1}');
 });
 
-test('OllamaModel streams native deltas then a final (no spurious empty delta on done)', async (t) => {
+test('OllamaModel streams native deltas then a final (speculative flush on no </think>)', async (t) => {
+  // ThinkFilter is always speculative: content buffers until </think> or flush().
+  // Without </think> the full buffer is released as one delta at flush() time.
   const body = streamOf([
     '{"message":{"role":"assistant","content":"he"},"done":false}\n',
     '{"message":{"content":"llo"},"done":false}\n',
@@ -262,7 +292,7 @@ test('OllamaModel streams native deltas then a final (no spurious empty delta on
   const parts = await collect(new OllamaModel(CFG));
   assert.deepEqual(
     parts.filter((p) => p.type === 'delta').map((p) => p.text),
-    ['he', 'llo'],
+    ['hello'], // flushed as one chunk since no </think> arrived
   );
   const final = parts.at(-1);
   assert.equal(final.type, 'final');
@@ -277,9 +307,16 @@ test('OllamaModel sends keep_alive and options to /api/chat', async (t) => {
     captured = { url, init };
     return fakeRes({ body: streamOf(['{"message":{"content":"x"},"done":true}\n']) });
   });
-  await collect(
-    new OllamaModel({ ...CFG, ollamaNumCtx: 8192, ollamaKeepAlive: '30m', maxNewTokens: 256 }),
-  );
+  // Use chatStream directly with default options (think: true) to verify the request body.
+  const model = new OllamaModel({
+    ...CFG,
+    ollamaNumCtx: 8192,
+    ollamaKeepAlive: '30m',
+    maxNewTokens: 256,
+  });
+  for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined)) {
+    /* drain */
+  }
   assert.match(captured.url, /\/api\/chat$/);
   const sent = JSON.parse(captured.init.body);
   assert.equal(sent.stream, true);
@@ -307,6 +344,44 @@ test('OllamaModel forwards a think:false override to /api/chat (retry path)', as
     void _;
   }
   assert.equal(JSON.parse(captured.init.body).think, false);
+});
+
+test('OllamaModel forwards a string think level ("high") verbatim to /api/chat', async (t) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let captured: any;
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    captured = { url, init };
+    return fakeRes({ body: streamOf(['{"message":{"content":"answer"},"done":true}\n']) });
+  });
+  const model = new OllamaModel(CFG);
+  for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, {
+    think: 'high',
+  })) {
+    void _;
+  }
+  // The dial's high/max levels pass through unchanged so graduated-reasoning
+  // models (gpt-oss) can honor them; others coerce server-side.
+  assert.equal(JSON.parse(captured.init.body).think, 'high');
+});
+
+test('OllamaModel uncapOutput removes the num_predict cap (max effort)', async (t) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let captured: any;
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+    captured = { url, init };
+    return fakeRes({ body: streamOf(['{"message":{"content":"x"},"done":true}\n']) });
+  });
+  // maxNewTokens is set, but uncapOutput must win → no num_predict at all, so a
+  // long reasoning + answer runs to the context limit instead of truncating.
+  const model = new OllamaModel({ ...CFG, maxNewTokens: 256 });
+  for await (const _ of model.chatStream([{ role: 'user', content: 'hi' }], undefined, undefined, {
+    think: 'high',
+    uncapOutput: true,
+  })) {
+    void _;
+  }
+  const options = JSON.parse(captured.init.body).options;
+  assert.equal(options.num_predict, undefined);
 });
 
 test('a large explicit maxNewTokens is respected above the reasoning floor', async (t) => {
@@ -546,4 +621,27 @@ test('OllamaModel retries without tools when model does not support tools (400)'
   const final = parts.at(-1);
   assert.equal(final.tool_calls?.length, 1);
   assert.equal(final.tool_calls[0].function.name, 'make_dir');
+});
+
+test('OllamaModel emits token_stats from prompt_eval_count / eval_count in done chunk', async (t) => {
+  const body = streamOf([
+    '{"message":{"content":"hello"},"done":false}\n',
+    '{"message":{"content":""},"done":true,"prompt_eval_count":42,"eval_count":7}\n',
+  ]);
+  t.mock.method(globalThis, 'fetch', async () => fakeRes({ body }));
+  const parts = await collect(new OllamaModel(CFG));
+  const stats = parts.find((p) => p.type === 'token_stats');
+  assert.ok(stats, 'token_stats event should be emitted');
+  assert.equal(stats.promptTokens, 42);
+  assert.equal(stats.outputTokens, 7);
+});
+
+test('OllamaModel does not emit token_stats when done chunk lacks eval counts', async (t) => {
+  const body = streamOf(['{"message":{"content":"hi"},"done":true}\n']);
+  t.mock.method(globalThis, 'fetch', async () => fakeRes({ body }));
+  const parts = await collect(new OllamaModel(CFG));
+  assert.ok(
+    !parts.some((p) => p.type === 'token_stats'),
+    'no token_stats when prompt_eval_count absent',
+  );
 });

@@ -35,16 +35,28 @@ export interface ToolCall {
 export type StreamPart =
   | { type: 'delta'; text: string }
   | { type: 'reasoning' } // model is inside a <think> block; no visible text this chunk
-  | { type: 'final'; content: string; tool_calls?: ToolCall[]; truncated?: boolean };
+  | { type: 'final'; content: string; tool_calls?: ToolCall[]; truncated?: boolean }
+  | { type: 'token_stats'; promptTokens: number; outputTokens: number };
 
 /** Per-call overrides for a single chatStream request. */
 export interface ChatOptions {
   /**
-   * Ask the backend to emit hidden reasoning (default true, honored by the native
-   * Ollama path). Set false to force a direct answer — used to retry a turn that
-   * spent its whole output budget inside `<think>` and returned nothing.
+   * How the backend should reason this turn. Honored by the native Ollama path,
+   * which accepts a boolean or a graduated level ('low'|'medium'|'high'):
+   *   - true (default) — emit hidden reasoning in its own field
+   *   - false — answer directly (fastest; also the retry when a turn reasoned
+   *     itself out of an answer)
+   *   - a level string — passed verbatim; models built for graduated reasoning
+   *     (gpt-oss) honor it, others coerce to full thinking.
+   * Set by the thinking-effort dial (src/agent/thinkingEffort.ts).
    */
-  think?: boolean;
+  think?: boolean | 'low' | 'medium' | 'high';
+  /**
+   * Remove the output-token cap for this turn (max effort). A long reasoning +
+   * answer then runs to the context limit instead of being truncated by
+   * num_predict. Honored by the native Ollama path.
+   */
+  uncapOutput?: boolean;
 }
 
 export interface ChatModel {
@@ -81,6 +93,10 @@ interface OllamaNativeChunk {
   /** Ollama's stop reason: "stop" (natural), "length" (hit num_predict), … */
   done_reason?: string;
   error?: string;
+  /** Input tokens used this turn (present on the final done:true chunk). */
+  prompt_eval_count?: number;
+  /** Output tokens generated this turn (present on the final done:true chunk). */
+  eval_count?: number;
 }
 
 /** Accumulate OpenAI-style streamed tool_call fragments (keyed by index). */
@@ -212,12 +228,68 @@ function partialTagSuffix(buf: string): number {
  * blocks from a model's content stream. Feed each delta to `push()`; it returns
  * the visible (answer) text and tracks whether we're currently inside a think
  * block. Handles tags split across chunk boundaries via an internal carry.
+ *
+ * Pass `assumeThinking = true` when the model's chat template prefills `<think>`
+ * as the assistant prefix, so the opening tag is never in the stream. In this
+ * "speculative" mode the filter buffers content and waits for `</think>` before
+ * emitting any visible text. If `flush()` is called without ever seeing `</think>`,
+ * the buffer is returned as visible content (the model replied directly, no thinking).
  */
 export class ThinkFilter {
-  private inThink = false;
+  private inThink: boolean;
   private carry = '';
+  private specBuf = '';
+  private speculative: boolean;
+
+  constructor(assumeThinking = false) {
+    this.inThink = assumeThinking;
+    this.speculative = assumeThinking;
+  }
+
+  /**
+   * Called when a native `thinking` field is detected in the stream, which means
+   * Ollama is separating reasoning from content — `msg.content` is always visible
+   * text, so speculative buffering is not needed. Returns any content that was
+   * erroneously buffered (should be empty in practice).
+   */
+  exitSpeculative(): string {
+    if (!this.speculative) return '';
+    const buf = this.specBuf;
+    this.specBuf = '';
+    this.speculative = false;
+    this.inThink = false;
+    return buf;
+  }
 
   push(chunk: string): { visible: string; reasoning: boolean } {
+    if (this.speculative) {
+      // Buffer everything until we find a </think> (confirms the template-prefilled
+      // case) or a <think> (the model included an explicit opening tag — preamble
+      // before it was visible text).
+      this.specBuf += chunk;
+      const openIdx = this.specBuf.indexOf('<think>');
+      const closeIdx = this.specBuf.indexOf('</think>');
+      if (openIdx !== -1 && (closeIdx === -1 || openIdx < closeIdx)) {
+        // Explicit <think> appears before any </think> — content before it was visible.
+        const preamble = this.specBuf.slice(0, openIdx);
+        const afterOpen = this.specBuf.slice(openIdx + '<think>'.length);
+        this.specBuf = '';
+        this.speculative = false;
+        this.inThink = true;
+        const rest = afterOpen ? this.push(afterOpen) : { visible: '', reasoning: false };
+        return { visible: preamble + rest.visible, reasoning: rest.reasoning };
+      }
+      if (closeIdx !== -1) {
+        // </think> found (no prior <think>) — template-prefilled case confirmed.
+        const after = this.specBuf.slice(closeIdx + '</think>'.length);
+        this.specBuf = '';
+        this.speculative = false;
+        this.inThink = false;
+        return after ? this.push(after) : { visible: '', reasoning: false };
+      }
+      return { visible: '', reasoning: true };
+    }
+
     let buf = this.carry + chunk;
     this.carry = '';
     let out = '';
@@ -243,6 +315,14 @@ export class ThinkFilter {
 
   /** Emit any buffered tail at end-of-stream (a tag that never completed). */
   flush(): string {
+    if (this.speculative) {
+      // Never saw </think> — the model replied directly without thinking.
+      const rest = this.specBuf;
+      this.specBuf = '';
+      this.speculative = false;
+      this.inThink = false;
+      return rest;
+    }
     const rest = this.inThink ? '' : this.carry;
     this.carry = '';
     return rest;
@@ -273,8 +353,14 @@ async function* streamOpenAICompat(
   signal: AbortSignal | undefined,
   backendLabel: string,
   unreachableHint: string,
+  thinkMode: ChatOptions['think'] = true,
 ): AsyncGenerator<StreamPart> {
   const baseUrl = url.replace(/\/v1\/chat\/completions$/, '');
+  // OpenAI-style reasoning control. Servers that support it (vLLM, newer
+  // llama-server builds) read `reasoning_effort`; others ignore the field.
+  // false → omit (let the server default, usually off); true → 'medium'.
+  const reasoningEffort =
+    thinkMode === false ? undefined : thinkMode === true ? 'medium' : thinkMode;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -285,6 +371,7 @@ async function* streamOpenAICompat(
         messages: messages.map(toOpenAIContent),
         tools,
         ...(config.maxNewTokens ? { max_tokens: config.maxNewTokens } : {}),
+        ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
         stream: true,
       }),
       signal,
@@ -491,7 +578,8 @@ async function* streamOllamaNative(
   messages: Message[],
   tools: ToolSchema[] | undefined,
   signal: AbortSignal | undefined,
-  enableThinking = true,
+  thinkMode: ChatOptions['think'] = true,
+  uncapOutput = false,
 ): AsyncGenerator<StreamPart> {
   const url = `${baseUrl}/api/chat`;
   const options: Record<string, unknown> = { num_ctx: config.ollamaNumCtx };
@@ -503,7 +591,10 @@ async function* streamOllamaNative(
   // their own, so this costs nothing on typical turns. The floor is scaled to
   // numCtx (via the same reserve promptBudgetFor subtracts out) so it can never
   // itself exceed the context window on a small preset.
-  if (config.maxNewTokens) {
+  //
+  // uncapOutput (max effort) skips the cap entirely: generation runs to the
+  // context limit so a long reasoning + answer is never truncated mid-thought.
+  if (config.maxNewTokens && !uncapOutput) {
     options.num_predict = Math.max(
       config.maxNewTokens,
       reasoningOutputReserve(config.ollamaNumCtx),
@@ -521,12 +612,12 @@ async function* streamOllamaNative(
         ...(tools ? { tools } : {}),
         stream: true,
         // Native thinking separates reasoning into its own `thinking` field
-        // (leaving `content` clean). We pass it explicitly so a caller can disable
-        // it: sending false is normally worse (some models, e.g. qwen3, ignore it
-        // and dump the monologue into `content`), but it's exactly what we want on
-        // a retry — a model that spent its whole budget reasoning gets one more
-        // chance to answer directly.
-        think: enableThinking,
+        // (leaving `content` clean). We pass it explicitly so a caller can tune
+        // it: false forces a direct answer (fastest, and the retry path when a
+        // model reasoned itself out of an answer); a level string ('low'|'high')
+        // is honored by models built for graduated reasoning (gpt-oss) and
+        // coerced to full thinking by others.
+        think: thinkMode,
         keep_alive: config.ollamaKeepAlive,
         options,
       }),
@@ -567,7 +658,15 @@ async function* streamOllamaNative(
     // Some models don't declare tool support in their Modelfile. Retry without
     // the tools field and fall back to inline JSON parsing on the response.
     if (res.status === 400 && tools && /does not support tools/i.test(detail)) {
-      yield* streamOllamaNative(baseUrl, config, messages, undefined, signal, enableThinking);
+      yield* streamOllamaNative(
+        baseUrl,
+        config,
+        messages,
+        undefined,
+        signal,
+        thinkMode,
+        uncapOutput,
+      );
       return;
     }
 
@@ -576,9 +675,18 @@ async function* streamOllamaNative(
   }
 
   let content = '';
-  const think = new ThinkFilter();
+  // Always start in speculative mode: qwen3's Ollama template prefills `<think>`
+  // when thinking is enabled (so the opening tag is never in the stream), and when
+  // think:false is passed some variants still output untagged reasoning before the
+  // answer. Speculative mode buffers content until `</think>` is seen (stripping the
+  // reasoning) then switches to normal streaming. If `</think>` never arrives the
+  // buffer is returned as visible text at flush() — acceptable for direct-reply turns.
+  const think = new ThinkFilter(true);
+  let sawNativeThinking = false;
   let nativeCalls: ToolCall[] = [];
   let doneReason: string | undefined;
+  let promptEvalCount: number | undefined;
+  let evalCount: number | undefined;
   for await (const line of readNDJSON(res.body)) {
     if (signal?.aborted) return; // honor abort even if the socket keeps dribbling
     let obj: OllamaNativeChunk;
@@ -591,18 +699,35 @@ async function* streamOllamaNative(
     if (obj.error) throw new Error(`Ollama: ${cleanBackendError(res.status, obj.error)}`);
 
     const msg = obj.message;
-    // Reasoning arrives in a separate `thinking` field (think:true) — surface a
-    // status but never add it to the visible content.
-    if (msg?.thinking) yield { type: 'reasoning' };
+    if (msg?.thinking) {
+      if (!sawNativeThinking) {
+        // First native-thinking chunk confirms Ollama is separating reasoning from
+        // content. Cancel speculative mode (buffer is empty in practice — content
+        // chunks are empty while thinking) so the visible response streams normally.
+        const flushed = think.exitSpeculative();
+        if (flushed) {
+          content += flushed;
+          yield { type: 'delta', text: flushed };
+        }
+        sawNativeThinking = true;
+      }
+      yield { type: 'reasoning' };
+    }
     if (msg?.content) {
-      // Belt-and-suspenders: a model that still inlines <think>...</think> in
-      // content gets stripped here too.
-      const { visible, reasoning } = think.push(msg.content);
-      if (visible) {
-        content += visible;
-        yield { type: 'delta', text: visible };
-      } else if (reasoning) {
-        yield { type: 'reasoning' };
+      if (sawNativeThinking) {
+        // Native thinking confirmed: content is always visible — bypass the filter.
+        content += msg.content;
+        yield { type: 'delta', text: msg.content };
+      } else {
+        // No native thinking (or not confirmed yet): run through the filter.
+        // Speculative mode handles the template-prefilled-<think> case.
+        const { visible, reasoning } = think.push(msg.content);
+        if (visible) {
+          content += visible;
+          yield { type: 'delta', text: visible };
+        } else if (reasoning) {
+          yield { type: 'reasoning' };
+        }
       }
     }
     // Native tool_calls arrive complete in one chunk (not fragmented like the
@@ -612,6 +737,8 @@ async function* streamOllamaNative(
     }
     if (obj.done) {
       doneReason = obj.done_reason;
+      promptEvalCount = obj.prompt_eval_count;
+      evalCount = obj.eval_count;
       break;
     }
   }
@@ -637,6 +764,9 @@ async function* streamOllamaNative(
     tool_calls: toolCalls.length ? toolCalls : undefined,
     truncated: doneReason === 'length',
   };
+  if (promptEvalCount !== undefined) {
+    yield { type: 'token_stats', promptTokens: promptEvalCount, outputTokens: evalCount ?? 0 };
+  }
 }
 
 /** HuggingFace router backend (paid providers). */
@@ -653,7 +783,12 @@ export class HFModel implements ChatModel {
     messages: Message[],
     tools: ToolSchema[] | undefined,
     signal?: AbortSignal,
+    opts?: ChatOptions,
   ): AsyncGenerator<StreamPart> {
+    // OpenAI-style reasoning control for providers that support it (ignored
+    // elsewhere). false → omit; true → 'medium'; a level string → verbatim.
+    const t = opts?.think ?? true;
+    const reasoningEffort = t === false ? undefined : t === true ? 'medium' : t;
     let stream;
     try {
       stream = this.client.chatCompletionStream(
@@ -665,6 +800,7 @@ export class HFModel implements ChatModel {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           tools: tools as any,
           ...(this.config.maxNewTokens ? { max_tokens: this.config.maxNewTokens } : {}),
+          ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
         },
         { signal },
       );
@@ -740,6 +876,7 @@ export class OllamaModel implements ChatModel {
       tools,
       signal,
       opts?.think ?? true,
+      opts?.uncapOutput ?? false,
     );
   }
 
@@ -760,6 +897,7 @@ export class LlamaCppModel implements ChatModel {
     messages: Message[],
     tools: ToolSchema[] | undefined,
     signal?: AbortSignal,
+    opts?: ChatOptions,
   ): AsyncGenerator<StreamPart> {
     const url = `${this.config.llamaCppBaseUrl}/v1/chat/completions`;
     yield* streamOpenAICompat(
@@ -770,6 +908,7 @@ export class LlamaCppModel implements ChatModel {
       signal,
       'llama.cpp',
       'Is the server running? Try: llama-server -m <model.gguf>',
+      opts?.think ?? true,
     );
   }
 
@@ -810,6 +949,7 @@ export class MlxModel implements ChatModel {
     messages: Message[],
     tools: ToolSchema[] | undefined,
     signal?: AbortSignal,
+    opts?: ChatOptions,
   ): AsyncGenerator<StreamPart> {
     const url = `${this.config.mlxBaseUrl}/v1/chat/completions`;
     yield* streamOpenAICompat(
@@ -820,6 +960,7 @@ export class MlxModel implements ChatModel {
       signal,
       'MLX server',
       'Is the server running? Try: python -m mlx_lm.server --model <model>',
+      opts?.think ?? true,
     );
   }
 
@@ -840,6 +981,7 @@ export class VLLMModel implements ChatModel {
     messages: Message[],
     tools: ToolSchema[] | undefined,
     signal?: AbortSignal,
+    opts?: ChatOptions,
   ): AsyncGenerator<StreamPart> {
     const url = `${this.config.vllmBaseUrl}/v1/chat/completions`;
     yield* streamOpenAICompat(
@@ -850,6 +992,7 @@ export class VLLMModel implements ChatModel {
       signal,
       'vLLM',
       'Is the server running? Try: vllm serve <model>',
+      opts?.think ?? true,
     );
   }
 

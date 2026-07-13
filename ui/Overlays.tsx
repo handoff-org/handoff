@@ -77,6 +77,7 @@ type SettingsValue =
   | 'context'
   | 'flash_attention'
   | 'kv_cache'
+  | 'auto_compress'
   | 'router_toggle'
   | 'router_fast_model'
   | 'router_think_model'
@@ -93,6 +94,7 @@ function settingsOptions(
   routerEnabled: boolean,
   routerFastModelId: string,
   routerNotes: string,
+  autoCompressAt: number | null,
 ): Array<{ label: string; value: SettingsValue; hint: string; separator?: boolean }> {
   return [
     {
@@ -134,6 +136,11 @@ function settingsOptions(
       label: `KV cache  (currently ${kvType})`,
       value: 'kv_cache',
       hint: 'quantize the KV cache to save memory · applies when Ollama restarts',
+    },
+    {
+      label: `Auto-compress  (${autoCompressAt !== null ? `at ${Math.round(autoCompressAt * 100)}%` : 'off'})`,
+      value: 'auto_compress',
+      hint: 'LLM-summarize old context when prompt tokens reach threshold · cycle: off → 60% → 75% → 80%',
     },
 
     { label: 'Model routing', value: 'router_toggle', hint: '', separator: true },
@@ -195,6 +202,8 @@ interface Props {
   /** Called when the user backs out of 'model_prepare'. */
   onModelPrepareCancel: () => void;
   onToggleFavourite: (modelId: string) => void;
+  /** Cycle the thinking-effort dial from the model menu (←/→). */
+  onCycleEffort: (dir: 1 | -1) => void;
   onThemePicked: (name: string) => void;
   onModePicked: (m: Config['mode']) => void;
   onProjectPicked: (slug: string) => void;
@@ -239,6 +248,7 @@ export function Overlays({
   onModelPrepared,
   onModelPrepareCancel,
   onToggleFavourite,
+  onCycleEffort,
   onThemePicked,
   onModePicked,
   onProjectPicked,
@@ -284,6 +294,8 @@ export function Overlays({
           ? { slowModels: modelPersonalization.slowModels }
           : {})}
         {...(modelPersonalization?.prefersFastSmallModels ? { prefersFastSmallModels: true } : {})}
+        thinkingEffort={config.thinkingEffort}
+        onCycleEffort={onCycleEffort}
         onSelect={onModelPicked}
         onToggleFavourite={onToggleFavourite}
         onCancel={onCancel}
@@ -353,6 +365,7 @@ export function Overlays({
           config.routerEnabled ?? false,
           config.routerFastModelId ?? 'qwen3:4b',
           config.routerNotes ?? 'changes',
+          config.autoCompressAt ?? null,
         )}
         onSelect={onSettingsPicked}
         onCancel={onCancel}

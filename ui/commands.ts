@@ -22,6 +22,14 @@ export const COMMANDS: Command[] = [
     name: '/model',
     desc: 'pick a model  (/model cool·fast·balanced·deep · fast·think tier override · doctor · benchmark)',
   },
+  {
+    name: '/effort',
+    desc: 'thinking effort dial  (/effort low·medium·high·max · also ←/→ in /model)',
+  },
+  {
+    name: '/compress',
+    desc: 'summarize old conversation history to free context space  (/compress [keep=12])',
+  },
   { name: '/settings', desc: 'inference preset, personalization, theme, or Ollama tuning' },
   {
     name: '/profile',

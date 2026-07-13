@@ -51,6 +51,14 @@ export const ConfigSchema = z.object({
   // Trim the history sent to the model each turn to the prompt budget (old tool
   // output capped, oldest turns dropped). Full history is still saved to disk.
   contextCompaction: z.boolean().default(true),
+  // Thinking-effort dial — the primary speed/depth control. 'low' turns reasoning
+  // off (fastest); 'medium' default; 'high' deep; 'max' deep + uncapped output.
+  // See src/agent/thinkingEffort.ts. Cycled with ←/→ in the model menu.
+  thinkingEffort: z.enum(['low', 'medium', 'high', 'max']).default('medium'),
+  // Auto-compress: summarize old history before a turn when prompt tokens reach this
+  // fraction of the context window. Null (default) = off; set to e.g. 0.75 to trigger
+  // at 75%. Configurable in /settings.
+  autoCompressAt: z.number().min(0).max(1).nullable().default(null),
   // Local adaptive personalization. Off until the user opts in (first-run wizard
   // or /settings). See src/personalization/. Cloud-prompt inclusion is off by default.
   personalizationEnabled: z.boolean().default(false),
@@ -153,6 +161,8 @@ export async function loadConfig(): Promise<Config> {
     inferencePreset: store.inferencePreset,
     maxPromptTokens: store.maxPromptTokens,
     contextCompaction: store.contextCompaction,
+    thinkingEffort: process.env['HANDOFF_THINKING_EFFORT'] ?? store.thinkingEffort,
+    autoCompressAt: store.autoCompressAt,
     personalizationEnabled: store.personalizationEnabled,
     personalizationIncludeInPrompt: store.personalizationIncludeInPrompt,
     personalizationAllowCloudPrompt: store.personalizationAllowCloudPrompt,

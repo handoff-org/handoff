@@ -8,6 +8,7 @@ import { type ChatEntry } from './types.js';
 import { bannerLines, LEFT_INNER, CANVAS_H } from './Banner.js';
 import { useLogoAnimation } from './useLogoAnimation.js';
 import { themePalette } from './ascii/gradient.js';
+import { hexToRgb, rgbToHex, mix } from './color.js';
 import { Overlays, type OverlayMode, type PendingQuestion } from './Overlays.js';
 import {
   sanitizeTyped,
@@ -75,6 +76,13 @@ import {
   formatTierNote,
   shouldShowTierNote,
 } from '../src/agent/router.js';
+import {
+  effortToParams,
+  cycleEffort,
+  parseEffort,
+  THINKING_EFFORTS,
+  type ThinkingEffort,
+} from '../src/agent/thinkingEffort.js';
 import type { RouterContext } from '../src/agent/router.js';
 import { INPUT_MODES_ON, INPUT_MODES_OFF } from './terminalControl.js';
 import { makeCoalescer } from './streamThrottle.js';
@@ -143,6 +151,57 @@ const INPUT_GAP = 3;
 // Braille spinner frames for the input-box prompt caret while working.
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
+// Typewriter-caret frames for the thinking indicator: the caret ">" advances
+// through "thinking...". Rendered with a per-character dark→bright gradient in the
+// theme's tool color so the leading edge glows (see thinkingFrame / thinkingGlow).
+const THINKING_FRAMES = [
+  '>',
+  't>',
+  'th>',
+  'thi>',
+  'thin>',
+  'think>',
+  'thinki>',
+  'thinkin>',
+  'thinking>',
+  'thinking.>',
+  'thinking..>',
+  'thinking...>',
+];
+
+// Extra ticks to dwell on the fully-typed word before the caret loops back to ">".
+const THINKING_DWELL = 4;
+
+/**
+ * Pick the current typewriter frame from a tick counter. Advances one character
+ * every 2 ticks (~180 ms) for a calm typing cadence, then holds on the complete
+ * "thinking...>" for ~0.7 s before looping — so the reset never feels abrupt.
+ */
+function thinkingFrame(tick: number): string {
+  const cycle = THINKING_FRAMES.length + THINKING_DWELL;
+  const step = Math.floor(tick / 2) % cycle;
+  return THINKING_FRAMES[Math.min(step, THINKING_FRAMES.length - 1)] ?? '>';
+}
+
+/**
+ * Render a thinking frame as a per-character gradient from a dark to a bright
+ * shade of `toolHex` (the theme's tool color): leftmost characters are dim and the
+ * advancing caret glows. A slow tick-driven pulse makes the glow breathe so the
+ * dwell frames still feel alive.
+ */
+function thinkingGlow(frame: string, toolHex: string, tick: number): React.ReactNode {
+  const base = hexToRgb(toolHex);
+  const pulse = 0.5 + 0.5 * Math.sin(tick / 4); // slow breathe, 0..1
+  const dark = mix(base, [0, 0, 0], 0.6);
+  const bright = mix(base, [255, 255, 255], 0.25 + 0.2 * pulse);
+  const n = frame.length;
+  return frame.split('').map((ch, i) => (
+    <Text key={i} color={rgbToHex(mix(dark, bright, n === 1 ? 1 : i / (n - 1)))}>
+      {ch}
+    </Text>
+  ));
+}
+
 // Lines moved per arrow-key / wheel notch when scrolling the transcript.
 const SCROLL_STEP = 3;
 
@@ -158,6 +217,65 @@ const STREAM_FLUSH_MS = 33;
 const FAST_HYSTERESIS = 2;
 
 type Focus = 'research' | 'general';
+
+/**
+ * Summarize the oldest portion of a conversation history into a compact block,
+ * replacing those messages with a single system summary. Returns the updated
+ * history and stats on success, or null if there's nothing to compress or the
+ * model call fails/is cancelled.
+ */
+async function doCompress(
+  history: import('../src/agent/model.js').Message[],
+  model: import('../src/agent/model.js').ChatModel,
+  registry: import('../src/tools/registry.js').ToolRegistry,
+  keep: number,
+  signal: AbortSignal,
+): Promise<{
+  newHistory: import('../src/agent/model.js').Message[];
+  summarized: number;
+  freed: number;
+} | null> {
+  const msgHistory = history.slice(1); // skip system prompt
+  if (msgHistory.length <= keep) return null;
+
+  const toSummarize = msgHistory.slice(0, msgHistory.length - keep);
+  const toKeep = msgHistory.slice(-keep);
+
+  const dump = toSummarize
+    .map((m) => {
+      const text = typeof m.content === 'string' ? m.content.slice(0, 2000) : '[non-text]';
+      return `[${m.role}]: ${text}`;
+    })
+    .join('\n\n');
+
+  const originalChars = dump.length;
+
+  let summary = '';
+  for await (const event of runAgentLoop(
+    `Summarize the following conversation excerpt into a compact, dense paragraph. ` +
+      `Include: decisions made, key facts, ongoing tasks, important context. ` +
+      `No preamble — return only the summary.\n\n${dump}`,
+    [{ role: 'system', content: 'Return only the summary. Be concise.' }],
+    model,
+    registry,
+    { signal, approve: async () => false, noTools: true, think: false },
+  )) {
+    if (event.type === 'message_end') summary = event.content;
+    if (event.type === 'error' || event.type === 'cancelled') return null;
+  }
+
+  if (!summary.trim()) return null;
+
+  const systemMsg = history[0] ?? { role: 'system' as const, content: '' };
+  const summaryMsg: import('../src/agent/model.js').Message = {
+    role: 'system',
+    content: `### Summary of earlier conversation\n\n${summary}`,
+  };
+  const newHistory = [systemMsg, summaryMsg, ...toKeep];
+  const freed = Math.max(0, Math.round((originalChars - summary.length) / 4));
+
+  return { newHistory, summarized: toSummarize.length, freed };
+}
 
 export function App({ initialConfig, registry, autoResume = false }: Props) {
   const { exit } = useApp();
@@ -213,6 +331,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // Bumped to force a repaint after returning to chat from a full-screen overlay
   // (see the effect below). The value is otherwise unused.
   const [, setRepaintTick] = useState(0);
+  // Prompt token count from the last Ollama turn (used for ctx% display + auto-compress).
+  const [ctxUsedTokens, setCtxUsedTokens] = useState(0);
+  const ctxUsedTokensRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const lastTierRef = useRef<'fast' | 'think' | null>(null);
   const hadToolCallsRef = useRef(false);
@@ -282,7 +403,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // model responds (the spinner is the prompt then). Honors reduced-motion.
   const [cursorOn, setCursorOn] = useState(true);
   useEffect(() => {
-    if (isLoading || mode !== 'chat') {
+    if (mode !== 'chat') {
       setCursorOn(false);
       return;
     }
@@ -293,7 +414,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     setCursorOn(true);
     const id = setInterval(() => setCursorOn((c) => !c), 530);
     return () => clearInterval(id);
-  }, [isLoading, mode]);
+  }, [mode]);
 
   // Repaint when returning to chat from a full-screen overlay. When an overlay
   // hands control back in a single input-triggered state change (e.g. picking a
@@ -1368,17 +1489,38 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         const pulled = autoPullOverleaf();
         if (pulled) addEntry({ kind: 'note', content: pulled });
       }
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let acc = '';
+
+      // Auto-compress: when context fill exceeds the threshold, summarize the oldest
+      // history turns before running this turn so prefill stays fast.
+      let baseHistory = history;
+      if (
+        config.autoCompressAt !== null &&
+        ctxUsedTokensRef.current > 0 &&
+        ctxUsedTokensRef.current / config.ollamaNumCtx >= config.autoCompressAt
+      ) {
+        const cr = await doCompress(baseHistory, model, registry, 12, controller.signal);
+        if (cr && !controller.signal.aborted) {
+          baseHistory = cr.newHistory;
+          setHistory(cr.newHistory);
+          ctxUsedTokensRef.current = 0;
+          setCtxUsedTokens(0);
+          addEntry({
+            kind: 'note',
+            content: `Auto-compressed ${cr.summarized} messages before this turn`,
+          });
+        }
+      }
+
       // Always rebuild the system message from current promptOpts so the live
       // system prompt reflects the project, focus, and personalization block.
       const sysMeta = research ? activeProject : null;
       const turnHistory: Message[] = [
         { role: 'system', content: buildSystem(config.systemPrompt, sysMeta, promptOpts) },
-        ...history.slice(1),
+        ...baseHistory.slice(1),
       ];
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-      let acc = '';
 
       // Per-turn model selection: when routing is on, pick fast or think model.
       let activeModel: ChatModel = model;
@@ -1439,17 +1581,23 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       // so we don't need to flush the tail into `streaming`.
       const streamCoalescer = makeCoalescer<string>(STREAM_FLUSH_MS, setStreaming);
 
+      // Thinking-effort dial governs how the model reasons this turn. The one
+      // exception: when the router is enabled and picked its fast model, force
+      // think:false — fast models are meant to be quick and may not support
+      // thinking (some error on think:true). Effort governs every other turn.
+      const routerFastActive = config.routerEnabled && activeTier === 'fast';
+      const ep = effortToParams(config.thinkingEffort);
+      const turnThink = routerFastActive ? false : ep.think;
+      const turnUncapOutput = routerFastActive ? false : ep.uncapOutput;
+
       for await (const event of runAgentLoop(modelInput, turnHistory, activeModel, registry, {
         signal: controller.signal,
         approve,
         askUser,
         preset: config.inferencePreset,
         ...(compaction ? { budget: { maxPromptTokens: budgetTokens } } : {}),
-        // Fast tier: disable extended thinking (non-reasoning models error on
-        // think:true). Tools are kept enabled — small models handle simple tool
-        // calls (list_dir, read_file) correctly; noTools would silently break
-        // navigational turns that are the main reason to use the fast model.
-        ...(config.routerEnabled && activeTier === 'fast' ? { think: false } : {}),
+        think: turnThink,
+        ...(turnUncapOutput ? { uncapOutput: true } : {}),
       })) {
         if (event.type === 'message_start') {
           acc = '';
@@ -1539,6 +1687,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           } else {
             addEntry({ kind: 'tool_result', name: event.name, result: event.result });
           }
+        } else if (event.type === 'token_stats') {
+          ctxUsedTokensRef.current = event.promptTokens;
+          setCtxUsedTokens(event.promptTokens);
         } else if (event.type === 'error') {
           setStreaming(null);
           setReasoning(false);
@@ -1650,6 +1801,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       config.backend,
       config.hfConsent,
       config.personalizationEnabled,
+      config.thinkingEffort,
+      config.autoCompressAt,
+      config.ollamaNumCtx,
       activeProject,
       focus,
       promptOpts,
@@ -1822,6 +1976,60 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const handleSubmit = useCallback(
     async (userInput: string) => {
       const trimmed = userInput.trim();
+      // /compress [N] — LLM-summarize the oldest history turns to free context space.
+      // Default: keep last 12 messages. Bare /compress uses the default.
+      if (/^\/compress\b/i.test(trimmed)) {
+        const arg = trimmed.replace(/^\/compress\s*/i, '').trim();
+        const keep = arg ? Math.max(2, parseInt(arg, 10) || 12) : 12;
+        const msgHistory = history.slice(1);
+        if (msgHistory.length <= keep) {
+          addEntry({
+            kind: 'note',
+            content: `nothing to compress — history has only ${msgHistory.length} messages (need > ${keep})`,
+          });
+          return;
+        }
+        setIsLoading(true);
+        addEntry({ kind: 'note', content: `Compressing ${msgHistory.length - keep} messages…` });
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const result = await doCompress(history, model, registry, keep, controller.signal);
+        abortRef.current = null;
+        if (result) {
+          setHistory(result.newHistory);
+          ctxUsedTokensRef.current = 0;
+          setCtxUsedTokens(0);
+          addEntry({
+            kind: 'note',
+            content: `Compressed ${result.summarized} messages → 1 block (freed ~${result.freed.toLocaleString()} tokens)`,
+          });
+        } else if (!controller.signal.aborted) {
+          addEntry({ kind: 'note', content: 'Compression returned no output — no change made' });
+        }
+        setIsLoading(false);
+        return;
+      }
+      // /effort [low|medium|high|max] — set the thinking-effort dial (bare = show
+      // current). Sets config + persists; the same dial the model menu ←/→ cycles.
+      if (/^\/effort\b/i.test(trimmed)) {
+        const arg = trimmed.replace(/^\/effort\s*/i, '').trim();
+        if (!arg) {
+          addEntry({
+            kind: 'note',
+            content: `thinking effort: ${config.thinkingEffort} · set with /effort ${THINKING_EFFORTS.join('|')}`,
+          });
+          return;
+        }
+        const next = parseEffort(arg);
+        if (!next) {
+          addEntry({ kind: 'note', content: `usage: /effort ${THINKING_EFFORTS.join('|')}` });
+          return;
+        }
+        setConfig((c) => ({ ...c, thinkingEffort: next }));
+        void writeStore({ thinkingEffort: next });
+        addEntry({ kind: 'note', content: `thinking effort → ${next}` });
+        return;
+      }
       // /research keeps the original-case claim (runCommand lowercases args).
       if (/^\/research\b/i.test(trimmed)) {
         const claim = trimmed.replace(/^\/research\s*/i, '');
@@ -2025,6 +2233,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       handleClaims,
       handleCapsules,
       handleResearch,
+      config.thinkingEffort,
+      history,
+      model,
+      registry,
     ],
   );
 
@@ -2047,6 +2259,16 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         idx === -1 ? [...existing, { backend, modelId }] : existing.filter((_, i) => i !== idx);
       void writeStore({ favourites: next });
       return { ...c, favourites: next };
+    });
+  }, []);
+
+  // Cycle the thinking-effort dial (←/→ in the model menu). Functional updater
+  // keeps it free of stale-closure bugs; persists immediately.
+  const onCycleEffort = useCallback((dir: 1 | -1) => {
+    setConfig((c) => {
+      const next = cycleEffort(c.thinkingEffort as ThinkingEffort, dir);
+      void writeStore({ thinkingEffort: next });
+      return { ...c, thinkingEffort: next };
     });
   }, []);
 
@@ -2251,6 +2473,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         | 'context'
         | 'flash_attention'
         | 'kv_cache'
+        | 'auto_compress'
         | 'router_toggle'
         | 'router_fast_model'
         | 'router_think_model'
@@ -2305,6 +2528,21 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         });
         return;
       }
+      if (v === 'auto_compress') {
+        // Cycle: off → 60% → 75% → 80% → off
+        const order: (number | null)[] = [null, 0.6, 0.75, 0.8];
+        const cur = config.autoCompressAt ?? null;
+        const idx = order.findIndex((v) => v === cur);
+        const next = order[(idx + 1) % order.length]!;
+        setConfig((c) => ({ ...c, autoCompressAt: next }));
+        void writeStore({ autoCompressAt: next });
+        setMode('chat');
+        addEntry({
+          kind: 'note',
+          content: `auto-compress → ${next !== null ? `at ${Math.round(next * 100)}%` : 'off'}`,
+        });
+        return;
+      }
       if (v === 'router_toggle') {
         const on = !config.routerEnabled;
         setConfig((c) => ({ ...c, routerEnabled: on }));
@@ -2346,6 +2584,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       config.modelPerformanceMode,
       config.routerEnabled,
       config.routerNotes,
+      config.autoCompressAt,
     ],
   );
 
@@ -2406,11 +2645,6 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     width: LEFT_INNER,
     height: CANVAS_H,
     colors: logoColors,
-    // 12fps (not 20): the gradient sweeps ~26 near-full-width rows, and Ink
-    // repaints the whole changed block each frame, so a lower rate cuts repaint
-    // + GC pressure ~40% and reduces flicker on SSH/tmux, while the sweep stays
-    // smooth (see ERRORS.md #1). The transcript is already decoupled from this
-    // (entryNodes is memoized on [entries, theme, width]).
     fps: 12,
     color: process.env['NO_COLOR'] == null,
     enabled: animateMascot,
@@ -2469,6 +2703,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     // A live elapsed read-out (after the first second) so long turns feel alive.
     const secs = Math.floor((tick * 90) / 1000);
     const elapsed = secs >= 1 ? `  ${secs}s` : '';
+    // Dim shade of the tool color for the elapsed read-out, so it sits behind the glow.
+    const dimTool = rgbToHex(mix(hexToRgb(theme.tool), [0, 0, 0], 0.5));
     if (streaming !== null) {
       loadingNodes.push(<Text key="s-lead"> </Text>);
       // If the model is mid-emitting an inline tool call, don't show the raw JSON.
@@ -2476,9 +2712,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       if (reasoning && t === '') {
         // Inside a <think> block — show a status, never the raw reasoning.
         loadingNodes.push(
-          <Text key="reasoning" color={theme.tool}>
+          <Text key="reasoning" color={dimTool}>
             {'  '}
-            {spinner} thinking…{elapsed}
+            {thinkingGlow(thinkingFrame(tick), theme.tool, tick)}
+            {elapsed}
           </Text>,
         );
       } else if (t.startsWith('{') || t.startsWith('<tool_call')) {
@@ -2501,9 +2738,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     } else if (isLoading) {
       loadingNodes.push(<Text key="s-lead"> </Text>);
       loadingNodes.push(
-        <Text key="thinking" color={theme.tool}>
+        <Text key="thinking" color={dimTool}>
           {'  '}
-          {spinner} thinking…{elapsed}
+          {thinkingGlow(thinkingFrame(tick), theme.tool, tick)}
+          {elapsed}
         </Text>,
       );
     }
@@ -2598,7 +2836,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     }
 
     // ── Slash-command menu: arrows highlight, Tab completes, Enter runs. ──
-    if (menuActive && !isLoading) {
+    if (menuActive) {
       if (key.upArrow) {
         setMenuIndex((i) => (i - 1 + menuMatches.length) % menuMatches.length);
         return;
@@ -2615,11 +2853,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         return;
       }
       if (key.return) {
-        const name = menuMatches[menuSel]!.name;
-        setInput('');
-        setCursor(0);
-        setMenuIndex(0);
-        void handleSubmit(name);
+        if (!isLoading) {
+          const name = menuMatches[menuSel]!.name;
+          setInput('');
+          setCursor(0);
+          setMenuIndex(0);
+          void handleSubmit(name);
+        }
         return;
       }
       // Backspace/Delete: remove the last char and reset selection.
@@ -2646,13 +2886,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     if (key.upArrow) return scrollUp(SCROLL_STEP);
     if (key.downArrow) return scrollDown(SCROLL_STEP);
 
-    // Esc interrupts the model mid-generation; while thinking, swallow all
-    // other keys so a stray press can't leak into the next prompt.
+    // Esc interrupts the model mid-generation.
     if (key.escape && isLoading) {
       abortRef.current?.abort();
       return;
     }
-    if (isLoading) return;
 
     // Enter: a plain Return submits; Shift+Enter (or any modified Enter) inserts a
     // newline. Terminals send Shift+Enter as an escape sequence Ink can't parse
@@ -2668,6 +2906,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       return;
     }
     if (key.return || enter === 'submit') {
+      if (isLoading) return; // don't submit a second turn while one is running
       const val = input.trim();
       if (val) {
         historyRef.current = pushHistory(historyRef.current, val);
@@ -2824,6 +3063,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       onModelPrepared={onModelPrepared}
       onModelPrepareCancel={onModelPrepareCancel}
       onToggleFavourite={onToggleFavourite}
+      onCycleEffort={onCycleEffort}
       onThemePicked={onThemePicked}
       onModePicked={onModePicked}
       onProjectPicked={onProjectPicked}
@@ -2848,6 +3088,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // Right side only carries a status when the transcript is scrolled up — the
   // everyday shortcuts now live on a pinned line below the input box.
   const rightStatus = clampedOffset > 0 ? `↑ scrolled ${clampedOffset} · PgDn latest` : '';
+  // Context-fill indicator: shows once Ollama has reported prompt token counts.
+  const ctxPct = ctxUsedTokens > 0 ? Math.round((ctxUsedTokens / config.ollamaNumCtx) * 100) : 0;
+  const ctxColor = ctxPct >= 80 ? theme.error : ctxPct >= 60 ? 'yellow' : undefined;
 
   const gapLines = Array.from({ length: INPUT_GAP }, (_, i) => <Text key={`gap${i}`}> </Text>);
 
@@ -2882,6 +3125,14 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         <Text>
           <Text dimColor>{modeLabel}</Text>
           {focus === 'general' ? <Text color={theme.tool}>{'  ·  off-work'}</Text> : null}
+          <Text dimColor>{'  ·  '}</Text>
+          <Text color={theme.tool}>effort: {config.thinkingEffort}</Text>
+          {ctxUsedTokens > 0 ? <Text dimColor>{'  ·  '}</Text> : null}
+          {ctxUsedTokens > 0 ? (
+            <Text color={ctxColor} dimColor={ctxPct < 60}>
+              ctx: {ctxPct}%
+            </Text>
+          ) : null}
         </Text>
         <Text dimColor>{rightStatus}</Text>
       </Box>
