@@ -213,3 +213,20 @@ than papered over with disable comments now. `--max-warnings=0` is therefore
 intended consumer (`export_results`, per the docs' "per-column CI rows" claim)
 never called it. Decide keep-and-wire vs remove in `STALE_CODE_AUDIT.md`.
 
+### Phase 2 — Import/dead-code inventory ✅ (2026-07-13)
+
+Produced `STALE_CODE_AUDIT.md`. Ran `npx knip` (86 candidates) + whole-repo
+`grep -w` including tests/spawned paths/scripts. **Key finding: knip is ~85%
+false-positive here** (factory dispatch via `createModel`, child-process spawns,
+test-only usage it doesn't scan, deliberate API/path exports). Genuinely
+actionable set is small — see `STALE_CODE_AUDIT.md` §D:
+- **Safe delete:** `.DS_Store`, `dev.sh` (has a latent backtick bug; fold into CONTRIBUTING)
+- **Migrate:** `ERRORS.md` → `CHANGELOG.md`
+- **Relocate:** `BUILD_SEQUENCE.txt`, `PRODUCT_PLAN.txt`, `TODO.md` → `docs/dev/`; `src/adapters/*` → `benchmarks/`
+- **Wire up (+test):** `metricsTableWithStats`
+- **Investigate:** `getSystemRamGb`/`recommendModel` vs `advisor.ts` (possible legacy reco path)
+
+No code deleted in this phase (inventory only). Scope decision confirmed with
+user: **internal reorg, no `apps/packages` workspace migration**; **commit each
+phase** on master.
+
