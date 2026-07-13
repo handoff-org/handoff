@@ -5,7 +5,13 @@ import { getActiveProject, projectPaths } from './project.js';
 import { listCapsules, readCapsule, getPromoted, type Capsule } from './capsule.js';
 import { mainTexFile } from './overleaf.js';
 import { appendNotebook } from '../research/notebook.js';
-import { metricsTable, figureBlock, isFigureFile, sanitizeRef } from './resultsTable.js';
+import {
+  metricsTable,
+  metricsTableWithStats,
+  figureBlock,
+  isFigureFile,
+  sanitizeRef,
+} from './resultsTable.js';
 import {
   checkProvenance,
   applyProvenanceVerdicts,
@@ -124,11 +130,18 @@ export function registerReportTools(registry: ToolRegistry): void {
         label: promoted.has(c.id) ? `${c.id} (★)` : c.id,
         metrics: c.metrics,
       }));
-      const table = metricsTable(rows, {
+      const tableOpts = {
         ...(keys && keys.length ? { keys } : {}),
         ...(caption ? { caption: String(caption) } : {}),
         ...(label ? { label: String(label) } : {}),
-      });
+      };
+      // With multiple runs, append per-metric mean ± std and 95% CI rows so the
+      // paper can cite variance, not just point estimates. A single run has no
+      // spread to report, so fall back to the plain table.
+      const table =
+        rows.length >= 2
+          ? metricsTableWithStats(rows, undefined, tableOpts)
+          : metricsTable(rows, tableOpts);
 
       // Collect figure outputs; copy them into paper/figures/ so they render.
       const paperDir = projectPaths(slug).paper;

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   metricsTable,
+  metricsTableWithStats,
   figureBlock,
   formatNumber,
   isFigureFile,
@@ -64,6 +65,38 @@ test('metricsTable: keys option restricts and orders the columns', () => {
   );
   assert.match(markdown, /\| Run \| loss \| acc \|/);
   assert.doesNotMatch(markdown, /f1/);
+});
+
+test('metricsTableWithStats: appends cross-run mean±std and 95% CI for multiple runs', () => {
+  const { latex, markdown } = metricsTableWithStats([
+    { label: 'r1', metrics: { acc: 0.9 } },
+    { label: 'r2', metrics: { acc: 0.8 } },
+    { label: 'r3', metrics: { acc: 0.85 } },
+  ]);
+  // Base table still present.
+  assert.match(markdown, /\| Run \| acc \|/);
+  // Cross-run stats block: mean ± std and a CI interval.
+  assert.match(markdown, /Cross-run stats \(n=3\)/);
+  assert.match(markdown, /±/);
+  assert.match(markdown, /\[.*,.*\]/);
+  // LaTeX carries the stats as %-comments so it stays paste-safe.
+  assert.match(latex, /% cross-run stats \(n=3\)/);
+});
+
+test('metricsTableWithStats: baselineLabel marks the baseline row', () => {
+  const { markdown } = metricsTableWithStats(
+    [
+      { label: 'baseline', metrics: { acc: 0.8 } },
+      { label: 'tuned', metrics: { acc: 0.9 } },
+    ],
+    'baseline',
+  );
+  assert.match(markdown, /baseline \(baseline\)/);
+});
+
+test('metricsTableWithStats: single run adds no stats block (no spread)', () => {
+  const { markdown } = metricsTableWithStats([{ label: 'only', metrics: { acc: 0.9 } }]);
+  assert.doesNotMatch(markdown, /Cross-run stats/);
 });
 
 test('metricsTable: caption is LaTeX-escaped and label sanitized', () => {

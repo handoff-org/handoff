@@ -1,4 +1,3 @@
-import { totalmem } from 'os';
 import type { SelectOption } from '../ui/Select.js';
 import type { HandoffModelEntry } from './catalog-types.js';
 import { OLLAMA_CATALOG } from './catalog-ollama.js';
@@ -135,30 +134,7 @@ export function withQuant(model: string, quant: string): string {
   return quant ? `${model}-${quant}` : model;
 }
 
-/** Total system RAM in GB (rounded). The catalog tiers are keyed to this. */
-export function getSystemRamGb(): number {
-  return Math.round(totalmem() / 1e9);
-}
-
-/** Map total unified memory (GB) to the RAM tier it can comfortably run. */
-export function ramTierForGb(totalGb: number): ModelTier {
-  if (totalGb <= 12) return 'ram8';
-  if (totalGb <= 20) return 'ram16';
-  if (totalGb <= 28) return 'ram24';
-  if (totalGb <= 48) return 'ram32';
-  return 'ram64';
-}
-
-/**
- * Legacy RAM-only recommender. Retained for compatibility, but the model picker
- * now prefers the hardware-aware ModelAdvisor (src/agent/advisor.ts).
- */
-export function recommendModel(totalRamGb: number, models: ModelEntry[]): ModelEntry | null {
-  if (models.length === 0) return null;
-  const maxIdx = TIER_ORDER.indexOf(ramTierForGb(totalRamGb));
-  const eligible = models.filter((m) => TIER_ORDER.indexOf(m.tier) <= maxIdx);
-  const pool = eligible.length ? eligible : models; // nothing fits → smallest available
-  const topIdx = pool.reduce((hi, m) => Math.max(hi, TIER_ORDER.indexOf(m.tier)), -1);
-  const top = pool.filter((m) => TIER_ORDER.indexOf(m.tier) === topIdx);
-  return top.find((m) => m.recommended) ?? top[0] ?? null;
-}
+// Legacy RAM-only model recommendation (getSystemRamGb / ramTierForGb /
+// recommendModel) was removed — the hardware-aware ModelAdvisor
+// (src/agent/advisor.ts) is the sole recommender now. TIER_ORDER (above) is
+// still used by the model picker (ui/ModelMenu.tsx).

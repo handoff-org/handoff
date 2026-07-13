@@ -273,3 +273,23 @@ through tools…") is an *operational* tool-use instruction (behavior, cached vi
 out of scope for metadata alignment and risky to churn. README prose is already
 correctly positioned. `npm run check` green.
 
+### Phase 8 — Safe stale cleanup + wiring ✅ (2026-07-13)
+
+Acted on `STALE_CODE_AUDIT.md` (see its "Phase 8 outcome" section for the full
+ledger). Summary:
+- **Removed:** `dev.sh`; legacy RAM reco chain (`getSystemRamGb`, `ramTierForGb`,
+  `recommendModel` + `totalmem` import) in `config/models.ts` — proven dead,
+  superseded by `advisor.ts`.
+- **Untracked** `ERRORS.md` (`git rm --cached`) to honor its `.gitignore` intent;
+  local copy kept.
+- **Wired** `metricsTableWithStats` into `export_results` (≥2 runs) — killed an
+  unwired export and made the docs honest; +3 tests (571 total, was 568).
+- **Deferred** the `src/adapters → benchmarks` move (tsconfig-coverage risk +
+  maintainer intent + low value under internal-reorg scope) with rationale.
+- **Kept** the local-scratch txt files (gitignored, never committed) and a
+  handful of low-priority unused exports per the no-delete-just-because-unused
+  principle; reclassified the `terminalControl` "duplicate export" as an
+  intentional primitive/alias pair.
+
+`npm run check` green.
+

@@ -96,6 +96,52 @@ Actioned in Phase 8:
 
 ---
 
+## Phase 8 outcome (2026-07-13)
+
+**Removed (proven dead):**
+- `dev.sh` — tracked, unreferenced, latent backtick bug; dev setup is in CONTRIBUTING.
+- Legacy RAM-only recommender chain in `config/models.ts` — `getSystemRamGb`,
+  `ramTierForGb`, `recommendModel` (+ the now-orphaned `totalmem` import).
+  Self-documented as superseded by `src/agent/advisor.ts`; **zero** external or
+  test callers (whole-repo grep confirmed the chain was self-contained).
+
+**Untracked (kept locally):**
+- `ERRORS.md` — was committed before being added to `.gitignore`. `git rm
+  --cached` honors the ignore intent and declutters the GitHub root while
+  leaving the author's local copy. (Not migrated into `CHANGELOG.md`: it's dev
+  debug notes, a different audience than user-facing release notes.)
+
+**Wired up (dead → live):**
+- `metricsTableWithStats` — now used by `export_results` when ≥2 runs are
+  exported (makes the docs' "per-column CI rows" claim true); added its contract
+  (no stats block for <2 runs) + 3 tests (`test/resultsTable.test.ts`).
+
+**Deferred (documented tradeoff):**
+- `src/adapters/*` move → `benchmarks/`: only `runner.ts` imports from `src/`,
+  but relocating drops all adapters out of tsconfig `include` (benchmarks/ isn't
+  covered), risks surfacing latent errors in the currently-unchecked
+  `compare-sota.ts`, and the maintainer's `.gitignore` comment shows they
+  deliberately keep adapters tracked in `src/`. Value is low (small TS files,
+  never imported by the CLI; only a packaging-purity concern). Given the
+  internal-reorg-only scope, deferred as an optional follow-up.
+
+**Kept (no-delete-just-because-unused):**
+- `BUILD_SEQUENCE.txt`, `PRODUCT_PLAN.txt`, `TODO.md` — turned out to be
+  gitignored + **never committed** = the author's local scratch, not repo
+  clutter. Left untouched.
+- `_resetHardwareCache` (test seam, `_`-prefixed), `noWriteOutsideHome` (QA
+  safety assertion), `appendProfileEvent` (opt-in personalization),
+  `formatCapsule` (plausible display API), `ProfileNote` (type) — low-priority
+  unused exports; retained per the brief's caution. knip stays advisory.
+- `EXIT_ALT` / `ALT_SCREEN_OFF` — **reclassified from "bug" to intentional**: a
+  primitive (`EXIT_ALT`) + semantic alias (`ALT_SCREEN_OFF`, the one `index.tsx`
+  uses) pair, mirroring `ENTER_ALT`/`ALT_SCREEN_ON`. Clear, tested; left as-is.
+
+knip after Phase 8: 4 unused exports + 1 type + 1 (intentional) duplicate.
+`npm run check` green (571 tests).
+
+---
+
 ## Actionable summary (for Phase 8)
 
 **Safe deletes:** `.DS_Store`, `dev.sh` (after CONTRIBUTING covers dev setup).

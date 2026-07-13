@@ -151,7 +151,9 @@ export function metricsTableWithStats(
     : rows;
 
   const { latex: baseLatex, markdown: baseMd } = metricsTable(displayRows, opts);
-  if (!rows.length) return { latex: baseLatex, markdown: baseMd };
+  // Cross-run stats need at least two runs to have any spread — a single run
+  // would report mean = the value, no std, and an empty CI. Skip the block then.
+  if (rows.length < 2) return { latex: baseLatex, markdown: baseMd };
 
   const keys = opts.keys?.length ? opts.keys : unionKeys(rows);
 
