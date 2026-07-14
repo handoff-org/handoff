@@ -31,7 +31,13 @@ import { buildSystem } from '../src/agent/systemPrompt.js';
 import { writeTargetsProject } from '../src/agent/approval.js';
 import { redactSecrets } from '../src/util/redact.js';
 import { createModel, fetchVllmModels, type Message, type ChatModel } from '../src/agent/model.js';
-import { isModelInstalled, listInstalledModels, ollamaPs, psRowFor } from '../src/agent/ollama.js';
+import {
+  isModelInstalled,
+  listInstalledModels,
+  ollamaPs,
+  psRowFor,
+  warmUpModel,
+} from '../src/agent/ollama.js';
 import { detectHardware } from '../src/system/hardware.js';
 import {
   advise,
@@ -650,6 +656,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       if (!ok) {
         setPullModelId(initialConfig.modelId);
         setMode('model_prepare');
+      } else {
+        // Installed → warm it into memory now so the first turn isn't a cold load.
+        void warmUpModel(
+          initialConfig.ollamaBaseUrl,
+          initialConfig.modelId,
+          initialConfig.ollamaKeepAlive,
+        );
       }
     });
   }, []); // run once on mount
@@ -2341,7 +2354,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const onModelPrepared = useCallback(() => {
     setMode('chat');
     addEntry({ kind: 'note', content: `model ready → ${pullModelId}` });
-  }, [pullModelId]);
+    // Warm the freshly-pulled model into memory so the first turn isn't cold.
+    void warmUpModel(config.ollamaBaseUrl, pullModelId, config.ollamaKeepAlive);
+  }, [pullModelId, config.ollamaBaseUrl, config.ollamaKeepAlive]);
 
   // User backed out of the pull — return to the model list.
   const onModelPrepareCancel = useCallback(() => {

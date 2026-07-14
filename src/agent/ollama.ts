@@ -122,6 +122,36 @@ export async function listInstalledModels(baseUrl: string): Promise<string[]> {
   }
 }
 
+/**
+ * Warm a model into memory so the first real turn doesn't pay the cold-load
+ * latency (which otherwise reads as a hang right after selecting a model). Sends
+ * an empty-prompt /api/generate, which makes Ollama load the model and hold it
+ * resident for `keepAlive` without generating any tokens. Best-effort and
+ * fire-and-forget: any failure (server down, model still pulling) is swallowed,
+ * because a warm-up must never disrupt startup. The returned promise resolves
+ * when the load request settles, so tests can await it; UI callers do not.
+ */
+export async function warmUpModel(
+  baseUrl: string,
+  model: string,
+  keepAlive?: string | number,
+): Promise<void> {
+  try {
+    await fetch(`${baseUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        // No prompt → Ollama loads the model into memory and returns immediately.
+        stream: false,
+        ...(keepAlive != null ? { keep_alive: keepAlive } : {}),
+      }),
+    });
+  } catch {
+    // best-effort: a failed warm-up must never surface or block startup
+  }
+}
+
 /** One row of `ollama ps` — a currently-loaded model and where it runs. */
 export interface OllamaPsRow {
   name: string;

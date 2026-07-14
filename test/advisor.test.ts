@@ -4,6 +4,7 @@ import type { HardwareProfile } from '../src/system/hardware.js';
 import {
   advise,
   rankCandidates,
+  scoreModel,
   defaultContextForHardware,
   effectiveBudgetGb,
   preferredQuant,
@@ -310,6 +311,58 @@ test('a preferred model gets a scoring boost', () => {
     }),
   ).findIndex((r) => r.entry.id === target);
   assert.ok(after <= before, `preferred model should not rank lower (${before} → ${after})`);
+});
+
+// ── MoE decode-speed bonus ──────────────────────────────────────────────────
+
+test('a fitting MoE gets a decode-speed (moe) bonus; a dense model does not', () => {
+  const hw = macbook(64, 'max');
+  const moe = findCatalogEntry('ollama', 'qwen3:30b-a3b')!;
+  const dense = findCatalogEntry('ollama', 'qwen3:8b')!;
+  const moeScore = scoreModel(input(hw, { performanceMode: 'max' }), moe);
+  const denseScore = scoreModel(input(hw, { performanceMode: 'max' }), dense);
+  assert.ok(
+    moeScore.breakdown['moe']! > 0,
+    `30B-A3B should earn a decode bonus when it fits (got ${moeScore.breakdown['moe']})`,
+  );
+  assert.equal(denseScore.breakdown['moe'], 0, 'a dense model must not get the MoE bonus');
+});
+
+test('the MoE decode bonus is gated on fitting memory (none on a small MacBook)', () => {
+  // 16 GB can't hold 30B of weights, so the MoE would spill — no bonus, or it
+  // would wrongly rank a spilling model as fast.
+  const moe = findCatalogEntry('ollama', 'qwen3:30b-a3b')!;
+  const scored = scoreModel(input(macbook(16), { performanceMode: 'balanced' }), moe);
+  assert.equal(scored.breakdown['moe'], 0, 'a non-fitting MoE must not get the decode bonus');
+});
+
+test('an MoE scores cooler than the same model treated as dense', () => {
+  // Counterfactual: strip activeParamsB so the model is scored as a dense 30B.
+  // The MoE version must incur a lighter size-based heat penalty (sustained
+  // compute tracks active params) AND earn the decode bonus.
+  const hw = macbook(64, 'max');
+  const moe = findCatalogEntry('ollama', 'qwen3:30b-a3b')!;
+  const asDense = { ...moe, activeParamsB: undefined };
+  const moeScored = scoreModel(input(hw, { performanceMode: 'max' }), moe);
+  const denseScored = scoreModel(input(hw, { performanceMode: 'max' }), asDense);
+  assert.ok(
+    moeScored.breakdown['heat']! > denseScored.breakdown['heat']!,
+    `MoE heat (${moeScored.breakdown['heat']}) should be less negative than dense (${denseScored.breakdown['heat']})`,
+  );
+  assert.ok(moeScored.score > denseScored.score, 'the MoE should out-score its dense twin');
+});
+
+test('the MoE bonus lifts a fitting 30B-A3B above its own no-bonus score', () => {
+  // Sanity: the bonus is a real, positive contribution to the total score, so the
+  // model ranks strictly higher than it would on its other components alone.
+  const hw = macbook(64, 'max');
+  const moe = findCatalogEntry('ollama', 'qwen3:30b-a3b')!;
+  const scored = scoreModel(input(hw, { performanceMode: 'max' }), moe);
+  const componentsSansMoe = Object.entries(scored.breakdown)
+    .filter(([k]) => k !== 'moe')
+    .reduce((sum, [, v]) => sum + v, 0);
+  assert.equal(scored.score, componentsSansMoe + scored.breakdown['moe']!);
+  assert.ok(scored.breakdown['moe']! > 0);
 });
 
 test('prefersFastSmallModels penalizes large models', () => {

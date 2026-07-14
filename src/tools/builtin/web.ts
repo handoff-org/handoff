@@ -21,6 +21,7 @@ export function registerWebTools(registry: ToolRegistry): void {
       'scripts, and navigation). Use for reading articles, docs, or any URL. ' +
       'For PDFs use read_pdf instead. Output is capped; raise max_chars to read more.',
     sensitive: true,
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {
@@ -64,6 +65,7 @@ export function registerWebTools(registry: ToolRegistry): void {
       'sources, papers, docs, or facts, then web_fetch a result URL to read it. ' +
       'No API key required (DuckDuckGo).',
     sensitive: true,
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {

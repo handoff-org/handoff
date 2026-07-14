@@ -13,6 +13,7 @@ export function registerFilesystemTools(registry: ToolRegistry): void {
   registry.register({
     name: 'read_file',
     description: 'Read the contents of a file at the given path.',
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {
@@ -134,6 +135,7 @@ export function registerFilesystemTools(registry: ToolRegistry): void {
   registry.register({
     name: 'list_dir',
     description: 'List the entries in a directory.',
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {

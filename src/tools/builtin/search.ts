@@ -15,6 +15,7 @@ export function registerSearchTools(registry: ToolRegistry): void {
       'matching "path:line: text" lines. Much cheaper than reading whole files to find ' +
       'something. Case-insensitive by default; optionally restrict to files matching a ' +
       'glob (e.g. "**/*.py"). Skips node_modules/.git/.venv, binaries, and large files.',
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {
@@ -52,6 +53,7 @@ export function registerSearchTools(registry: ToolRegistry): void {
       'List project files whose path matches a glob. Use `**` for any depth, `*` within a ' +
       'path segment (e.g. "**/*.py", "results/*.png", "**/refs.bib"). Cheaper than repeated ' +
       'list_dir calls for locating files.',
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {

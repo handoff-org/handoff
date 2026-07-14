@@ -383,8 +383,3 @@ export function describeHardware(p: HardwareProfile): string {
     p.power === 'battery' ? ', on battery' : p.power === 'plugged' ? ', plugged in' : '';
   return `${chip} ${form}, ${p.totalMemoryGb} GB${power}`;
 }
-
-/** Reset the in-memory cache — used by tests. */
-export function _resetHardwareCache(): void {
-  cached = null;
-}

@@ -72,8 +72,9 @@ Individually: `npm run typecheck`, `npm run lint`, `npm run format`,
 
 - **Formatting** is owned by Prettier — run `npm run format`, don't hand-format.
 - **Lint:** `no-unused-vars` is an **error**. Prefix deliberately-unused names
-  with `_`. Remaining `react-hooks/exhaustive-deps` warnings are tracked in
-  `REFACTOR_AUDIT.md`.
+  with `_`. A handful of `react-hooks/exhaustive-deps` warnings in `ui/app.tsx`
+  and `ui/ModelMenu.tsx` are known and intentional (stable callbacks whose deps
+  would force needless re-renders); keep them warnings, don't silence them.
 - **Docs:** `docs/*.md` must pass `docs:check` (one H1, valid links, no
   placeholders). Literal `TODO`-like tokens must live inside `code spans`.
 - **QA:** `qa:chat:smoke` runs 22 deterministic scenarios with a mock model and
@@ -88,8 +89,8 @@ Individually: `npm run typecheck`, `npm run lint`, `npm run format`,
   `Co-Authored-By` or other attribution trailers.
 - **Never delete code just because it looks unused** — prove it with the import
   graph, grep (including tests + dynamic/spawned paths), and runtime analysis.
-  See `STALE_CODE_AUDIT.md`; note `knip` is noisy here (factory dispatch,
-  child-process spawns, test-only usage).
+  Run `npm run deadcode` (knip), but note it is noisy here (factory dispatch,
+  child-process spawns, test-only usage), so confirm each finding by hand.
 
 ## Safety invariants (do not regress)
 

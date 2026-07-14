@@ -14,6 +14,7 @@ export function registerPdfTools(registry: ToolRegistry): void {
       'Requires pdftotext (part of poppler): `brew install poppler` on macOS. ' +
       'Use for reading papers, reports, or any PDF the user provides.',
     sensitive: true,
+    parallelSafe: true,
     parameters: {
       type: 'object',
       properties: {

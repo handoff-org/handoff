@@ -1,12 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-  appendFileSync,
-  copyFileSync,
-} from 'fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { AdaptiveProfileSchema, defaultProfile, migrate, type AdaptiveProfile } from './profile.js';
@@ -20,7 +12,6 @@ import { AdaptiveProfileSchema, defaultProfile, migrate, type AdaptiveProfile } 
 
 const HANDOFF_DIR = join(homedir(), '.handoff');
 export const PROFILE_PATH = join(HANDOFF_DIR, 'profile.json');
-const EVENTS_PATH = join(HANDOFF_DIR, 'profile-events.jsonl');
 
 function stamp(): string {
   return new Date().toISOString();
@@ -103,22 +94,5 @@ export function exportProfile(profile: AdaptiveProfile): string | null {
     return dest;
   } catch {
     return null;
-  }
-}
-
-/**
- * Append one compact, already-sanitized event line for transparency
- * (`/profile why`). Bounded by design: callers pass short summaries only.
- */
-export function appendProfileEvent(entry: {
-  type: string;
-  timestamp: string;
-  summary: string;
-}): void {
-  try {
-    mkdirSync(HANDOFF_DIR, { recursive: true });
-    appendFileSync(EVENTS_PATH, JSON.stringify(entry) + '\n', 'utf-8');
-  } catch {
-    /* non-fatal */
   }
 }

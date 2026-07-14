@@ -284,6 +284,109 @@ test('the no-think retry error is preset-aware (deep → suggests long_context)'
   assert.match(err && err.type === 'error' ? err.message : '', /long_context/);
 });
 
+// ── Parallel tool execution ─────────────────────────────────────────────────
+
+/** A registry of coordinating tools that record peak concurrency + finish order. */
+function concurrencyRegistry(track: { active: number; maxActive: number; finished: string[] }) {
+  const r = new ToolRegistry();
+  const mk = (name: string, parallelSafe: boolean, delayMs: number) =>
+    r.register({
+      name,
+      description: name,
+      parallelSafe,
+      parameters: { type: 'object', properties: {} },
+      async execute() {
+        track.active++;
+        track.maxActive = Math.max(track.maxActive, track.active);
+        await new Promise((res) => setTimeout(res, delayMs));
+        track.active--;
+        track.finished.push(name);
+        return `${name}:done`;
+      },
+    });
+  return { r, mk };
+}
+
+test('all-parallel-safe tool calls in one turn run concurrently, results stay in call order', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  // The first call is SLOWER than the second, so if execution were sequential the
+  // second could not finish first. Concurrency is proven by maxActive === 2.
+  mk('web_search', true, 40);
+  mk('web_fetch', true, 5);
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'web_search', {}), call('2', 'web_fetch', {})] },
+    { content: 'done' },
+  ]);
+  const events = await collect('go', sys, model, r, { signal, approve: async () => true });
+
+  assert.equal(track.maxActive, 2, 'both reads should be in flight at once');
+  assert.deepEqual(track.finished, ['web_fetch', 'web_search'], 'the faster call finished first');
+  // …but the emitted results and the pushed tool messages stay in CALL order.
+  const results = events
+    .filter((e) => e.type === 'tool_result')
+    .map((e) => (e.type === 'tool_result' ? e.result : ''));
+  assert.deepEqual(results, ['web_search:done', 'web_fetch:done']);
+  const done = events.at(-1);
+  const toolMsgs = done?.type === 'done' ? done.messages.filter((m) => m.role === 'tool') : [];
+  assert.deepEqual(
+    toolMsgs.map((m) => [m.tool_call_id, m.content]),
+    [
+      ['1', 'web_search:done'],
+      ['2', 'web_fetch:done'],
+    ],
+    'each tool result answers its own call id, in order',
+  );
+});
+
+test('a batch with any non-parallel-safe tool falls back to sequential execution', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  mk('read_file', true, 10);
+  mk('write_file', false, 10); // mutating → the whole batch must stay serial
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'read_file', {}), call('2', 'write_file', {})] },
+    { content: 'ok' },
+  ]);
+  await collect('go', sys, model, r, { signal, approve: async () => true });
+  assert.equal(track.maxActive, 1, 'a mixed batch must never run concurrently');
+});
+
+test('a single parallel-safe call is not treated as a parallel batch', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  mk('web_search', true, 5);
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'web_search', {})] },
+    { content: 'ok' },
+  ]);
+  const events = await collect('go', sys, model, r, { signal, approve: async () => true });
+  assert.equal(track.maxActive, 1);
+  const result = events.find((e) => e.type === 'tool_result');
+  assert.equal(result && result.type === 'tool_result' ? result.result : '', 'web_search:done');
+});
+
+test('a denied call in a parallel batch is denied while the others still run', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  mk('web_search', true, 10);
+  mk('web_fetch', true, 10);
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'web_search', {}), call('2', 'web_fetch', {})] },
+    { content: 'done' },
+  ]);
+  // Deny only web_fetch.
+  const events = await collect('go', sys, model, r, {
+    signal,
+    approve: async (name) => name !== 'web_fetch',
+  });
+  const results = events
+    .filter((e) => e.type === 'tool_result')
+    .map((e) => (e.type === 'tool_result' ? e.result : ''));
+  assert.equal(results[0], 'web_search:done');
+  assert.match(results[1] ?? '', /Denied by the user/);
+});
+
 test('a truncated turn with no reasoning is not retried', async () => {
   class TruncNoReason implements ChatModel {
     readonly modelId = 'trunc-plain';

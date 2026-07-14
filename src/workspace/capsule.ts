@@ -267,24 +267,6 @@ export function promoteRun(slug: string, id: string): boolean {
 
 // ── Formatting for the transcript ─────────────────────────────────────────────
 
-function fmtMetrics(m: Record<string, number>): string {
-  const keys = Object.keys(m);
-  return keys.length ? keys.map((k) => `${k}=${m[k]}`).join('  ') : '(none)';
-}
-
-export function formatCapsule(c: Capsule, promoted = false): string {
-  const gitLine = c.git
-    ? `${c.git.commit.slice(0, 8)}${c.git.dirty ? ' (dirty)' : ''}`
-    : 'no git repo';
-  return [
-    `run ${c.id}${promoted ? ' ★ canonical' : ''}  ·  ${c.language}  ·  exit ${c.exitCode}  ·  ${c.durationMs}ms`,
-    `  when:    ${c.startedAt}`,
-    `  git:     ${gitLine}`,
-    `  metrics: ${fmtMetrics(c.metrics)}`,
-    `  outputs: ${Object.keys(c.outputHashes).length} file(s) under results/`,
-  ].join('\n');
-}
-
 export function formatReproPreview(slug: string, c: Capsule): string {
   const dir = capsuleDir(slug, c.id);
   const script = generateReproSh(c);

@@ -262,9 +262,20 @@ export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): Score
   let heat = 0;
   const macbook = hw.isMacBook !== false && hw.os === 'darwin';
   const totalB = entry.totalParamsB ?? 8;
+  // The size-based heat penalty tracks sustained COMPUTE per token, which for a
+  // mixture-of-experts model is its active params, not its stored size: a 30B-A3B
+  // does the per-token work of a ~3B model and runs correspondingly cooler. Use
+  // active params for the size threshold on a real MoE; the catalog's per-model
+  // `heatRisk` (below) still applies, and the coarse `risk` label further down
+  // still keys off total size so the model is honestly flagged for its full
+  // memory footprint.
+  const heatSizeB =
+    entry.activeParamsB != null && entry.activeParamsB > 0 && entry.activeParamsB * 2 <= totalB
+      ? entry.activeParamsB
+      : totalB;
   if (macbook) {
-    if (totalB >= 20) heat -= 18;
-    else if (totalB >= 14) heat -= 6;
+    if (heatSizeB >= 20) heat -= 18;
+    else if (heatSizeB >= 14) heat -= 6;
     if (entry.heatRisk === 'high') heat -= 12;
     else if (entry.heatRisk === 'extreme') heat -= 40;
     if (hw.power === 'battery') heat -= 10;
@@ -325,7 +336,25 @@ export function scoreModel(input: AdvisorInput, entry: HandoffModelEntry): Score
   }
   breakdown['personalization'] = personalization;
 
-  const score = fit + gpu + speed + heat + role + maturity + tierPenalty + bench + personalization;
+  // moeBonus: a mixture-of-experts model activates only a fraction of its weights
+  // per token, so it DECODES with the memory bandwidth cost of a much smaller
+  // model while keeping a large model's quality. Decode is bandwidth-bound (bytes
+  // read per token ≈ active params), so this is a real speed edge the static
+  // speedScore doesn't capture — a 30B-A3B reads ~3B/token but scores speed like a
+  // dense 14B. The bonus scales with how lopsided total:active is, capped so it
+  // never overrides fit/heat safety. Gated on the model actually fitting memory
+  // (headroom ≥ 0): an MoE must hold ALL its weights resident, and one that spills
+  // to CPU is slow no matter how few experts activate — exactly the case we must
+  // NOT reward on a memory-limited laptop or small GPU.
+  let moeBonus = 0;
+  const activeB = entry.activeParamsB;
+  if (isLocal && activeB != null && activeB > 0 && activeB * 2 <= totalB && headroom >= 0) {
+    moeBonus = Math.min(12, Math.round((totalB / activeB - 1) * 2));
+  }
+  breakdown['moe'] = moeBonus;
+
+  const score =
+    fit + gpu + speed + heat + role + maturity + tierPenalty + bench + personalization + moeBonus;
 
   // On a discrete GPU, "hot" means the weights won't fit VRAM and will spill to
   // CPU (the desktop-GPU equivalent of a MacBook running hot).

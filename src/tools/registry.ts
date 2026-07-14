@@ -27,6 +27,15 @@ export interface ToolDefinition {
   };
   /** Mutating/dangerous tools that should require approval in permissions mode. */
   sensitive?: boolean;
+  /**
+   * Side-effect-free read tools (web/file/search reads) that are safe to run
+   * concurrently with each other. When a turn's tool calls are ALL parallel-safe,
+   * the agent loop executes them at once instead of one-at-a-time, cutting the
+   * wall-clock latency of multi-lookup research turns to that of the slowest call.
+   * Approval is unaffected — a parallel-safe tool can still be `sensitive` (e.g.
+   * a network read) and is still gated; only its *execution* is parallelized.
+   */
+  parallelSafe?: boolean;
   execute: (args: Record<string, unknown>) => Promise<string | ToolResult>;
 }
 
@@ -83,5 +92,10 @@ export class ToolRegistry {
 
   isSensitive(name: string): boolean {
     return this.tools.get(name)?.sensitive ?? false;
+  }
+
+  /** True if the tool is a side-effect-free read safe to run concurrently. */
+  isParallelSafe(name: string): boolean {
+    return this.tools.get(name)?.parallelSafe ?? false;
   }
 }

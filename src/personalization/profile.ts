@@ -49,7 +49,6 @@ const ProfileNoteSchema = z.object({
   updatedAt: z.string().optional(),
   source: z.enum(['explicit', 'benchmark', 'inferred']),
 });
-export type ProfileNote = z.infer<typeof ProfileNoteSchema>;
 
 const sv = ScoredValueSchema;
 
