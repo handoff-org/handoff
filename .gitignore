@@ -32,3 +32,6 @@ benchmarks/work/
 # Debug pass logs
 debug/logs/
 docs/landing.html
+
+# Local GPU/CPU inference profiling scripts + their outputs (dev tooling, not shipped)
+profiling/
