@@ -52,9 +52,11 @@ export const ConfigSchema = z.object({
   // output capped, oldest turns dropped). Full history is still saved to disk.
   contextCompaction: z.boolean().default(true),
   // Thinking-effort dial — the primary speed/depth control. 'low' turns reasoning
-  // off (fastest); 'medium' default; 'high' deep; 'max' deep + uncapped output.
+  // 'auto' (default) picks the level per turn — thinking off for trivial turns
+  // (tool follow-ups, short confirmations, slash commands), medium otherwise.
+  // 'low' off (fastest); 'medium' default; 'high' deep; 'max' deep + uncapped output.
   // See src/agent/thinkingEffort.ts. Cycled with ←/→ in the model menu.
-  thinkingEffort: z.enum(['low', 'medium', 'high', 'max']).default('medium'),
+  thinkingEffort: z.enum(['auto', 'low', 'medium', 'high', 'max']).default('auto'),
   // Auto-compress: summarize old history before a turn when prompt tokens reach this
   // fraction of the context window. Null (default) = off; set to e.g. 0.75 to trigger
   // at 75%. Configurable in /settings.
@@ -81,7 +83,11 @@ export const ConfigSchema = z.object({
   toolDirs: z.array(z.string()).default([]),
   // Two-tier model routing: auto-select a fast or think model per turn.
   routerEnabled: z.boolean().default(false),
-  routerFastModelId: z.string().default('qwen3:4b'),
+  // Fast tier defaults to the genuine instruct (non-thinking) model: profiling
+  // showed hybrid qwen3:4b keeps reasoning *in the content stream* even with
+  // think:false (~8s on a trivial turn), while qwen3:4b-instruct answers directly
+  // (~0.9s, ~9× faster). The instruct model is the right pick for the fast tier.
+  routerFastModelId: z.string().default('qwen3:4b-instruct-2507-q4_K_M'),
   // undefined → falls back to config.modelId (zero extra setup to activate).
   routerThinkModelId: z.string().optional(),
   // How often to show the per-turn tier note: only on change (default), always, or never.

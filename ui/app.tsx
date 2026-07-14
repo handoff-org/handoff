@@ -84,6 +84,7 @@ import {
 } from '../src/agent/router.js';
 import {
   effortToParams,
+  resolveAutoEffort,
   cycleEffort,
   parseEffort,
   THINKING_EFFORTS,
@@ -343,6 +344,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const lastTierRef = useRef<'fast' | 'think' | null>(null);
   const hadToolCallsRef = useRef(false);
+  // Whether the CURRENT turn is a thinking turn (resolved think !== false). Read
+  // at render time to label the loading indicator correctly — the "thinking…"
+  // glow should only show when the model is actually reasoning, not on think=false turns.
+  const turnThinkingRef = useRef(true);
   const forceTierRef = useRef<'fast' | 'think' | null>(null);
   // The tier last *announced* to the user, so a 'changes'-mode note only fires
   // when the tier actually switches (see shouldShowTierNote).
@@ -1535,6 +1540,11 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         ...baseHistory.slice(1),
       ];
 
+      // Snapshot whether the PREVIOUS turn ran a tool before hadToolCallsRef is
+      // reset below (line ~1577). Used by both router classification and the
+      // auto-effort resolver, which run on either side of that reset.
+      const turnHadToolCalls = hadToolCallsRef.current;
+
       // Per-turn model selection: when routing is on, pick fast or think model.
       let activeModel: ChatModel = model;
       let activeTier: 'fast' | 'think' = 'think';
@@ -1594,14 +1604,22 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       // so we don't need to flush the tail into `streaming`.
       const streamCoalescer = makeCoalescer<string>(STREAM_FLUSH_MS, setStreaming);
 
-      // Thinking-effort dial governs how the model reasons this turn. The one
-      // exception: when the router is enabled and picked its fast model, force
-      // think:false — fast models are meant to be quick and may not support
-      // thinking (some error on think:true). Effort governs every other turn.
+      // Thinking-effort dial governs how the model reasons this turn. 'auto'
+      // resolves to a concrete level per turn from cheap signals (trivial turns →
+      // thinking off, else medium). The one exception: when the router is enabled
+      // and picked its fast model, force think:false — fast models are meant to be
+      // quick and may not support thinking (some error on think:true).
+      const effectiveEffort =
+        config.thinkingEffort === 'auto'
+          ? resolveAutoEffort(modelInput, { hadToolCalls: turnHadToolCalls })
+          : config.thinkingEffort;
       const routerFastActive = config.routerEnabled && activeTier === 'fast';
-      const ep = effortToParams(config.thinkingEffort);
+      const ep = effortToParams(effectiveEffort);
       const turnThink = routerFastActive ? false : ep.think;
       const turnUncapOutput = routerFastActive ? false : ep.uncapOutput;
+      // Record for the loading indicator: only show the "thinking…" glow when
+      // the model will actually reason this turn (think !== false).
+      turnThinkingRef.current = turnThink !== false;
 
       for await (const event of runAgentLoop(modelInput, turnHistory, activeModel, registry, {
         signal: controller.signal,
@@ -2725,13 +2743,24 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       // If the model is mid-emitting an inline tool call, don't show the raw JSON.
       const t = streaming.trimStart();
       if (reasoning && t === '') {
-        // Inside a <think> block — show a status, never the raw reasoning.
+        // Inside a think block — show a status, never the raw reasoning. Only
+        // call it "thinking" when the user actually asked for reasoning this turn
+        // (effort resolved think !== false). Some hybrid models (e.g. qwen3) still
+        // emit chain-of-thought as content even with think:false; on those turns
+        // we asked for no reasoning, so label it neutrally rather than "thinking".
         loadingNodes.push(
-          <Text key="reasoning" color={dimTool}>
-            {'  '}
-            {thinkingGlow(thinkingFrame(tick), theme.tool, tick)}
-            {elapsed}
-          </Text>,
+          turnThinkingRef.current ? (
+            <Text key="reasoning" color={dimTool}>
+              {'  '}
+              {thinkingGlow(thinkingFrame(tick), theme.tool, tick)}
+              {elapsed}
+            </Text>
+          ) : (
+            <Text key="reasoning" color={theme.tool}>
+              {'  '}
+              {spinner} working…{elapsed}
+            </Text>
+          ),
         );
       } else if (t.startsWith('{') || t.startsWith('<tool_call')) {
         loadingNodes.push(
@@ -2752,13 +2781,26 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       }
     } else if (isLoading) {
       loadingNodes.push(<Text key="s-lead"> </Text>);
-      loadingNodes.push(
-        <Text key="thinking" color={dimTool}>
-          {'  '}
-          {thinkingGlow(thinkingFrame(tick), theme.tool, tick)}
-          {elapsed}
-        </Text>,
-      );
+      if (turnThinkingRef.current) {
+        // Thinking turn: the "thinking…" glow, shown through prefill until the
+        // reasoning branch above takes over once the model streams its think block.
+        loadingNodes.push(
+          <Text key="thinking" color={dimTool}>
+            {'  '}
+            {thinkingGlow(thinkingFrame(tick), theme.tool, tick)}
+            {elapsed}
+          </Text>,
+        );
+      } else {
+        // Non-thinking turn (effort resolved think:false): neutral label — the
+        // model isn't reasoning, so don't claim it is.
+        loadingNodes.push(
+          <Text key="working" color={theme.tool}>
+            {'  '}
+            {spinner} working…{elapsed}
+          </Text>,
+        );
+      }
     }
   }
 

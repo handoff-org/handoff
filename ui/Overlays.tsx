@@ -363,7 +363,7 @@ export function Overlays({
           config.inferencePreset,
           config.personalizationEnabled,
           config.routerEnabled ?? false,
-          config.routerFastModelId ?? 'qwen3:4b',
+          config.routerFastModelId ?? 'qwen3:4b-instruct-2507-q4_K_M',
           config.routerNotes ?? 'changes',
           config.autoCompressAt ?? null,
         )}

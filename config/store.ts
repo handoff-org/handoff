@@ -41,8 +41,8 @@ export interface StoredConfig {
   maxNewTokens?: number;
   /** Trim history sent to the model each turn to the prompt budget (default true). */
   contextCompaction?: boolean;
-  /** Thinking-effort dial: how hard the model reasons per turn (default 'medium'). */
-  thinkingEffort?: 'low' | 'medium' | 'high' | 'max';
+  /** Thinking-effort dial: how hard the model reasons per turn (default 'auto'). */
+  thinkingEffort?: 'auto' | 'low' | 'medium' | 'high' | 'max';
   /** Auto-compress context when prompt tokens reach this fraction of num_ctx (0–1). Null = off. */
   autoCompressAt?: number | null;
   /** Local adaptive personalization (off until opted in). */

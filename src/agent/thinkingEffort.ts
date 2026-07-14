@@ -11,10 +11,14 @@
  * the string levels distinctly; others coerce any truthy value to full thinking.
  */
 
-export type ThinkingEffort = 'low' | 'medium' | 'high' | 'max';
+export type ThinkingEffort = 'auto' | 'low' | 'medium' | 'high' | 'max';
 
-/** Dial positions in ascending order — the ←/→ cycle order and display order. */
-export const THINKING_EFFORTS: ThinkingEffort[] = ['low', 'medium', 'high', 'max'];
+/**
+ * Dial positions in cycle/display order. `auto` sits first (leftmost) as the
+ * smart default: it picks a concrete level per turn (see resolveAutoEffort);
+ * the rest are fixed levels in ascending intensity.
+ */
+export const THINKING_EFFORTS: ThinkingEffort[] = ['auto', 'low', 'medium', 'high', 'max'];
 
 export interface EffortParams {
   /** Sent verbatim to the backend's think field (Ollama native accepts either). */
@@ -26,6 +30,11 @@ export interface EffortParams {
 /** Map a dial position to the concrete backend parameters. */
 export function effortToParams(effort: ThinkingEffort): EffortParams {
   switch (effort) {
+    case 'auto':
+      // `auto` is resolved to a concrete level (resolveAutoEffort) before this
+      // is normally called; this fallback keeps the switch exhaustive and, if a
+      // stray 'auto' ever reaches here, behaves as the safe default (medium).
+      return { think: true, uncapOutput: false };
     case 'low':
       return { think: false, uncapOutput: false }; // fastest — no reasoning
     case 'medium':
@@ -35,6 +44,50 @@ export function effortToParams(effort: ThinkingEffort): EffortParams {
     case 'max':
       return { think: 'high', uncapOutput: true }; // deep + never truncate
   }
+}
+
+/** Signals used to resolve `auto` to a concrete level for a single turn. */
+export interface AutoEffortContext {
+  /** The previous turn emitted a tool call — this is its mechanical follow-up. */
+  hadToolCalls: boolean;
+}
+
+/**
+ * Genuine reasoning cues: if a message contains one (or a '?'), keep thinking on
+ * even when it's short. Tunable — bias is toward `medium`, so err on inclusion.
+ */
+const REASONING_CUES = [
+  'why',
+  'how',
+  'explain',
+  'reason',
+  'prove',
+  'analyze',
+  'compare',
+  'evaluate',
+  'plan',
+  'design',
+  'debug',
+  'step by step',
+  'trade-off',
+  'tradeoff',
+];
+
+/**
+ * Resolve `auto` to a concrete level from cheap per-turn signals. Conservative
+ * by design: only provably-trivial turns drop to `low` (thinking off); when in
+ * doubt it returns `medium` (today's default reasoning). It never escalates to
+ * high — that costs latency with no measured quality gain. Returns 'low' | 'medium'.
+ */
+export function resolveAutoEffort(message: string, ctx: AutoEffortContext): ThinkingEffort {
+  const m = message.trim();
+  if (ctx.hadToolCalls) return 'low'; // tool-chain continuation — mechanical
+  if (m.startsWith('/')) return 'low'; // slash command — no model reasoning
+  const lower = m.toLowerCase();
+  const wantsReasoning = m.includes('?') || REASONING_CUES.some((c) => lower.includes(c));
+  if (wantsReasoning) return 'medium'; // question / explicit cue → keep thinking
+  if (m.split(/\s+/).filter(Boolean).length <= 6) return 'low'; // short confirmation
+  return 'medium'; // default: normal reasoning
 }
 
 /**
