@@ -101,6 +101,14 @@ export const ConfigSchema = z.object({
   // or sets the env overrides. Captured by the link form, not through the model.
   openreviewUsername: z.string().optional(),
   openreviewPassword: z.string().optional(),
+  // Peer GPU network — "Uber for GPUs". When enabled, inference falls back to a
+  // peer node via the relay when local Ollama is unavailable. Off by default until
+  // the user opts in and sets a peerToken (via relay signup).
+  peerNetworkEnabled: z.boolean().default(false),
+  peerToken: z.string().optional(),
+  peerRelayUrl: z.string().default('https://relay.handoff.sh'),
+  // true = prefer local Ollama; only route to peer if local is unreachable.
+  peerFallbackOnly: z.boolean().default(true),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -181,6 +189,10 @@ export async function loadConfig(): Promise<Config> {
     routerFastModelId: store.routerFastModelId,
     routerThinkModelId: store.routerThinkModelId,
     routerNotes: store.routerNotes,
+    peerNetworkEnabled: store.peerNetworkEnabled,
+    peerToken: process.env['HANDOFF_PEER_TOKEN'] ?? store.peerToken,
+    peerRelayUrl: process.env['HANDOFF_PEER_RELAY_URL'] ?? store.peerRelayUrl,
+    peerFallbackOnly: process.env['HANDOFF_PEER_FALLBACK_ONLY'] === '0' ? false : store.peerFallbackOnly,
     zoteroApiKey: process.env['HANDOFF_ZOTERO_API_KEY'] ?? store.zoteroApiKey,
     zoteroUserId: process.env['HANDOFF_ZOTERO_USER_ID'] ?? store.zoteroUserId,
     openreviewUsername: process.env['HANDOFF_OPENREVIEW_USERNAME'] ?? store.openreviewUsername,

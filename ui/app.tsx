@@ -139,6 +139,7 @@ import {
 } from '../src/workspace/overleaf.js';
 import type { Config } from '../config/schema.js';
 import type { ToolRegistry } from '../src/tools/registry.js';
+import { fetchCredits } from '../src/network/relayClient.js';
 
 interface Props {
   initialConfig: Config;
@@ -377,6 +378,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const [personalizationBlock, setPersonalizationBlock] = useState('');
   // The project awaiting a template pick in the 'template_select' overlay.
   const [templateTarget, setTemplateTarget] = useState<ProjectMeta | null>(null);
+  // Peer network credit balance; null = not yet fetched or peer network disabled.
+  const [peerCredits, setPeerCredits] = useState<number | null>(null);
 
   // Input/scroll modes for the live TUI. Alt-scroll (?1007h) lets the mouse
   // wheel scroll the transcript — terminals translate wheel events into arrow
@@ -2510,7 +2513,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         | 'router_toggle'
         | 'router_fast_model'
         | 'router_think_model'
-        | 'router_notes',
+        | 'router_notes'
+        | 'peer_network_toggle'
+        | 'peer_network_credits',
     ) => {
       if (v === 'preset') {
         setMode('preset_select');
@@ -2605,6 +2610,37 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         addEntry({ kind: 'note', content: `routing notes → ${next}` });
         return;
       }
+      if (v === 'peer_network_toggle') {
+        // Always open the guided setup screen — it handles both the first-time
+        // registration flow and the menu for users who already have a token.
+        setMode('peer_setup');
+        return;
+      }
+      if (v === 'peer_network_credits') {
+        setMode('chat');
+        if (!config.peerToken) {
+          addEntry({
+            kind: 'note',
+            content: 'no peer token set — cannot fetch balance',
+          });
+          return;
+        }
+        void fetchCredits(config).then((bal) => {
+          if (bal) {
+            setPeerCredits(bal.balance);
+            addEntry({
+              kind: 'note',
+              content: `peer credits: ${bal.balance.toLocaleString()} tokens  ·  earned ${bal.earned.toLocaleString()}  ·  spent ${bal.spent.toLocaleString()}`,
+            });
+          } else {
+            addEntry({
+              kind: 'note',
+              content: 'could not reach relay — check peerRelayUrl and peerToken',
+            });
+          }
+        });
+        return;
+      }
       const on = config.bannerAnimation === false;
       setConfig((c) => ({ ...c, bannerAnimation: on }));
       void writeStore({ bannerAnimation: on });
@@ -2618,6 +2654,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       config.routerEnabled,
       config.routerNotes,
       config.autoCompressAt,
+      config.peerNetworkEnabled,
+      config.peerToken,
     ],
   );
 
@@ -3136,6 +3174,23 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       onQuestionAnswer={(answer) => {
         question?.resolve(answer);
         setQuestion(null);
+      }}
+      peerCredits={peerCredits}
+      onPeerRegister={(token, balance) => {
+        setConfig((c) => ({ ...c, peerToken: token, peerNetworkEnabled: true }));
+        void writeStore({ peerToken: token, peerNetworkEnabled: true });
+        setPeerCredits(balance);
+        setMode('chat');
+        addEntry({
+          kind: 'note',
+          content: `peer network active  ·  ${balance > 0 ? `${balance.toLocaleString()} free tokens to start` : 'token saved'}`,
+        });
+      }}
+      onPeerToggle={(enabled) => {
+        setConfig((c) => ({ ...c, peerNetworkEnabled: enabled }));
+        void writeStore({ peerNetworkEnabled: enabled });
+        setMode('chat');
+        addEntry({ kind: 'note', content: `peer GPU network → ${enabled ? 'on' : 'off'}` });
       }}
     />
   );

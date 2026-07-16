@@ -75,7 +75,33 @@ Global install failed.
 }
 Ok "Installed. The 'handoff' command is now available."
 
-# 4. Ollama
+# 4. handoff-serve — provider daemon for the peer GPU network.
+Write-Host ""
+$ServeBin = Join-Path $HOME '.handoff\bin\handoff-serve.exe'
+if ((Test-Path $ServeBin) -or (Get-Command handoff-serve -ErrorAction SilentlyContinue)) {
+  Ok "handoff-serve already installed."
+} else {
+  Info "Installing handoff-serve (peer GPU network provider daemon)..."
+  $ServeDir = Join-Path $HOME '.handoff\bin'
+  $ServeAsset = 'handoff-serve-windows-amd64.exe'
+  $ServeUrl = "https://github.com/handoff-org/handoff-relay/releases/latest/download/$ServeAsset"
+  try {
+    New-Item -ItemType Directory -Force -Path $ServeDir | Out-Null
+    Invoke-WebRequest -Uri $ServeUrl -OutFile $ServeBin -UseBasicParsing
+    # Add ~/.handoff/bin to the user PATH (idempotent).
+    $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+    if ($UserPath -notlike "*$ServeDir*") {
+      [Environment]::SetEnvironmentVariable('PATH', "$UserPath;$ServeDir", 'User')
+      $env:PATH += ";$ServeDir"
+    }
+    Ok "handoff-serve installed to $ServeBin."
+  } catch {
+    Warn "handoff-serve install failed: $_"
+    Warn "Download manually from https://github.com/handoff-org/handoff-relay/releases"
+  }
+}
+
+# 6. Ollama
 Write-Host ""
 if (Get-Command ollama -ErrorAction SilentlyContinue) {
   Ok "Ollama already installed."
@@ -110,7 +136,7 @@ $env:OLLAMA_KV_CACHE_TYPE = 'q8_0'
 $env:OLLAMA_NUM_PARALLEL = '1'
 Ok "Ollama speed-ups enabled: flash attention + q8 KV cache + single slot (restart Ollama to apply)."
 
-# 5. uv — Python project & environment manager used by handoff's experiment runner.
+# 7. uv — Python project & environment manager used by handoff's experiment runner.
 #    With uv, each project's experiments/ directory becomes a reproducible Python
 #    project (pyproject.toml + uv.lock) that can be pushed to GitHub.
 Write-Host ""
@@ -145,11 +171,11 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
   }
 }
 
-# 6. mlx-lm — not available on Windows (Apple Silicon macOS only)
+# 8. mlx-lm — not available on Windows (Apple Silicon macOS only)
 Write-Host ""
 Info "mlx-lm (MLX backend): Apple Silicon macOS only — not applicable on Windows."
 
-# 7. LaTeX — local paper compilation (pdflatex / latexmk).
+# 9. LaTeX — local paper compilation (pdflatex / latexmk).
 Write-Host ""
 if (Get-Command pdflatex -ErrorAction SilentlyContinue) {
   Ok "LaTeX already installed."
@@ -170,7 +196,7 @@ if (Get-Command pdflatex -ErrorAction SilentlyContinue) {
   }
 }
 
-# 8. llama.cpp — llama-server
+# 10. llama.cpp — llama-server
 Write-Host ""
 if (Get-Command llama-server -ErrorAction SilentlyContinue) {
   Ok "llama.cpp (llama-server) already installed."
@@ -188,7 +214,7 @@ if (Get-Command llama-server -ErrorAction SilentlyContinue) {
   }
 }
 
-# 9. Done
+# 11. Done
 Write-Host ""
 Ok "Done!"
 Info "Start handoff by running: handoff"

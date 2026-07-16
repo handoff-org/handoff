@@ -68,22 +68,12 @@ export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T
 
   options.forEach((opt, i) => {
     if (opt.separator) {
-      // Section headings get a blank line above (unless very first), an accent
-      // colored label, and a subtle rule — no dashes in the data.
-      if (i > 0) rows.push(<Text key={`sep-pre-${i}`}> </Text>);
       rows.push(
         <Text key={`sep-${i}`} color={section} bold>
           {'  '}
           {opt.label.toUpperCase()}
         </Text>,
       );
-      rows.push(
-        <Text key={`sep-rule-${i}`} color={section} dimColor>
-          {'  '}
-          {'─'.repeat(opt.label.length)}
-        </Text>,
-      );
-      rows.push(<Text key={`sep-post-${i}`}> </Text>);
       return;
     }
 
@@ -98,7 +88,8 @@ export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T
         </Text>
       </Text>,
     );
-    if (opt.hint) {
+    // Hint shown only for the focused item.
+    if (active && opt.hint) {
       rows.push(
         <Text key={`hint-${i}`} dimColor>
           {'      '}
@@ -106,15 +97,16 @@ export function Select<T>({ title, options, onSelect, onCancel, theme }: Props<T
         </Text>,
       );
     }
+    // One blank line after every option for breathing room.
     rows.push(<Text key={`gap-${i}`}> </Text>);
   });
 
   rows.push(
+    <Text key="footer-gap"> </Text>,
     <Text key="footer" dimColor>
       {'  ↑↓ move  ·  ↵ select'}
       {onCancel ? '  ·  esc cancel' : ''}
     </Text>,
-    <Text key="bottom"> </Text>,
   );
 
   return <Box flexDirection="column">{rows}</Box>;

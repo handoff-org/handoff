@@ -10,6 +10,7 @@ import { Question } from './Question.js';
 import { ModelMenu } from './ModelMenu.js';
 import { OllamaPrepare } from './OllamaPrepare.js';
 import { ContextInput } from './ContextInput.js';
+import { PeerSetup } from './PeerSetup.js';
 import {
   BACKEND_OPTIONS,
   QUANT_OPTIONS,
@@ -40,7 +41,8 @@ export type OverlayMode =
   | 'template_select'
   | 'overleaf_link'
   | 'zotero_link'
-  | 'openreview_link';
+  | 'openreview_link'
+  | 'peer_setup';
 
 /** A model question awaiting the user's on-screen selection. */
 export interface PendingQuestion {
@@ -81,7 +83,9 @@ type SettingsValue =
   | 'router_toggle'
   | 'router_fast_model'
   | 'router_think_model'
-  | 'router_notes';
+  | 'router_notes'
+  | 'peer_network_toggle'
+  | 'peer_network_credits';
 
 function settingsOptions(
   mascotOn: boolean,
@@ -95,74 +99,92 @@ function settingsOptions(
   routerFastModelId: string,
   routerNotes: string,
   autoCompressAt: number | null,
+  peerNetworkEnabled: boolean,
+  peerTokenSet: boolean,
+  peerCredits: number | null,
 ): Array<{ label: string; value: SettingsValue; hint: string; separator?: boolean }> {
+  const compressLabel = autoCompressAt !== null ? `at ${Math.round(autoCompressAt * 100)}%` : 'off';
   return [
     {
-      label: `Inference preset  (currently ${preset})`,
+      label: `Inference preset  ·  ${preset}`,
       value: 'preset',
-      hint: 'cool / fast / balanced / deep — bundles context, output, keep-alive & prompt budget',
+      hint: 'cool / fast / balanced / deep — context, output & prompt budget',
     },
     {
-      label: `Personalization  (currently ${personalizationOn ? 'on' : 'off'})`,
+      label: `Personalization  ·  ${personalizationOn ? 'on' : 'off'}`,
       value: 'personalization',
-      hint: 'local, editable profile of your preferences — nothing leaves this machine',
+      hint: 'local preference profile — nothing leaves this machine',
     },
 
     { label: 'Appearance', value: 'theme', hint: '', separator: true },
-    { label: 'Change theme', value: 'theme', hint: 'pick a color scheme for the terminal' },
+    { label: 'Change theme', value: 'theme', hint: 'pick a color scheme' },
     {
-      label: `Toggle mascot  (currently ${mascotOn ? 'on' : 'off'})`,
+      label: `Mascot  ·  ${mascotOn ? 'on' : 'off'}`,
       value: 'mascot',
       hint: 'animated banner character',
     },
 
     { label: 'Performance', value: 'performance_mode', hint: '', separator: true },
     {
-      label: `Performance mode  (currently ${perfMode})`,
+      label: `Performance mode  ·  ${perfMode}`,
       value: 'performance_mode',
-      hint: 'cool = fast & cool (default) · balanced · max = allow bigger/hotter models',
+      hint: 'cool = fast & quiet · balanced · max = bigger models allowed',
     },
     {
-      label: `Context window  (currently ${numCtx})`,
+      label: `Context window  ·  ${numCtx}`,
       value: 'context',
-      hint: 'larger context can make the model much slower or force CPU offload · try 8192',
+      hint: 'larger context = slower inference; 8192 is a good balance',
     },
     {
-      label: `Flash attention  (currently ${flashOn ? 'on' : 'off'})`,
+      label: `Flash attention  ·  ${flashOn ? 'on' : 'off'}`,
       value: 'flash_attention',
-      hint: 'faster attention · applies when Ollama restarts',
+      hint: 'faster attention kernel — applies on next Ollama restart',
     },
     {
-      label: `KV cache  (currently ${kvType})`,
+      label: `KV cache  ·  ${kvType}`,
       value: 'kv_cache',
-      hint: 'quantize the KV cache to save memory · applies when Ollama restarts',
+      hint: 'quantize KV cache to save VRAM — applies on next Ollama restart',
     },
     {
-      label: `Auto-compress  (${autoCompressAt !== null ? `at ${Math.round(autoCompressAt * 100)}%` : 'off'})`,
+      label: `Auto-compress  ·  ${compressLabel}`,
       value: 'auto_compress',
-      hint: 'LLM-summarize old context when prompt tokens reach threshold · cycle: off → 60% → 75% → 80%',
+      hint: 'summarize old context at threshold · cycle: off → 60% → 75% → 80%',
     },
 
     { label: 'Model routing', value: 'router_toggle', hint: '', separator: true },
     {
-      label: `Toggle routing  (${routerEnabled ? 'on' : 'off'})`,
+      label: `Routing  ·  ${routerEnabled ? 'on' : 'off'}`,
       value: 'router_toggle',
-      hint: 'auto-select fast vs think model per turn',
+      hint: 'auto-pick fast vs think model per turn',
     },
     {
-      label: `Fast model  (${routerFastModelId})`,
+      label: `Fast model  ·  ${routerFastModelId}`,
       value: 'router_fast_model',
-      hint: 'conversational turns · no extended thinking',
+      hint: 'used for quick conversational turns',
     },
     {
-      label: 'Think model  (main model)',
+      label: 'Think model  ·  (main model)',
       value: 'router_think_model',
-      hint: 'research / paper turns · full reasoning',
+      hint: 'used for research and reasoning turns',
     },
     {
-      label: `Routing notes  (${routerNotes})`,
+      label: `Routing notes  ·  ${routerNotes}`,
       value: 'router_notes',
-      hint: 'when to show the per-turn tier note: changes · always · off',
+      hint: 'show tier note: changes · always · off',
+    },
+
+    { label: 'Peer GPU network', value: 'peer_network_toggle', hint: '', separator: true },
+    {
+      label: `Peer network  ·  ${peerNetworkEnabled ? 'on' : 'off'}`,
+      value: 'peer_network_toggle',
+      hint: 'route to a peer GPU when local Ollama is unavailable',
+    },
+    {
+      label: peerTokenSet
+        ? `Credits  ·  ${peerCredits !== null ? `${peerCredits.toLocaleString()} tokens` : '…'}`
+        : 'Credits  ·  no token',
+      value: 'peer_network_credits',
+      hint: peerTokenSet ? 'refresh balance from relay' : 'open peer setup to get a free token',
     },
   ];
 }
@@ -215,6 +237,10 @@ interface Props {
   onZoteroLink: (apiKey: string, userId: string) => void;
   onOpenReviewLink: (username: string, password: string) => void;
   onQuestionAnswer: (answer: string) => void;
+  /** Current peer network credit balance (null = not yet fetched). */
+  peerCredits?: number | null;
+  onPeerRegister: (token: string, balance: number) => void;
+  onPeerToggle: (enabled: boolean) => void;
 }
 
 /**
@@ -259,6 +285,9 @@ export function Overlays({
   onZoteroLink,
   onOpenReviewLink,
   onQuestionAnswer,
+  peerCredits = null,
+  onPeerRegister,
+  onPeerToggle,
 }: Props): React.ReactElement | null {
   if (mode === 'backend_select') {
     return (
@@ -366,6 +395,9 @@ export function Overlays({
           config.routerFastModelId ?? 'qwen3:4b-instruct-2507-q4_K_M',
           config.routerNotes ?? 'changes',
           config.autoCompressAt ?? null,
+          config.peerNetworkEnabled ?? false,
+          !!config.peerToken,
+          peerCredits,
         )}
         onSelect={onSettingsPicked}
         onCancel={onCancel}
@@ -531,6 +563,19 @@ export function Overlays({
         onSwitch={onProjectPicked}
         onCreate={onProjectCreate}
         onDelete={onProjectDelete}
+        onCancel={onCancel}
+      />
+    );
+  }
+
+  if (mode === 'peer_setup') {
+    return (
+      <PeerSetup
+        theme={theme}
+        config={config}
+        peerCredits={peerCredits}
+        onRegister={onPeerRegister}
+        onToggle={onPeerToggle}
         onCancel={onCancel}
       />
     );

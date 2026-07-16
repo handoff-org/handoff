@@ -73,6 +73,11 @@ export interface StoredConfig {
   openreviewUsername?: string;
   /** OpenReview password. Stored locally in ~/.handoff/config.json (plaintext, like hfToken). */
   openreviewPassword?: string;
+  /** Peer GPU network — opt-in distributed inference fallback. */
+  peerNetworkEnabled?: boolean;
+  peerToken?: string;
+  peerRelayUrl?: string;
+  peerFallbackOnly?: boolean;
 }
 
 export async function readStore(): Promise<StoredConfig> {

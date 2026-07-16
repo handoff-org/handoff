@@ -172,7 +172,32 @@ DID_PERF=0
 disable_ollama_perf
 if [ "$DID_PERF" = 1 ]; then ok "Removed handoff's Ollama speed-up settings."; fi
 
-# 3. mlx-lm
+# 3. handoff-serve provider daemon.
+printf '\n'
+HS_BIN="$(command -v handoff-serve 2>/dev/null || true)"
+[ -z "$HS_BIN" ] && [ -f "${HOME}/.handoff/bin/handoff-serve" ] && HS_BIN="${HOME}/.handoff/bin/handoff-serve"
+if [ -n "$HS_BIN" ] || [ -f "${HOME}/Library/LaunchAgents/sh.handoff.serve.plist" ]; then
+  info "Removing handoff-serve..."
+  # Stop and unload the launchd service (macOS) before removing the binary.
+  _plist="${HOME}/Library/LaunchAgents/sh.handoff.serve.plist"
+  if [ "$OS" = "Darwin" ] && [ -f "$_plist" ]; then
+    launchctl unload "$_plist" 2>/dev/null || true
+    rm -f "$_plist" 2>/dev/null || true
+  fi
+  # Stop the systemd user service (Linux), if one was installed.
+  if [ "$OS" = "Linux" ] && command -v systemctl >/dev/null 2>&1; then
+    systemctl --user stop handoff-serve 2>/dev/null || true
+    systemctl --user disable handoff-serve 2>/dev/null || true
+    rm -f "${HOME}/.config/systemd/user/handoff-serve.service" 2>/dev/null || true
+  fi
+  # Remove the binary.
+  [ -n "$HS_BIN" ] && rm -f "$HS_BIN" 2>/dev/null || true
+  ok "handoff-serve removed."
+else
+  info "${DIM}handoff-serve not found — skipping.${RESET}"
+fi
+
+# 5. mlx-lm
 printf '\n'
 if python3 -c "import mlx_lm" >/dev/null 2>&1; then
   info "Uninstalling mlx-lm..."
@@ -186,7 +211,7 @@ else
   info "${DIM}mlx-lm not found — skipping.${RESET}"
 fi
 
-# 4. llama.cpp. Detect the binary directly (not just via PATH) because a
+# 6. llama.cpp. Detect the binary directly (not just via PATH) because a
 # `curl | bash` uninstall runs non-interactively and won't have ~/.handoff/bin
 # sourced from the shell profile.
 printf '\n'
@@ -243,7 +268,7 @@ else
   info "${DIM}llama.cpp not found — skipping.${RESET}"
 fi
 
-# 5. Optionally remove handoff user data.
+# 7. Optionally remove handoff user data.
 if [ "$PURGE" -eq 1 ]; then
   if [ -d "$DATA_DIR" ]; then
     info "Removing $DATA_DIR (config, skills, projects, cache)..."

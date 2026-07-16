@@ -27,6 +27,46 @@ ok()    { printf '%s%s%s\n' "$GREEN" "$*" "$RESET"; }
 warn()  { printf '%s%s%s\n' "$YELLOW" "$*" "$RESET"; }
 fail()  { printf '%s%s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
 
+# Install the handoff-serve provider daemon from GitHub releases.
+# Downloads to ~/.handoff/bin/handoff-serve and makes it executable.
+# Returns 0 on success.
+install_handoff_serve() {
+  command -v curl >/dev/null 2>&1 || { warn "curl not found — cannot download handoff-serve."; return 1; }
+
+  hs_arch="$(uname -m)"
+  case "$hs_arch" in
+    x86_64|amd64) hs_arch="amd64" ;;
+    aarch64|arm64) hs_arch="arm64" ;;
+    *) warn "Unsupported arch ($hs_arch) for handoff-serve."; return 1 ;;
+  esac
+  case "$OS" in
+    Darwin) hs_os="darwin" ;;
+    Linux)  hs_os="linux" ;;
+    *)      warn "Unsupported OS ($OS) for handoff-serve."; return 1 ;;
+  esac
+
+  hs_asset="handoff-serve-${hs_os}-${hs_arch}"
+  hs_url="https://github.com/handoff-org/handoff-relay/releases/latest/download/${hs_asset}"
+  hs_dir="${HOME}/.handoff/bin"
+  hs_dest="${hs_dir}/handoff-serve"
+
+  mkdir -p "$hs_dir" || return 1
+  if ! curl -fsSL "$hs_url" -o "$hs_dest"; then
+    rm -f "$hs_dest" 2>/dev/null || true
+    return 1
+  fi
+  chmod +x "$hs_dest"
+
+  # Add ~/.handoff/bin to PATH for future shells (idempotent).
+  for prof in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+    [ -f "$prof" ] || continue
+    grep -q '.handoff/bin' "$prof" 2>/dev/null && continue
+    printf '\n# handoff local backends\nexport PATH="$HOME/.handoff/bin:$PATH"\n' >> "$prof"
+  done
+  export PATH="${hs_dir}:$PATH"
+  return 0
+}
+
 # Best-effort install of LaTeX (pdflatex) for local paper compilation.
 # macOS: basictex via Homebrew + the tlmgr packages the ACL/NeurIPS templates need.
 # Linux: texlive-latex-extra + fonts via the distro package manager.
@@ -183,6 +223,7 @@ enable_ollama_perf() {
 
 # Per-component result, shown in the closing summary.
 STATUS_CLI="not attempted"
+STATUS_SERVE="not attempted"
 STATUS_OLLAMA_PERF="not attempted"
 STATUS_OLLAMA="not attempted"
 STATUS_UV="not attempted"
@@ -278,7 +319,23 @@ else
   STATUS_CLI="FAILED"
 fi
 
-# 3. Ollama (default backend) — works on macOS and Linux.
+# 3. handoff-serve — provider daemon for the peer GPU network.
+printf '\n'
+if [ -f "${HOME}/.handoff/bin/handoff-serve" ] || command -v handoff-serve >/dev/null 2>&1; then
+  ok "handoff-serve already installed."
+  STATUS_SERVE="already installed"
+else
+  info "Installing handoff-serve (peer GPU network provider daemon)..."
+  if install_handoff_serve; then
+    ok "handoff-serve installed to ~/.handoff/bin."
+    STATUS_SERVE="installed"
+  else
+    warn "handoff-serve install failed — download manually from github.com/handoff-org/handoff-relay/releases"
+    STATUS_SERVE="FAILED"
+  fi
+fi
+
+# 4. Ollama (default backend) — works on macOS and Linux.
 printf '\n'
 if command -v ollama >/dev/null 2>&1; then
   ok "Ollama already installed."
@@ -325,7 +382,7 @@ else
   esac
 fi
 
-# 3b. Turn on Ollama's flash attention + q8 KV cache by default (faster, leaner
+# 4b. Turn on Ollama's flash attention + q8 KV cache by default (faster, leaner
 # local inference). Only meaningful when Ollama is present.
 if command -v ollama >/dev/null 2>&1; then
   enable_ollama_perf
@@ -346,7 +403,7 @@ if command -v ollama >/dev/null 2>&1; then
   esac
 fi
 
-# 4. uv — Python project & environment manager used by handoff's experiment runner.
+# 5. uv — Python project & environment manager used by handoff's experiment runner.
 #    With uv, each project's experiments/ directory becomes a reproducible Python
 #    project (pyproject.toml + uv.lock) that can be pushed to GitHub.
 printf '\n'
@@ -371,7 +428,7 @@ else
   fi
 fi
 
-# 5. mlx-lm — Apple Silicon macOS only (MLX is Apple's framework; it genuinely
+# 6. mlx-lm — Apple Silicon macOS only (MLX is Apple's framework; it genuinely
 #    does not exist on Linux/Windows or Intel Macs).
 printf '\n'
 if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
@@ -409,7 +466,7 @@ else
   STATUS_MLX="n/a (needs Apple Silicon)"
 fi
 
-# 6. llama.cpp (llama-server)
+# 7. llama.cpp (llama-server)
 printf '\n'
 if command -v llama-server >/dev/null 2>&1; then
   ok "llama.cpp (llama-server) already installed."
@@ -449,7 +506,7 @@ else
   esac
 fi
 
-# 7. LaTeX — local paper compilation (pdflatex / latexmk).
+# 8. LaTeX — local paper compilation (pdflatex / latexmk).
 printf '\n'
 if command -v pdflatex >/dev/null 2>&1; then
   ok "LaTeX already installed."
@@ -482,10 +539,11 @@ else
   esac
 fi
 
-# 8. Summary.
+# 9. Summary.
 printf '\n'
 printf '%s\n' "${BOLD}Setup summary${RESET}"
 info "  handoff CLI  : $STATUS_CLI"
+info "  handoff-serve: $STATUS_SERVE"
 info "  Ollama       : $STATUS_OLLAMA"
 info "  Ollama tuning: $STATUS_OLLAMA_PERF"
 info "  uv           : $STATUS_UV"

@@ -2,6 +2,7 @@ import { InferenceClient } from '@huggingface/inference';
 import type { Config } from '../../config/schema.js';
 import type { ToolSchema } from '../tools/registry.js';
 import { reasoningOutputReserve } from './contextBudget.js';
+import { resolveOllamaUrl } from '../network/peerRouter.js';
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 
@@ -869,8 +870,11 @@ export class OllamaModel implements ChatModel {
   ): AsyncGenerator<StreamPart> {
     // Use Ollama's NATIVE /api/chat endpoint (not the OpenAI-compat one) so we
     // can pass keep_alive and options.num_ctx — the OpenAI endpoint ignores both.
+    // resolveOllamaUrl() may return the peer relay URL when local Ollama is
+    // unreachable and peer network is enabled — the relay speaks the same API.
+    const baseUrl = await resolveOllamaUrl(this.config);
     yield* streamOllamaNative(
-      this.config.ollamaBaseUrl,
+      baseUrl,
       this.config,
       messages,
       tools,
