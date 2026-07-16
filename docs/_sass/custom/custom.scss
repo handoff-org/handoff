@@ -33,10 +33,11 @@ $hf-dim: #484858;
   --hf-text: #e2e2ea;
   --hf-muted: #88889a;
   --hf-dim: #484858;
-  // Accent: defer to just-the-docs var(--link-color) which the dark scheme sets
-  --hf-accent: var(--link-color, #9b8af0);
-  --hf-accent-faint: rgba(155, 138, 240, 0.1);
-  --hf-accent-glow: rgba(155, 138, 240, 0.18);
+  // Accent: brand green (matches logo)
+  --link-color: #4ade80;
+  --hf-accent: #4ade80;
+  --hf-accent-faint: rgba(74, 222, 128, 0.1);
+  --hf-accent-glow: rgba(74, 222, 128, 0.18);
   --hf-green: #4ade80;
   --hf-green-dim: rgba(74, 222, 128, 0.15);
   --hf-amber: #fbbf24;
@@ -51,6 +52,34 @@ body,
 nav.site-nav,
 .site-footer {
   background-color: $hf-bg !important;
+}
+
+// ── Typography — Inter ────────────────────────────────────────────────────────
+body,
+.side-bar,
+.site-nav,
+.main-content,
+.search-input,
+input,
+button {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif !important;
+  font-weight: 300;
+}
+
+.nav-list .nav-list-item .nav-list-link,
+.site-title,
+.aux-nav-list-item,
+table th,
+table td {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif !important;
+  font-weight: 400;
+}
+
+// Sidebar logo sizing
+.site-logo img,
+.site-header .site-logo {
+  max-height: 36px;
+  width: auto;
 }
 
 // ── Typography baseline ───────────────────────────────────────────────────────
@@ -72,14 +101,14 @@ nav.site-nav,
 // ── Heading hierarchy ─────────────────────────────────────────────────────────
 .main-content h1 {
   font-size: clamp(1.6rem, 3vw, 2.25rem);
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 0.6rem;
   letter-spacing: -0.02em;
 }
 
 .main-content h2 {
   font-size: clamp(1.15rem, 2vw, 1.4rem);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 2.5rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid $hf-border;
@@ -88,7 +117,7 @@ nav.site-nav,
 
 .main-content h3 {
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 1.75rem;
   color: var(--hf-text);
 }
@@ -333,7 +362,7 @@ nav.site-nav,
 
   h1 {
     font-size: clamp(2.2rem, 5vw, 3.2rem) !important;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.03em;
     margin: 0 0 0.5rem !important;
     line-height: 1.1;
@@ -922,6 +951,16 @@ nav.site-nav,
     opacity: 1;
     transform: none;
   }
+}
+
+// ── Hero logo ─────────────────────────────────────────────────────────────────
+.hf-hero-logo {
+  max-width: 260px;
+  height: auto;
+  display: block;
+  margin-bottom: 1rem;
+  border-radius: 0 !important;
+  border: none !important;
 }
 
 // ── Homepage hero layout override ─────────────────────────────────────────────

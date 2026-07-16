@@ -10,7 +10,7 @@ permalink: /
   <div class="hf-hero-grid">
     <div class="hf-hero-copy">
       <span class="hf-eyebrow">Local-first · Terminal-native · Private</span>
-      <h1>handoff</h1>
+      <img src="{{ '/assets/bn/banner300.png' | relative_url }}" alt="handoff" class="hf-hero-logo">
       <p class="hf-tagline">
         Private research you can prove. Read papers, run experiments,
         write LaTeX, and trace every claim to its evidence — models on
