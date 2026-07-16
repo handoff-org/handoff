@@ -56,7 +56,7 @@ nav.site-nav,
 // ── Typography baseline ───────────────────────────────────────────────────────
 .main-content {
   line-height: 1.65;
-  font-size: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
+  font-size: unquote("clamp(0.9375rem, 0.9rem + 0.2vw, 1rem)");
 }
 
 .main-content p,
