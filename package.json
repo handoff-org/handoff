@@ -40,7 +40,7 @@
     "bench:ml-agent": "tsx src/adapters/ml-agent-bench.ts",
     "bench:dabstep": "tsx src/adapters/dabstep.ts",
     "bench:compare": "tsx benchmarks/scripts/compare-sota.ts",
-    "prepublishOnly": "npm run typecheck && npm test"
+    "prepublishOnly": "npm run check"
   },
   "keywords": [
     "research",

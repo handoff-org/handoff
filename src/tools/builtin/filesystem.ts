@@ -8,6 +8,13 @@ import { resolveWorkspacePath, isWithinProject } from '../../workspace/project.j
  * Filesystem tools: read/write/edit files, make/list directories. Writes are
  * confined to the active project workspace (isWithinProject) and pass through
  * the Overleaf single-document guard so a linked paper stays compilable.
+ *
+ * Privacy note: read_file intentionally allows absolute paths outside the project
+ * because agents frequently need to read papers, datasets, and scripts from
+ * arbitrary locations (e.g. ~/Downloads). list_dir is confined to the project to
+ * avoid leaking directory structure. Callers should be aware that adversarial
+ * content in an ingested document could attempt to instruct read_file to exfiltrate
+ * sensitive paths; this is a known prompt-injection risk acknowledged in the design.
  */
 export function registerFilesystemTools(registry: ToolRegistry): void {
   registry.register({
@@ -144,6 +151,9 @@ export function registerFilesystemTools(registry: ToolRegistry): void {
     },
     async execute({ path }) {
       const target = resolveWorkspacePath(path ? String(path) : '.');
+      if (!isWithinProject(target)) {
+        return `Refused: "${path}" resolves outside the project workspace. List directories inside the active project.`;
+      }
       const entries = await readdir(target, { withFileTypes: true });
       return entries.map((e) => (e.isDirectory() ? `${e.name}/` : e.name)).join('\n');
     },
