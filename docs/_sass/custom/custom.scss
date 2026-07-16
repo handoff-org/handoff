@@ -360,22 +360,13 @@ table td {
     border-radius: 100px;
   }
 
-  h1 {
-    font-size: clamp(2.2rem, 5vw, 3.2rem) !important;
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    margin: 0 0 0.5rem !important;
-    line-height: 1.1;
-    color: var(--hf-text);
-  }
-
   .hf-tagline {
-    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-size: clamp(1rem, 2vw, 1.15rem);
     color: var(--hf-muted);
-    font-weight: 400;
-    line-height: 1.55;
+    font-weight: 300;
+    line-height: 1.6;
     margin-bottom: 1.75rem;
-    max-width: 38ch;
+    max-width: 52ch;
   }
 }
 
@@ -955,12 +946,18 @@ table td {
 
 // ── Hero logo ─────────────────────────────────────────────────────────────────
 .hf-hero-logo {
-  max-width: 260px;
+  max-width: 520px;
+  width: 100%;
   height: auto;
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   border-radius: 0 !important;
   border: none !important;
+}
+
+.hf-hero-terminal {
+  margin-top: 2.5rem;
+  max-width: 540px;
 }
 
 // ── Homepage hero layout override ─────────────────────────────────────────────

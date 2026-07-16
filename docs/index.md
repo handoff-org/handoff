@@ -7,29 +7,24 @@ permalink: /
 ---
 
 <div class="hf-hero">
-  <div class="hf-hero-grid">
-    <div class="hf-hero-copy">
-      <span class="hf-eyebrow">Local-first · Terminal-native · Private</span>
-      <img src="{{ '/assets/bn/banner300.png' | relative_url }}" alt="handoff" class="hf-hero-logo">
-      <p class="hf-tagline">
-        Private research you can prove. Read papers, run experiments,
-        write LaTeX, and trace every claim to its evidence — models on
-        your machine, nothing leaves unless you say so.
-      </p>
-      <div class="hf-hero-ctas">
-        <a href="getting-started.html" class="btn btn-primary fs-5">Get started</a>
-        <a href="commands.html" class="btn fs-5">Commands</a>
-        <a href="https://github.com/handoff-org/handoff" class="btn fs-5">GitHub</a>
-      </div>
-      <div class="hf-hero-meta">
-        <span><span class="hf-meta-dot"></span>Runs locally on Ollama · llama.cpp · MLX</span>
-        <span>ELv2 license</span>
-        <span>TypeScript + Ink TUI</span>
-      </div>
-    </div>
-    <div>
-      {% include terminal-card.html %}
-    </div>
+  <img src="{{ '/assets/bn/banner300.png' | relative_url }}" alt="handoff" class="hf-hero-logo">
+  <p class="hf-tagline">
+    Private research you can prove. Read papers, run experiments,
+    write LaTeX, and trace every claim to its evidence — models on
+    your machine, nothing leaves unless you say so.
+  </p>
+  <div class="hf-hero-ctas">
+    <a href="getting-started.html" class="btn btn-primary fs-5">Get started</a>
+    <a href="commands.html" class="btn fs-5">Commands</a>
+    <a href="https://github.com/handoff-org/handoff" class="btn fs-5">GitHub</a>
+  </div>
+  <div class="hf-hero-meta">
+    <span><span class="hf-meta-dot"></span>Runs locally on Ollama · llama.cpp · MLX</span>
+    <span>ELv2 license</span>
+    <span>TypeScript + Ink TUI</span>
+  </div>
+  <div class="hf-hero-terminal">
+    {% include terminal-card.html %}
   </div>
 </div>
 
