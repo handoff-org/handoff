@@ -49,7 +49,7 @@ back_to_top_text: 'Back to top'
 footer_content: >-
   handoff · private research you can prove ·
   <a href="https://github.com/handoff-org/handoff">GitHub</a> ·
-  <a href="https://www.npmjs.com/package/ownhandoff">npm</a> · MIT License
+  Elastic License 2.0
 
 # Files Jekyll should not copy into the built site.
 exclude:

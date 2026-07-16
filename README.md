@@ -20,9 +20,6 @@ curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installe
 
 # Windows (PowerShell)
 irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex
-
-# Any OS — CLI only (model backends not included)
-npm install -g ownhandoff
 ```
 
 ---
@@ -71,4 +68,4 @@ npm uninstall -g ownhandoff
 
 ---
 
-[MIT](./LICENSE) 2026
+[Elastic License 2.0](./LICENSE) 2026

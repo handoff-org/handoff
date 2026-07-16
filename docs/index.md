@@ -23,7 +23,7 @@ permalink: /
       </div>
       <div class="hf-hero-meta">
         <span><span class="hf-meta-dot"></span>Runs locally on Ollama · llama.cpp · MLX</span>
-        <span>MIT license</span>
+        <span>ELv2 license</span>
         <span>TypeScript + Ink TUI</span>
       </div>
     </div>
@@ -43,12 +43,9 @@ curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installe
 
 # Windows (PowerShell)
 irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex
-
-# Any OS — CLI only (add a model backend yourself)
-npm install -g ownhandoff
 ```
 
-Package **`ownhandoff`** · command **`handoff`**. Then run `handoff` and follow the setup wizard.
+Then run `handoff` and follow the setup wizard.
 
 ## What handoff does
 
@@ -61,7 +58,7 @@ Package **`ownhandoff`** · command **`handoff`**. Then run `handoff` and follow
   <span class="hf-badge">Data stays on your machine</span>
   <span class="hf-badge">Ollama · llama.cpp · MLX · vLLM</span>
   <span class="hf-badge">HuggingFace opt-in only</span>
-  <span class="hf-badge">Open source · MIT</span>
+  <span class="hf-badge">Source available · ELv2</span>
 </div>
 
 handoff runs against [Ollama](https://ollama.com), llama.cpp, MLX, or vLLM on your own

@@ -500,6 +500,15 @@ nav.site-nav,
   &--accent {
     color: var(--hf-accent);
   }
+
+  &--muted {
+    color: var(--hf-dim);
+    font-style: italic;
+  }
+
+  &--amber {
+    color: var(--hf-amber);
+  }
 }
 
 .hf-terminal__status {
