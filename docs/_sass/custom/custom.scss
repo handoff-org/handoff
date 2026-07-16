@@ -43,6 +43,19 @@ $hf-dim: #484858;
   --hf-amber: #fbbf24;
 }
 
+// ── Accessibility ─────────────────────────────────────────────────────────────
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 // ── Base chrome ──────────────────────────────────────────────────────────────
 body,
 .side-bar,
@@ -62,7 +75,13 @@ body,
 .search-input,
 input,
 button {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif !important;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    ui-sans-serif,
+    system-ui,
+    sans-serif !important;
   font-weight: 300;
 }
 
@@ -71,7 +90,13 @@ button {
 .aux-nav-list-item,
 table th,
 table td {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif !important;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    ui-sans-serif,
+    system-ui,
+    sans-serif !important;
   font-weight: 400;
 }
 
@@ -85,7 +110,7 @@ table td {
 // ── Typography baseline ───────────────────────────────────────────────────────
 .main-content {
   line-height: 1.65;
-  font-size: unquote("clamp(0.9375rem, 0.9rem + 0.2vw, 1rem)");
+  font-size: unquote('clamp(0.9375rem, 0.9rem + 0.2vw, 1rem)');
 }
 
 .main-content p,

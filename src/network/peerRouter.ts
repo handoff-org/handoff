@@ -49,7 +49,9 @@ function findServeBin(): string | null {
   try {
     const p = execFileSync('which', ['handoff-serve'], { encoding: 'utf8' }).trim();
     if (p) return p;
-  } catch { /* not in PATH */ }
+  } catch {
+    /* not in PATH */
+  }
 
   // 2. Standard install location (placed here by the handoff installer)
   const home = process.env['HOME'] ?? '';
@@ -90,11 +92,7 @@ async function ensurePeerDaemon(config: Config): Promise<void> {
 
   spawn(
     bin,
-    [
-      '--token', config.peerToken,
-      '--relay', toWsUrl(config.peerRelayUrl),
-      '--embedded-relay',
-    ],
+    ['--token', config.peerToken, '--relay', toWsUrl(config.peerRelayUrl), '--embedded-relay'],
     { detached: true, stdio: 'ignore' },
   ).unref();
 

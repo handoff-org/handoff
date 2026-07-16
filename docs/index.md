@@ -6,6 +6,8 @@ description: "handoff — a local-first AI research companion for reading papers
 permalink: /
 ---
 
+<h1 class="sr-only">handoff</h1>
+
 <div class="hf-hero">
   <img src="{{ '/assets/bn/banner300.png' | relative_url }}" alt="handoff" class="hf-hero-logo">
   <p class="hf-tagline">

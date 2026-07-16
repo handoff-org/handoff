@@ -192,7 +192,8 @@ export async function loadConfig(): Promise<Config> {
     peerNetworkEnabled: store.peerNetworkEnabled,
     peerToken: process.env['HANDOFF_PEER_TOKEN'] ?? store.peerToken,
     peerRelayUrl: process.env['HANDOFF_PEER_RELAY_URL'] ?? store.peerRelayUrl,
-    peerFallbackOnly: process.env['HANDOFF_PEER_FALLBACK_ONLY'] === '0' ? false : store.peerFallbackOnly,
+    peerFallbackOnly:
+      process.env['HANDOFF_PEER_FALLBACK_ONLY'] === '0' ? false : store.peerFallbackOnly,
     zoteroApiKey: process.env['HANDOFF_ZOTERO_API_KEY'] ?? store.zoteroApiKey,
     zoteroUserId: process.env['HANDOFF_ZOTERO_USER_ID'] ?? store.zoteroUserId,
     openreviewUsername: process.env['HANDOFF_OPENREVIEW_USERNAME'] ?? store.openreviewUsername,

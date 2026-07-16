@@ -16,13 +16,7 @@ interface Props {
   onCancel: () => void;
 }
 
-type Phase =
-  | 'landing'
-  | 'registering'
-  | 'confirmed'
-  | 'enter_token'
-  | 'menu'
-  | 'installing';
+type Phase = 'landing' | 'registering' | 'confirmed' | 'enter_token' | 'menu' | 'installing';
 
 function servePath(): string | null {
   try {
@@ -46,7 +40,7 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   const [tokenError, setTokenError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [installError, setInstallError] = useState('');
-  const [serveBin, setServeBin] = useState<string | null>(() => servePath());
+  const [serveBin, _setServeBin] = useState<string | null>(() => servePath());
 
   const landingOptions = ['Get started (free)', 'I already have a token', 'Cancel'];
 
@@ -61,15 +55,24 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   ];
 
   useInput((char, key) => {
-    if (key.escape) { onCancel(); return; }
+    if (key.escape) {
+      onCancel();
+      return;
+    }
 
     if (phase === 'landing') {
-      if (key.upArrow) setLandingIdx((i) => (i + landingOptions.length - 1) % landingOptions.length);
+      if (key.upArrow)
+        setLandingIdx((i) => (i + landingOptions.length - 1) % landingOptions.length);
       if (key.downArrow) setLandingIdx((i) => (i + 1) % landingOptions.length);
       if (key.return) {
-        if (landingIdx === 0) { setPhase('registering'); void doRegister(); }
-        else if (landingIdx === 1) { setPhase('enter_token'); }
-        else { onCancel(); }
+        if (landingIdx === 0) {
+          setPhase('registering');
+          void doRegister();
+        } else if (landingIdx === 1) {
+          setPhase('enter_token');
+        } else {
+          onCancel();
+        }
       }
       return;
     }
@@ -84,7 +87,10 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
     if (phase === 'enter_token') {
       if (key.return) {
         const t = tokenInput.trim();
-        if (!t) { setTokenError('Paste your token here.'); return; }
+        if (!t) {
+          setTokenError('Paste your token here.');
+          return;
+        }
         onRegister(t, 0);
         return;
       }
@@ -131,7 +137,10 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
       stdio: 'pipe',
     });
     if (result.status !== 0) {
-      setInstallError(result.stderr?.toString().trim() || 'Install failed — try running with sudo or check permissions.');
+      setInstallError(
+        result.stderr?.toString().trim() ||
+          'Install failed — try running with sudo or check permissions.',
+      );
     }
     setPhase('menu');
   }
@@ -144,16 +153,25 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
     } catch {
       try {
         spawnSync('xclip', ['-selection', 'clipboard'], { input: token });
-      } catch { /* clipboard unavailable */ }
+      } catch {
+        /* clipboard unavailable */
+      }
     }
   }
 
   function handleMenuPick(idx: number) {
     switch (idx) {
-      case 0: onToggle(!config.peerNetworkEnabled); break;
-      case 1: if (!serviceOn) doInstallServe(); break;
-      case 2: copyToken(); break;
-      default: onCancel();
+      case 0:
+        onToggle(!config.peerNetworkEnabled);
+        break;
+      case 1:
+        if (!serviceOn) doInstallServe();
+        break;
+      case 2:
+        copyToken();
+        break;
+      default:
+        onCancel();
     }
   }
 
@@ -162,12 +180,14 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   if (phase === 'landing') {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text bold color={accent}>Join the handoff GPU network</Text>
+        <Text bold color={accent}>
+          Join the handoff GPU network
+        </Text>
         <Text> </Text>
         <Text dimColor>Run inference on community GPUs when your local model is unavailable.</Text>
         <Text dimColor>First 50,000 tokens free — no credit card, no sign-up form.</Text>
         <Text> </Text>
-        {registerError ? <Text color={theme.error}>⚠  {registerError}</Text> : null}
+        {registerError ? <Text color={theme.error}>⚠ {registerError}</Text> : null}
         {landingOptions.map((opt, i) => (
           <Text key={opt} color={i === landingIdx ? accent : undefined}>
             {i === landingIdx ? '❯ ' : '  '}
@@ -175,7 +195,7 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
           </Text>
         ))}
         <Text> </Text>
-        <Text dimColor>↑↓ move  ·  Enter select  ·  Esc close</Text>
+        <Text dimColor>↑↓ move · Enter select · Esc close</Text>
       </Box>
     );
   }
@@ -183,7 +203,9 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   if (phase === 'registering') {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text bold color={accent}>Connecting…</Text>
+        <Text bold color={accent}>
+          Connecting…
+        </Text>
         <Text dimColor>Registering your free account.</Text>
       </Box>
     );
@@ -192,7 +214,9 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   if (phase === 'installing') {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text bold color={accent}>Installing background service…</Text>
+        <Text bold color={accent}>
+          Installing background service…
+        </Text>
         <Text dimColor>Registering with launchd — will auto-start on login.</Text>
       </Box>
     );
@@ -201,7 +225,9 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   if (phase === 'confirmed') {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text bold color={theme.note}>✓ You&apos;re in!</Text>
+        <Text bold color={theme.note}>
+          ✓ You&apos;re in!
+        </Text>
         <Text> </Text>
         <Text>Balance: 50,000 free tokens</Text>
         <Text dimColor>Token saved. Peer network is now active.</Text>
@@ -215,7 +241,9 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
   if (phase === 'enter_token') {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Text bold color={accent}>Enter your token</Text>
+        <Text bold color={accent}>
+          Enter your token
+        </Text>
         <Text> </Text>
         <Text dimColor>Paste the token from your other device.</Text>
         <Box borderStyle="round" borderColor={theme.borderActive} paddingX={1}>
@@ -224,7 +252,7 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
         </Box>
         {tokenError ? <Text color={theme.error}>{tokenError}</Text> : null}
         <Text> </Text>
-        <Text dimColor>Enter to save  ·  Esc back</Text>
+        <Text dimColor>Enter to save · Esc back</Text>
       </Box>
     );
   }
@@ -238,9 +266,11 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
     <Box flexDirection="column" paddingX={2} paddingY={1}>
       <Box gap={1}>
         <Text bold>Peer GPU network</Text>
-        <Text color={statusColor}>{statusDot} {config.peerNetworkEnabled ? 'on' : 'off'}</Text>
+        <Text color={statusColor}>
+          {statusDot} {config.peerNetworkEnabled ? 'on' : 'off'}
+        </Text>
       </Box>
-      <Text dimColor>Balance  {bal} tokens</Text>
+      <Text dimColor>Balance {bal} tokens</Text>
       <Text> </Text>
       {menuOptions.map((opt, i) => (
         <Text key={opt} color={i === menuIdx ? accent : undefined}>
@@ -251,11 +281,11 @@ export function PeerSetup({ theme, config, peerCredits, onRegister, onToggle, on
       {installError ? (
         <Box flexDirection="column">
           <Text> </Text>
-          <Text color={theme.error}>⚠  {installError}</Text>
+          <Text color={theme.error}>⚠ {installError}</Text>
         </Box>
       ) : null}
       <Text> </Text>
-      <Text dimColor>↑↓ move  ·  Enter select  ·  Esc close</Text>
+      <Text dimColor>↑↓ move · Enter select · Esc close</Text>
     </Box>
   );
 }
