@@ -172,30 +172,8 @@ DID_PERF=0
 disable_ollama_perf
 if [ "$DID_PERF" = 1 ]; then ok "Removed handoff's Ollama speed-up settings."; fi
 
-# 3. handoff-serve provider daemon.
-printf '\n'
-HS_BIN="$(command -v handoff-serve 2>/dev/null || true)"
-[ -z "$HS_BIN" ] && [ -f "${HOME}/.handoff/bin/handoff-serve" ] && HS_BIN="${HOME}/.handoff/bin/handoff-serve"
-if [ -n "$HS_BIN" ] || [ -f "${HOME}/Library/LaunchAgents/sh.handoff.serve.plist" ]; then
-  info "Removing handoff-serve..."
-  # Stop and unload the launchd service (macOS) before removing the binary.
-  _plist="${HOME}/Library/LaunchAgents/sh.handoff.serve.plist"
-  if [ "$OS" = "Darwin" ] && [ -f "$_plist" ]; then
-    launchctl unload "$_plist" 2>/dev/null || true
-    rm -f "$_plist" 2>/dev/null || true
-  fi
-  # Stop the systemd user service (Linux), if one was installed.
-  if [ "$OS" = "Linux" ] && command -v systemctl >/dev/null 2>&1; then
-    systemctl --user stop handoff-serve 2>/dev/null || true
-    systemctl --user disable handoff-serve 2>/dev/null || true
-    rm -f "${HOME}/.config/systemd/user/handoff-serve.service" 2>/dev/null || true
-  fi
-  # Remove the binary.
-  [ -n "$HS_BIN" ] && rm -f "$HS_BIN" 2>/dev/null || true
-  ok "handoff-serve removed."
-else
-  info "${DIM}handoff-serve not found — skipping.${RESET}"
-fi
+# TODO(peer-network): handoff-serve removal — re-enable when peer network ships.
+# 3. handoff-serve — skipped until peer network relay is live.
 
 # 5. mlx-lm
 printf '\n'

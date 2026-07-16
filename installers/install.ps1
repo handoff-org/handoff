@@ -75,31 +75,8 @@ Global install failed.
 }
 Ok "Installed. The 'handoff' command is now available."
 
-# 4. handoff-serve — provider daemon for the peer GPU network.
-Write-Host ""
-$ServeBin = Join-Path $HOME '.handoff\bin\handoff-serve.exe'
-if ((Test-Path $ServeBin) -or (Get-Command handoff-serve -ErrorAction SilentlyContinue)) {
-  Ok "handoff-serve already installed."
-} else {
-  Info "Installing handoff-serve (peer GPU network provider daemon)..."
-  $ServeDir = Join-Path $HOME '.handoff\bin'
-  $ServeAsset = 'handoff-serve-windows-amd64.exe'
-  $ServeUrl = "https://github.com/handoff-org/handoff-relay/releases/latest/download/$ServeAsset"
-  try {
-    New-Item -ItemType Directory -Force -Path $ServeDir | Out-Null
-    Invoke-WebRequest -Uri $ServeUrl -OutFile $ServeBin -UseBasicParsing
-    # Add ~/.handoff/bin to the user PATH (idempotent).
-    $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-    if ($UserPath -notlike "*$ServeDir*") {
-      [Environment]::SetEnvironmentVariable('PATH', "$UserPath;$ServeDir", 'User')
-      $env:PATH += ";$ServeDir"
-    }
-    Ok "handoff-serve installed to $ServeBin."
-  } catch {
-    Warn "handoff-serve install failed: $_"
-    Warn "Download manually from https://github.com/handoff-org/handoff-relay/releases"
-  }
-}
+# TODO(peer-network): handoff-serve install — re-enable when relay.handoff.sh is deployed.
+# 4. handoff-serve — skipped until peer network relay is live.
 
 # 6. Ollama
 Write-Host ""

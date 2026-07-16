@@ -85,26 +85,8 @@ Remove-Item Env:\OLLAMA_KV_CACHE_TYPE -ErrorAction SilentlyContinue
 Remove-Item Env:\OLLAMA_NUM_PARALLEL -ErrorAction SilentlyContinue
 Ok "Removed handoff's Ollama speed-up environment variables."
 
-# 3. handoff-serve provider daemon.
-Write-Host ""
-$ServeBin = Join-Path $HOME '.handoff\bin\handoff-serve.exe'
-$ServeFound = (Test-Path $ServeBin) -or [bool](Get-Command handoff-serve -ErrorAction SilentlyContinue)
-if ($ServeFound) {
-  Info "Removing handoff-serve..."
-  # Remove the binary.
-  Remove-Item -Force $ServeBin -ErrorAction SilentlyContinue
-  # Remove ~/.handoff/bin from the user PATH if it's now empty.
-  $ServeDir = Join-Path $HOME '.handoff\bin'
-  $remaining = Get-ChildItem $ServeDir -ErrorAction SilentlyContinue
-  if (-not $remaining) {
-    $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $UserPath = ($UserPath -split ';' | Where-Object { $_ -ne $ServeDir }) -join ';'
-    [Environment]::SetEnvironmentVariable('PATH', $UserPath, 'User')
-  }
-  Ok "handoff-serve removed."
-} else {
-  Info "handoff-serve not found - skipping."
-}
+# TODO(peer-network): handoff-serve removal — re-enable when peer network ships.
+# 3. handoff-serve — skipped until peer network relay is live.
 
 # 4. mlx-lm — not applicable on Windows.
 Write-Host ""

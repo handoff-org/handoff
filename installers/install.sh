@@ -27,45 +27,31 @@ ok()    { printf '%s%s%s\n' "$GREEN" "$*" "$RESET"; }
 warn()  { printf '%s%s%s\n' "$YELLOW" "$*" "$RESET"; }
 fail()  { printf '%s%s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
 
-# Install the handoff-serve provider daemon from GitHub releases.
-# Downloads to ~/.handoff/bin/handoff-serve and makes it executable.
-# Returns 0 on success.
-install_handoff_serve() {
-  command -v curl >/dev/null 2>&1 || { warn "curl not found — cannot download handoff-serve."; return 1; }
-
-  hs_arch="$(uname -m)"
-  case "$hs_arch" in
-    x86_64|amd64) hs_arch="amd64" ;;
-    aarch64|arm64) hs_arch="arm64" ;;
-    *) warn "Unsupported arch ($hs_arch) for handoff-serve."; return 1 ;;
-  esac
-  case "$OS" in
-    Darwin) hs_os="darwin" ;;
-    Linux)  hs_os="linux" ;;
-    *)      warn "Unsupported OS ($OS) for handoff-serve."; return 1 ;;
-  esac
-
-  hs_asset="handoff-serve-${hs_os}-${hs_arch}"
-  hs_url="https://github.com/handoff-org/handoff-relay/releases/latest/download/${hs_asset}"
-  hs_dir="${HOME}/.handoff/bin"
-  hs_dest="${hs_dir}/handoff-serve"
-
-  mkdir -p "$hs_dir" || return 1
-  if ! curl -fsSL "$hs_url" -o "$hs_dest"; then
-    rm -f "$hs_dest" 2>/dev/null || true
-    return 1
-  fi
-  chmod +x "$hs_dest"
-
-  # Add ~/.handoff/bin to PATH for future shells (idempotent).
-  for prof in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
-    [ -f "$prof" ] || continue
-    grep -q '.handoff/bin' "$prof" 2>/dev/null && continue
-    printf '\n# handoff local backends\nexport PATH="$HOME/.handoff/bin:$PATH"\n' >> "$prof"
-  done
-  export PATH="${hs_dir}:$PATH"
-  return 0
-}
+# TODO(peer-network): install_handoff_serve — re-enable when relay.handoff.sh is deployed.
+# install_handoff_serve() {
+#   hs_arch="$(uname -m)"
+#   case "$hs_arch" in
+#     x86_64|amd64) hs_arch="amd64" ;;
+#     aarch64|arm64) hs_arch="arm64" ;;
+#     *) return 1 ;;
+#   esac
+#   case "$OS" in
+#     Darwin) hs_os="darwin" ;;
+#     Linux)  hs_os="linux" ;;
+#     *) return 1 ;;
+#   esac
+#   hs_dest="${HOME}/.handoff/bin/handoff-serve"
+#   mkdir -p "${HOME}/.handoff/bin" || return 1
+#   curl -fsSL "https://github.com/handoff-org/handoff-relay/releases/latest/download/handoff-serve-${hs_os}-${hs_arch}" \
+#     -o "$hs_dest" || return 1
+#   chmod +x "$hs_dest"
+#   for prof in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+#     [ -f "$prof" ] || continue
+#     grep -q '.handoff/bin' "$prof" 2>/dev/null && continue
+#     printf '\n# handoff local backends\nexport PATH="$HOME/.handoff/bin:$PATH"\n' >> "$prof"
+#   done
+#   export PATH="${HOME}/.handoff/bin:$PATH"
+# }
 
 # Best-effort install of LaTeX (pdflatex) for local paper compilation.
 # macOS: basictex via Homebrew + the tlmgr packages the ACL/NeurIPS templates need.
@@ -223,7 +209,7 @@ enable_ollama_perf() {
 
 # Per-component result, shown in the closing summary.
 STATUS_CLI="not attempted"
-STATUS_SERVE="not attempted"
+# STATUS_SERVE="not attempted"  # TODO(peer-network)
 STATUS_OLLAMA_PERF="not attempted"
 STATUS_OLLAMA="not attempted"
 STATUS_UV="not attempted"
@@ -319,21 +305,8 @@ else
   STATUS_CLI="FAILED"
 fi
 
-# 3. handoff-serve — provider daemon for the peer GPU network.
-printf '\n'
-if [ -f "${HOME}/.handoff/bin/handoff-serve" ] || command -v handoff-serve >/dev/null 2>&1; then
-  ok "handoff-serve already installed."
-  STATUS_SERVE="already installed"
-else
-  info "Installing handoff-serve (peer GPU network provider daemon)..."
-  if install_handoff_serve; then
-    ok "handoff-serve installed to ~/.handoff/bin."
-    STATUS_SERVE="installed"
-  else
-    warn "handoff-serve install failed — download manually from github.com/handoff-org/handoff-relay/releases"
-    STATUS_SERVE="FAILED"
-  fi
-fi
+# TODO(peer-network): handoff-serve install — re-enable when relay.handoff.sh is deployed.
+# 3. handoff-serve — skipped until peer network relay is live.
 
 # 4. Ollama (default backend) — works on macOS and Linux.
 printf '\n'
@@ -543,7 +516,6 @@ fi
 printf '\n'
 printf '%s\n' "${BOLD}Setup summary${RESET}"
 info "  handoff CLI  : $STATUS_CLI"
-info "  handoff-serve: $STATUS_SERVE"
 info "  Ollama       : $STATUS_OLLAMA"
 info "  Ollama tuning: $STATUS_OLLAMA_PERF"
 info "  uv           : $STATUS_UV"
