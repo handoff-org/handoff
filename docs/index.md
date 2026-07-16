@@ -13,11 +13,6 @@ permalink: /
     write LaTeX, and trace every claim to its evidence — models on
     your machine, nothing leaves unless you say so.
   </p>
-  <div class="hf-hero-ctas">
-    <a href="getting-started.html" class="btn btn-primary fs-5">Get started</a>
-    <a href="commands.html" class="btn fs-5">Commands</a>
-    <a href="https://github.com/handoff-org/handoff" class="btn fs-5">GitHub</a>
-  </div>
   <div class="hf-hero-meta">
     <span><span class="hf-meta-dot"></span>Runs locally on Ollama · llama.cpp · MLX</span>
     <span>ELv2 license</span>
