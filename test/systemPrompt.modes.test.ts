@@ -152,7 +152,7 @@ test('prompt advertises append mode only because write_file supports it', () => 
 test('model-family hint is injected and short', () => {
   const sys = buildSystem('BASE', null, { modelFamily: 'ornith' });
   assert.match(sys, /Model note:/);
-  assert.match(sys, /coding agent/i);
+  assert.match(sys, /act through tools/i);
 });
 
 // ── starterTex hardening ──────────────────────────────────────────────────────

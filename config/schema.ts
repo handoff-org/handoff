@@ -77,8 +77,10 @@ export const ConfigSchema = z.object({
   systemPrompt: z
     .string()
     .default(
-      'You are a helpful coding assistant with access to tools. ' +
-        'Use tools when needed. Be concise.',
+      'You are Handoff, a local-first research companion. ' +
+        'Help the user read papers, validate claims, run reproducible experiments, ' +
+        'write and cite LaTeX, manage evidence, and trace every claim to its source. ' +
+        'Use tools for all file and search operations. Be concise and evidence-aware.',
     ),
   toolDirs: z.array(z.string()).default([]),
   // Two-tier model routing: auto-select a fast or think model per turn.

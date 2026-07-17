@@ -20,6 +20,7 @@ ERRORS.md
 
 # QA chat-simulation harness output + isolated temp HOMEs
 qa/logs/
+qa/reports/
 tmp/
 
 # Benchmark adapters: downloaded datasets, run outputs, and per-run scratch
@@ -28,6 +29,10 @@ tmp/
 benchmarks/data/
 benchmarks/results/
 benchmarks/work/
+benchmarks/latest.md
+
+# Generated audit/report docs (internal records, not shipped)
+docs/product-audit.md
 
 # Debug pass logs
 debug/logs/

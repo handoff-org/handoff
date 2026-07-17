@@ -77,12 +77,12 @@ $hf-dim: #484858;
 
   // Font tokens — self-hosted Geist (SIL OFL). Display reuses the sans at heavier
   // weights; Geist Mono is the companion monospace for code and the terminal card.
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui,
-    'Segoe UI', sans-serif;
-  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui,
-    sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    'Liberation Mono', 'Cascadia Code', monospace;
+  --font-sans:
+    'Geist', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Cascadia Code', monospace;
 
   // Semantic design tokens (brand-system names → hf tokens)
   --brand-primary: var(--hf-accent);

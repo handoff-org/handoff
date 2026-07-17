@@ -17,152 +17,195 @@
   crossorigin
 />
 <script>
-(function () {
-  'use strict';
+  (function () {
+    'use strict';
 
-  function ready(fn) {
-    if (document.readyState !== 'loading') { fn(); }
-    else { document.addEventListener('DOMContentLoaded', fn); }
-  }
-
-  // ── Copy buttons ─────────────────────────────────────────────────────────────
-  function initCopyButtons() {
-    var COPY_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-    var CHECK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
-
-    document.querySelectorAll('div.highlighter-rouge').forEach(function (block) {
-      var btn = document.createElement('button');
-      btn.className = 'hf-copy-btn';
-      btn.setAttribute('aria-label', 'Copy code');
-      btn.innerHTML = COPY_SVG;
-
-      btn.addEventListener('click', function () {
-        var code = block.querySelector('code');
-        if (!code) return;
-        var text = code.innerText;
-
-        function onCopied() {
-          btn.innerHTML = CHECK_SVG;
-          btn.classList.add('hf-copy-btn--copied');
-          btn.setAttribute('aria-label', 'Copied!');
-          setTimeout(function () {
-            btn.innerHTML = COPY_SVG;
-            btn.classList.remove('hf-copy-btn--copied');
-            btn.setAttribute('aria-label', 'Copy code');
-          }, 2000);
-        }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(onCopied).catch(function () { fallbackCopy(text, onCopied); });
-        } else {
-          fallbackCopy(text, onCopied);
-        }
-      });
-
-      block.appendChild(btn);
-    });
-  }
-
-  function fallbackCopy(text, cb) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    try { document.execCommand('copy'); cb(); } catch (e) { /* silent */ }
-    document.body.removeChild(ta);
-  }
-
-  // ── Language labels ───────────────────────────────────────────────────────────
-  var LANG_DISPLAY = {
-    sh: 'shell', bash: 'bash', zsh: 'shell', shell: 'shell',
-    js: 'js', javascript: 'js', ts: 'ts', typescript: 'ts',
-    json: 'json', yaml: 'yaml', yml: 'yaml', toml: 'toml',
-    python: 'python', py: 'python', ruby: 'ruby',
-    rust: 'rust', go: 'go', java: 'java', 'c++': 'c++',
-    css: 'css', scss: 'scss', html: 'html', xml: 'xml',
-    sql: 'sql', graphql: 'graphql', diff: 'diff',
-    latex: 'latex', tex: 'latex',
-    text: null, plaintext: null,
-  };
-
-  function initLangLabels() {
-    document.querySelectorAll('div.highlighter-rouge').forEach(function (block) {
-      var langClass = Array.from(block.classList).find(function (c) { return /^language-/.test(c); });
-      if (!langClass) return;
-      var raw = langClass.slice(9); // strip 'language-'
-      var display = raw in LANG_DISPLAY ? LANG_DISPLAY[raw] : raw;
-      if (!display) return;
-      var span = document.createElement('span');
-      span.className = 'hf-lang-label';
-      span.setAttribute('aria-hidden', 'true');
-      span.textContent = display;
-      block.appendChild(span);
-    });
-  }
-
-  // ── Right-side Table of Contents ──────────────────────────────────────────────
-  function initTOC() {
-    if (!window.matchMedia('(min-width: 97rem)').matches) return;
-
-    var content = document.querySelector('.main-content');
-    if (!content) return;
-
-    var headings = content.querySelectorAll('h2[id], h3[id]');
-    if (headings.length < 3) return;
-
-    var nav = document.createElement('nav');
-    nav.className = 'hf-toc';
-    nav.setAttribute('aria-label', 'On this page');
-
-    var titleEl = document.createElement('p');
-    titleEl.className = 'hf-toc__title';
-    titleEl.textContent = 'On this page';
-    nav.appendChild(titleEl);
-
-    var ul = document.createElement('ul');
-    ul.className = 'hf-toc__list';
-
-    headings.forEach(function (h) {
-      var li = document.createElement('li');
-      li.className = 'hf-toc__item hf-toc__item--' + h.tagName.toLowerCase();
-      var a = document.createElement('a');
-      a.className = 'hf-toc__link';
-      a.href = '#' + h.id;
-      // Strip trailing anchor glyph that just-the-docs appends
-      a.textContent = h.textContent.replace(/\s*#\s*$/, '').trim();
-      li.appendChild(a);
-      ul.appendChild(li);
-    });
-
-    nav.appendChild(ul);
-    document.body.appendChild(nav);
-
-    // Scroll spy
-    var links = nav.querySelectorAll('.hf-toc__link');
-
-    function setActive(id) {
-      links.forEach(function (l) {
-        l.classList.toggle('active', l.getAttribute('href') === '#' + id);
-      });
+    function ready(fn) {
+      if (document.readyState !== 'loading') {
+        fn();
+      } else {
+        document.addEventListener('DOMContentLoaded', fn);
+      }
     }
 
-    if ('IntersectionObserver' in window) {
-      var observer = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) setActive(entry.target.id);
+    // ── Copy buttons ─────────────────────────────────────────────────────────────
+    function initCopyButtons() {
+      var COPY_SVG =
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      var CHECK_SVG =
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+      document.querySelectorAll('div.highlighter-rouge').forEach(function (block) {
+        var btn = document.createElement('button');
+        btn.className = 'hf-copy-btn';
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.innerHTML = COPY_SVG;
+
+        btn.addEventListener('click', function () {
+          var code = block.querySelector('code');
+          if (!code) return;
+          var text = code.innerText;
+
+          function onCopied() {
+            btn.innerHTML = CHECK_SVG;
+            btn.classList.add('hf-copy-btn--copied');
+            btn.setAttribute('aria-label', 'Copied!');
+            setTimeout(function () {
+              btn.innerHTML = COPY_SVG;
+              btn.classList.remove('hf-copy-btn--copied');
+              btn.setAttribute('aria-label', 'Copy code');
+            }, 2000);
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(onCopied)
+              .catch(function () {
+                fallbackCopy(text, onCopied);
+              });
+          } else {
+            fallbackCopy(text, onCopied);
+          }
         });
-      }, { rootMargin: '-12% 0% -78% 0%', threshold: 0 });
 
-      headings.forEach(function (h) { observer.observe(h); });
+        block.appendChild(btn);
+      });
     }
-  }
 
-  ready(function () {
-    initCopyButtons();
-    initLangLabels();
-    initTOC();
-  });
-}());
+    function fallbackCopy(text, cb) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        cb();
+      } catch (e) {
+        /* silent */
+      }
+      document.body.removeChild(ta);
+    }
+
+    // ── Language labels ───────────────────────────────────────────────────────────
+    var LANG_DISPLAY = {
+      sh: 'shell',
+      bash: 'bash',
+      zsh: 'shell',
+      shell: 'shell',
+      js: 'js',
+      javascript: 'js',
+      ts: 'ts',
+      typescript: 'ts',
+      json: 'json',
+      yaml: 'yaml',
+      yml: 'yaml',
+      toml: 'toml',
+      python: 'python',
+      py: 'python',
+      ruby: 'ruby',
+      rust: 'rust',
+      go: 'go',
+      java: 'java',
+      'c++': 'c++',
+      css: 'css',
+      scss: 'scss',
+      html: 'html',
+      xml: 'xml',
+      sql: 'sql',
+      graphql: 'graphql',
+      diff: 'diff',
+      latex: 'latex',
+      tex: 'latex',
+      text: null,
+      plaintext: null,
+    };
+
+    function initLangLabels() {
+      document.querySelectorAll('div.highlighter-rouge').forEach(function (block) {
+        var langClass = Array.from(block.classList).find(function (c) {
+          return /^language-/.test(c);
+        });
+        if (!langClass) return;
+        var raw = langClass.slice(9); // strip 'language-'
+        var display = raw in LANG_DISPLAY ? LANG_DISPLAY[raw] : raw;
+        if (!display) return;
+        var span = document.createElement('span');
+        span.className = 'hf-lang-label';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = display;
+        block.appendChild(span);
+      });
+    }
+
+    // ── Right-side Table of Contents ──────────────────────────────────────────────
+    function initTOC() {
+      if (!window.matchMedia('(min-width: 97rem)').matches) return;
+
+      var content = document.querySelector('.main-content');
+      if (!content) return;
+
+      var headings = content.querySelectorAll('h2[id], h3[id]');
+      if (headings.length < 3) return;
+
+      var nav = document.createElement('nav');
+      nav.className = 'hf-toc';
+      nav.setAttribute('aria-label', 'On this page');
+
+      var titleEl = document.createElement('p');
+      titleEl.className = 'hf-toc__title';
+      titleEl.textContent = 'On this page';
+      nav.appendChild(titleEl);
+
+      var ul = document.createElement('ul');
+      ul.className = 'hf-toc__list';
+
+      headings.forEach(function (h) {
+        var li = document.createElement('li');
+        li.className = 'hf-toc__item hf-toc__item--' + h.tagName.toLowerCase();
+        var a = document.createElement('a');
+        a.className = 'hf-toc__link';
+        a.href = '#' + h.id;
+        // Strip trailing anchor glyph that just-the-docs appends
+        a.textContent = h.textContent.replace(/\s*#\s*$/, '').trim();
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+
+      nav.appendChild(ul);
+      document.body.appendChild(nav);
+
+      // Scroll spy
+      var links = nav.querySelectorAll('.hf-toc__link');
+
+      function setActive(id) {
+        links.forEach(function (l) {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + id);
+        });
+      }
+
+      if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) setActive(entry.target.id);
+            });
+          },
+          { rootMargin: '-12% 0% -78% 0%', threshold: 0 },
+        );
+
+        headings.forEach(function (h) {
+          observer.observe(h);
+        });
+      }
+    }
+
+    ready(function () {
+      initCopyButtons();
+      initLangLabels();
+      initTOC();
+    });
+  })();
 </script>

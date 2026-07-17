@@ -136,6 +136,7 @@ import {
   autoSyncOverleaf,
   autoPullOverleaf,
 } from '../src/workspace/overleaf.js';
+import { fetchCredits } from '../src/network/relayClient.js';
 import type { Config } from '../config/schema.js';
 import type { ToolRegistry } from '../src/tools/registry.js';
 
@@ -352,6 +353,8 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   // FAST_HYSTERESIS consecutive signals, keeping the think model (and its KV
   // cache) loaded during brief navigational turns between research turns.
   const consecutiveFastSignalsRef = useRef(0);
+  // Peer network credit balance (null = not yet fetched or peer disabled).
+  const [peerCredits, setPeerCredits] = useState<number | null>(null);
   // Submitted-input history (oldest→newest) and the live browse cursor. The
   // cursor is created on the first Ctrl-P and cleared whenever the user edits
   // the box or submits, so browsing never fights with typing.
@@ -2492,7 +2495,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         | 'router_toggle'
         | 'router_fast_model'
         | 'router_think_model'
-        | 'router_notes',
+        | 'router_notes'
+        | 'peer_network_toggle'
+        | 'peer_network_credits',
     ) => {
       if (v === 'preset') {
         setMode('preset_select');
@@ -2587,6 +2592,21 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         addEntry({ kind: 'note', content: `routing notes → ${next}` });
         return;
       }
+      if (v === 'peer_network_toggle') {
+        setMode('peer_setup');
+        return;
+      }
+      if (v === 'peer_network_credits') {
+        if (config.peerToken) {
+          void fetchCredits(config).then((bal) => {
+            if (bal !== null) setPeerCredits(bal.balance);
+          });
+        } else {
+          setMode('peer_setup');
+        }
+        setMode('chat');
+        return;
+      }
       const on = config.bannerAnimation === false;
       setConfig((c) => ({ ...c, bannerAnimation: on }));
       void writeStore({ bannerAnimation: on });
@@ -2600,8 +2620,31 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       config.routerEnabled,
       config.routerNotes,
       config.autoCompressAt,
+      config.peerToken,
+      config.peerNetworkEnabled,
     ],
   );
+
+  const onPeerRegister = useCallback((token: string, balance: number) => {
+    setConfig((c) => ({ ...c, peerToken: token, peerNetworkEnabled: true }));
+    void writeStore({ peerToken: token, peerNetworkEnabled: true });
+    setPeerCredits(balance);
+    setMode('chat');
+    addEntry({
+      kind: 'note',
+      content: `peer relay: registered; ${balance.toLocaleString()} tokens available`,
+    });
+  }, []);
+
+  const onPeerToggle = useCallback((enabled: boolean) => {
+    setConfig((c) => ({ ...c, peerNetworkEnabled: enabled }));
+    void writeStore({ peerNetworkEnabled: enabled });
+    setMode('chat');
+    addEntry({
+      kind: 'note',
+      content: `peer GPU network: ${enabled ? 'on — prompts may be sent to a provider' : 'off — local inference only'}`,
+    });
+  }, []);
 
   const onContextPicked = useCallback((numCtx: number) => {
     setConfig((c) => ({ ...c, ollamaNumCtx: numCtx }));
@@ -2898,8 +2941,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     if (key.pageUp) return scrollUp(pageRef.current);
     if (key.pageDown) return scrollDown(pageRef.current);
 
-    if (key.upArrow) return scrollUp(SCROLL_STEP);
-    if (key.downArrow) return scrollDown(SCROLL_STEP);
+    // Ctrl-Up/Ctrl-Down: scroll the transcript while keeping focus in the prompt.
+    // Terminals typically send CSI 1;5A/B for these; catch the sequences before
+    // they reach the isCompleteEscapeSeq swallow below.
+    if ((key.ctrl && key.upArrow) || char === '\x1b[1;5A' || (char === '\x1b[A' && key.ctrl))
+      return scrollUp(SCROLL_STEP);
+    if ((key.ctrl && key.downArrow) || char === '\x1b[1;5B' || (char === '\x1b[B' && key.ctrl))
+      return scrollDown(SCROLL_STEP);
 
     // Esc interrupts the model mid-generation.
     if (key.escape && isLoading) {
@@ -2929,6 +2977,32 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         setInput('');
         setCursor(0);
         void handleSubmit(val);
+      }
+      return;
+    }
+
+    // Up/Down: browse submitted-input history (bash-style).
+    // Slash-menu Up/Down is handled above and won't reach here.
+    // Ctrl+Up/Down is caught above as transcript scroll and won't reach here.
+    if (key.upArrow) {
+      if (!historyCursorRef.current) {
+        historyCursorRef.current = new HistoryCursor(historyRef.current, input);
+      }
+      const prev = historyCursorRef.current.prev();
+      if (prev !== null) {
+        setInput(prev);
+        setCursor(prev.length);
+      }
+      return;
+    }
+    if (key.downArrow) {
+      if (historyCursorRef.current) {
+        const nextVal = historyCursorRef.current.next();
+        if (nextVal !== null) {
+          setInput(nextVal);
+          setCursor(nextVal.length);
+        }
+        if (historyCursorRef.current.atDraft()) historyCursorRef.current = null;
       }
       return;
     }
@@ -2972,8 +3046,7 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       setCursor(r.cursor);
       return;
     }
-    // Ctrl-P / Ctrl-N: browse submitted-input history (readline-style). Kept off
-    // the arrow keys so it never fights transcript scroll or the slash-menu.
+    // Ctrl-P / Ctrl-N: readline-style history aliases (Up/Down is the primary binding).
     if (key.ctrl && char === 'p') {
       if (!historyCursorRef.current) {
         historyCursorRef.current = new HistoryCursor(historyRef.current, input);
@@ -3065,6 +3138,9 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
           ? { prefersFastSmallModels: true }
           : {}),
       }}
+      peerCredits={peerCredits}
+      onPeerRegister={onPeerRegister}
+      onPeerToggle={onPeerToggle}
       onHfConsent={onHfConsent}
       onCancel={() => {
         // Backing out of any overlay clears a pending router fast/think pick so
@@ -3102,7 +3178,10 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const modeLabel = config.mode === 'auto' ? 'hands-off ⚡' : 'hands-on 🔒';
   // Right side only carries a status when the transcript is scrolled up — the
   // everyday shortcuts now live on a pinned line below the input box.
-  const rightStatus = clampedOffset > 0 ? `↑ scrolled ${clampedOffset} · PgDn latest` : '';
+  const rightStatus =
+    clampedOffset > 0
+      ? `↑ scrolled ${clampedOffset} · PgDn to follow · Ctrl↑↓ or PgUp/PgDn to scroll`
+      : '';
   // Context-fill indicator: shows once Ollama has reported prompt token counts.
   const ctxPct = ctxUsedTokens > 0 ? Math.round((ctxUsedTokens / config.ollamaNumCtx) * 100) : 0;
   const ctxColor = ctxPct >= 80 ? theme.error : ctxPct >= 60 ? 'yellow' : undefined;
@@ -3165,15 +3244,17 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
       {!menuActive && (
         <Box paddingX={1}>
           <Text>
-            <Text dimColor>Press </Text>
+            <Text color={theme.user}>↑↓</Text>
+            <Text dimColor> history</Text>
+            <Text dimColor>{'   ·   '}</Text>
+            <Text color={theme.user}>PgUp/PgDn</Text>
+            <Text dimColor> scroll</Text>
+            <Text dimColor>{'   ·   '}</Text>
             <Text color={theme.user}>esc</Text>
-            <Text dimColor> to interrupt</Text>
+            <Text dimColor> interrupt</Text>
             <Text dimColor>{'   ·   '}</Text>
             <Text color={theme.user}>⇧Tab</Text>
             <Text dimColor> hands-on/off</Text>
-            <Text dimColor>{'   ·   '}</Text>
-            <Text color={theme.user}>⇧~</Text>
-            <Text dimColor> focus ⇄ off-work</Text>
             <Text dimColor>{'   ·   '}</Text>
             <Text color={theme.user}>/help</Text>
           </Text>

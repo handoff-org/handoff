@@ -99,12 +99,12 @@ function privacyGuidance(hasProject: boolean): string {
 const FAMILY_HINTS: Record<ModelFamily, string> = {
   qwen: 'Emit valid tool calls with exact file paths; read before editing; keep summaries compact.',
   ornith:
-    'Act as a coding agent through tools; run terminal actions via tools; never dump code walls in chat.',
+    'Act through tools for all file and research operations; run terminal actions via tools; never dump code walls in chat.',
   gpt_oss: 'Produce schema-adherent tool arguments and concise post-tool summaries.',
   gemma: 'Write polished, well-cited prose; avoid unsupported claims; still act through tools.',
   deepseek: 'Give concise, evidence-backed audit findings; no visible chain-of-thought.',
   glm: 'You may plan briefly for multi-step tasks, but still act through tools.',
-  kimi: 'You may plan briefly for complex coding tasks, but still act through tools.',
+  kimi: 'You may plan briefly for complex research tasks, but still act through tools.',
   legacy: 'Keep it simple: short answers, exact tool calls.',
 };
 

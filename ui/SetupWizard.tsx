@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Box, Text, useInput } from 'ink';
 import { Select } from './Select.js';
 import { SetupFlow } from './SetupFlow.js';
 import { OllamaPrepare } from './OllamaPrepare.js';
@@ -20,10 +21,10 @@ interface Props {
   onComplete: (config: Config) => void;
 }
 
-type Step = 'backend' | 'model' | 'quant' | 'token' | 'prepare' | 'personalization';
+type Step = 'welcome' | 'backend' | 'model' | 'quant' | 'token' | 'prepare' | 'personalization';
 
 export function SetupWizard({ initialConfig, onComplete }: Props) {
-  const [step, setStep] = useState<Step>('backend');
+  const [step, setStep] = useState<Step>('welcome');
   const [config, setConfig] = useState<Config>(initialConfig);
   const [vllmModels, setVllmModels] = useState<string[]>([]);
   const [llamaCppModels, setLlamaCppModels] = useState<string[]>([]);
@@ -139,6 +140,10 @@ export function SetupWizard({ initialConfig, onComplete }: Props) {
     [config],
   );
 
+  if (step === 'welcome') {
+    return <WelcomeScreen onContinue={() => setStep('backend')} />;
+  }
+
   if (step === 'backend') {
     return (
       <Select title="Choose your backend" options={BACKEND_OPTIONS} onSelect={chooseBackend} />
@@ -194,7 +199,7 @@ export function SetupWizard({ initialConfig, onComplete }: Props) {
             hint: 'handoff learns your stated preferences & habits, stored locally; edit or disable anytime with /profile',
           },
           {
-            label: 'No — stay generic',
+            label: 'No — skip for now',
             value: 'no',
             hint: 'you can turn this on later in /settings',
           },
@@ -216,5 +221,57 @@ export function SetupWizard({ initialConfig, onComplete }: Props) {
       onReady={() => finish(config)}
       onCancel={goBackFromPrepare}
     />
+  );
+}
+
+function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
+  useInput((_char, key) => {
+    if (key.return || key.escape) onContinue();
+  });
+
+  return (
+    <Box flexDirection="column" paddingX={2} paddingY={1} gap={1}>
+      <Text bold color="cyan">
+        Handoff: local-first research companion
+      </Text>
+
+      <Box flexDirection="column" gap={0}>
+        <Text>Read papers, validate claims, run reproducible experiments, write LaTeX,</Text>
+        <Text>and trace every claim to its evidence — powered by models on your machine.</Text>
+      </Box>
+
+      <Box flexDirection="column" gap={0} marginTop={1}>
+        <Text bold dimColor>
+          Privacy and data flow
+        </Text>
+        <Text>
+          <Text color="green">local by default: </Text>
+          <Text dimColor>all inference, notes, and project files stay on this machine.</Text>
+        </Text>
+        <Text>
+          <Text color="yellow">opt-in cloud: </Text>
+          <Text dimColor>
+            HuggingFace, Overleaf, Zotero, and the peer relay only activate when you
+          </Text>
+        </Text>
+        <Text dimColor>
+          {'  '}explicitly connect them. You will always see what data leaves and why.
+        </Text>
+      </Box>
+
+      <Box flexDirection="column" gap={0} marginTop={1}>
+        <Text bold dimColor>
+          After setup you can
+        </Text>
+        <Text dimColor> /project new — start a research project</Text>
+        <Text dimColor> /research — check a claim against the literature</Text>
+        <Text dimColor> ask to read a paper, run an experiment, or draft LaTeX</Text>
+        <Text dimColor> /help — see all commands</Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>Press Enter to choose your local model backend</Text>
+      </Box>
+    </Box>
   );
 }
