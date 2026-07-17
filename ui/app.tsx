@@ -22,6 +22,8 @@ import {
 } from './input.js';
 import { matchCommands } from './commands.js';
 import { InputContent } from './InputContent.js';
+import { BeamBox } from './BeamBox.js';
+import { useBorderBeam } from './useBorderBeam.js';
 import { useTerminalSize } from './useTerminalSize.js';
 import { entryLines, assistantLines } from './lines.js';
 import { summarizeDiff } from './diff.js';
@@ -2688,6 +2690,20 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
   const toolCount = registry.list().length;
   const spinner = SPINNER_FRAMES[tick % SPINNER_FRAMES.length];
 
+  // Border-beam "working" indicator: while responding, a lighter comet laps the
+  // input-box border (drawn by BeamBox). Gated to a real TTY with motion + color
+  // allowed and a wide-enough box; otherwise we fall back to the static Ink border
+  // and braille spinner below, so reduced-motion/NO_COLOR behavior is unchanged.
+  const BEAM_MIN_WIDTH = 24;
+  const beamEnabled =
+    isLoading &&
+    (process.stdout.isTTY ?? false) &&
+    process.env['HANDOFF_REDUCED_MOTION'] == null &&
+    process.env['NO_COLOR'] == null &&
+    width >= BEAM_MIN_WIDTH;
+  const beamPhase = useBorderBeam({ enabled: beamEnabled });
+  const inputLines = Math.max(1, input.split('\n').length);
+
   // Animated banner logo. It only ticks while the banner is on-screen (the ref
   // below), and degrades to the static logo when it can't or shouldn't animate:
   // no tty, reduced-motion env, disabled in config, or a one-column narrow banner.
@@ -3231,14 +3247,21 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
         <Text dimColor>{rightStatus}</Text>
       </Box>
 
-      <Box
-        borderStyle="round"
-        borderColor={isLoading ? theme.border : theme.borderActive}
-        paddingX={1}
-      >
-        <Text color={theme.user}>{isLoading ? spinner : '›'} </Text>
-        <InputContent value={input} cursor={cursor} cursorOn={cursorOn} accent={theme.user} />
-      </Box>
+      {beamPhase !== null ? (
+        <BeamBox width={width} lines={inputLines} baseColor={theme.border} phase={beamPhase}>
+          <Text color={theme.user}>› </Text>
+          <InputContent value={input} cursor={cursor} cursorOn={cursorOn} accent={theme.user} />
+        </BeamBox>
+      ) : (
+        <Box
+          borderStyle="round"
+          borderColor={isLoading ? theme.border : theme.borderActive}
+          paddingX={1}
+        >
+          <Text color={theme.user}>{isLoading ? spinner : '›'} </Text>
+          <InputContent value={input} cursor={cursor} cursorOn={cursorOn} accent={theme.user} />
+        </Box>
+      )}
 
       {/* Pinned shortcut hints, just below the input box. */}
       {!menuActive && (
