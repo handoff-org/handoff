@@ -1,0 +1,104 @@
+\documentclass{article}
+
+% ── Track / review mode ────────────────────────────────────────────────────────
+% Submission (double-blind, default):
+\usepackage{neurips_2026}
+% Camera-ready after acceptance — add "final":
+%   \usepackage[main, final]{neurips_2026}
+% Other tracks: [position], [eandd], [creativeai], [sglblindworkshop],
+%   [dblblindworkshop], [education].  Add "final" for camera-ready in any track.
+% Preprint / arXiv:
+%   \usepackage[preprint]{neurips_2026}
+
+% ── Packages ───────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath,amssymb}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+% ── Title ──────────────────────────────────────────────────────────────────────
+\title{TITLE_GOES_HERE}
+
+% Single author:
+%   \author{Name\thanks{optional footnote} \\ Dept \\ University \\ \texttt{email}}
+%
+% Multiple authors — use \And (same line) or \AND (force new line):
+\author{%
+  First Author \\
+  Department of Computer Science \\
+  University Name \\
+  City, Country \\
+  \texttt{author@university.edu}
+  \And
+  Second Author \\
+  Affiliation \\
+  \texttt{email@affiliation.com}
+}
+
+% ── Document ───────────────────────────────────────────────────────────────────
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+% 1–2 paragraphs: problem statement, approach, key results, and significance.
+% NeurIPS abstracts are typically 150–250 words.
+\end{abstract}
+
+\section{Introduction}
+% Motivate the problem and state the research question.
+% Summarise the contributions clearly (numbered list or bold bullets are common).
+% End with a one-sentence roadmap of the paper.
+
+\section{Related Work}
+% Survey prior work grouped by theme or approach.
+% Explain how this work differs from or improves on each group.
+
+\section{Methodology}
+% Describe the approach clearly enough for a reader to reproduce it.
+% Include task formulation, model architecture, and algorithms.
+
+\section{Experiments}
+% Describe datasets, baselines, metrics, and implementation details.
+% NeurIPS requires compute/resource information — state GPU type, training time, etc.
+
+\section{Results}
+% Report the main quantitative findings (tables and figures encouraged).
+% Include ablations and discuss statistical significance where applicable.
+
+\section{Discussion}
+% Interpret the results: what do they imply beyond the numbers?
+% Address unexpected findings and limitations of the experimental setup.
+
+\section{Conclusion}
+% Summarise the key contributions and findings in 1–2 paragraphs.
+% State implications and suggest concrete directions for future work.
+
+\section*{Limitations}
+% Required by NeurIPS.  Use a starred (unnumbered) section.
+% Cover scope, data coverage, compute requirements, evaluation constraints, etc.
+
+% ── Bibliography ───────────────────────────────────────────────────────────────
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+% ── Appendix ───────────────────────────────────────────────────────────────────
+\appendix
+
+\section{Appendix}
+\label{sec:appendix}
+% Supplementary material: proofs, extended tables, additional experiments, etc.
+% Appendix sections are numbered A, B, … automatically after \appendix.
+
+% ── NeurIPS checklist (required, must be last) ─────────────────────────────────
+\newpage
+\input{checklist.tex}
+
+\end{document}

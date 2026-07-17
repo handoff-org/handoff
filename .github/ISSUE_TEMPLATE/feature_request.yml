@@ -1,0 +1,59 @@
+name: Feature request
+description: Suggest a capability or improvement for handoff.
+title: '[feature]: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! handoff is a **local-first research companion** — proposals
+        that keep work on the user's machine (no silent cloud usage) fit best.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and this isn't already covered.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The research task or friction behind the request — not the solution yet.
+      placeholder: When writing the paper I can't easily…
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you'd like handoff to do. A command name or example interaction helps.
+      placeholder: A `/…` command that…
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of handoff does this touch?
+      options:
+        - Literature (search, ingestion, notes)
+        - Experiments (runners, reproducibility)
+        - Results (tables, figures, reporting)
+        - Paper writing (LaTeX, citations, Overleaf)
+        - Provenance (claims, traceability)
+        - TUI / UX
+        - Models / backends
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches or workarounds you've thought about (optional).

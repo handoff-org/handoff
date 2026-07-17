@@ -1,0 +1,20 @@
+# Normalize line endings: check in as LF, check out native on the working tree.
+* text=auto eol=lf
+
+# Explicitly binary (never diff/merge as text, never EOL-normalize).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Keep shell scripts LF regardless of platform.
+*.sh text eol=lf
+
+# Collapse generated/vendored noise in PR diffs and exclude from language stats.
+package-lock.json linguist-generated=true -diff
+src/ascii/** linguist-generated=true -diff

@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: typecheck + test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  quality:
+    name: lint + format + docs
+    runs-on: ubuntu-latest
+    # Blocking: lint (no-unused-vars is an error), Prettier, and the docs linter
+    # all pass on master (see REFACTOR_AUDIT.md). Warnings do not fail the build.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run docs:check
+
+  qa-smoke:
+    name: qa chat-sim smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Deterministic: mock model, isolated temp HOMEs, no network / Ollama / cloud.
+      - run: npm run qa:chat:smoke
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-chat-logs
+          path: qa/logs/
+          if-no-files-found: ignore
+
+  deadcode:
+    name: dead-code (knip, advisory)
+    runs-on: ubuntu-latest
+    # Advisory until the Phase 8 cleanup lands (a handful of known unused exports
+    # remain — see STALE_CODE_AUDIT.md §E). Promote to blocking after that.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run deadcode

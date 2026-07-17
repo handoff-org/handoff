@@ -1,0 +1,34 @@
+{% comment %}
+  Reusable callout component.
+  Parameters:
+    type    — info | tip | warning | danger | security  (default: info)
+    title   — displayed in small-caps above the body    (default: type label)
+    content — the body text (plain text or HTML)
+
+  Usage in markdown:
+    {% include callout.html type="warning" title="Warning" content="Body text here." %}
+
+  Or wrap multi-line content in a capture:
+    {% capture body %}
+    Multi-line content with **markdown** here.
+    {% endcapture %}
+    {% include callout.html type="tip" title="Tip" content=body %}
+{% endcomment %}
+
+{% assign _type    = include.type    | default: "info" %}
+{% assign _content = include.content | default: "" %}
+
+{% case _type %}
+  {% when "tip"      %}{% assign _default_title = "Tip" %}
+  {% when "warning"  %}{% assign _default_title = "Warning" %}
+  {% when "danger"   %}{% assign _default_title = "Danger" %}
+  {% when "security" %}{% assign _default_title = "Security" %}
+  {% else            %}{% assign _default_title = "Note" %}
+{% endcase %}
+
+{% assign _title = include.title | default: _default_title %}
+
+<div class="hf-callout hf-callout--{{ _type }}" role="note">
+  <p class="hf-callout__title">{{ _title }}</p>
+  {{ _content }}
+</div>

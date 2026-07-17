@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["qa/chat-sim/runScenario.ts", "test/**/*.test.{ts,tsx}"],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "ui/**/*.{ts,tsx}",
+    "config/**/*.ts",
+    "qa/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "ignoreBinaries": ["ollama", "uv"],
+  "ignoreExportsUsedInFile": true
+}

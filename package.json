@@ -1,0 +1,87 @@
+{
+  "name": "ownhandoff",
+  "version": "0.1.0",
+  "description": "Own your research. A local-first, terminal-native research companion: read papers, run experiments, write LaTeX, and trace every claim to its evidence — powered by models on your own machine.",
+  "type": "module",
+  "bin": {
+    "handoff": "bin/handoff.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "ui",
+    "config",
+    "skills",
+    "templates",
+    "installers",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "tsx src/index.tsx",
+    "start": "tsx src/index.tsx",
+    "mascot": "tsx src/mascotPreview.tsx",
+    "docs:check": "tsx scripts/check-docs.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run docs:check && npm test",
+    "deadcode": "knip",
+    "qa:chat": "tsx qa/chat-sim/runner.ts --all",
+    "qa:chat:smoke": "tsx qa/chat-sim/runner.ts --smoke",
+    "qa:chat:fuzz": "tsx qa/chat-sim/runner.ts --fuzz --iterations 50",
+    "qa:chat:real": "tsx qa/chat-sim/runner.ts --all --real-model",
+    "bench:core": "tsx src/adapters/core-bench.ts",
+    "bench:ml-agent": "tsx src/adapters/ml-agent-bench.ts",
+    "bench:dabstep": "tsx src/adapters/dabstep.ts",
+    "bench:compare": "tsx benchmarks/scripts/compare-sota.ts",
+    "prepublishOnly": "npm run check"
+  },
+  "keywords": [
+    "research",
+    "research-agent",
+    "tui",
+    "cli",
+    "terminal",
+    "llm",
+    "ollama",
+    "local-first",
+    "latex",
+    "reproducibility",
+    "science"
+  ],
+  "author": "Inigo Parra",
+  "license": "Elastic-2.0",
+  "homepage": "https://github.com/handoff-org/handoff#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/handoff-org/handoff.git"
+  },
+  "bugs": {
+    "url": "https://github.com/handoff-org/handoff/issues"
+  },
+  "dependencies": {
+    "@huggingface/inference": "^4.13.20",
+    "ink": "^5.0.1",
+    "react": "^18.3.1",
+    "tsx": "^4.16.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "ink-testing-library": "^4.0.0",
+    "knip": "^6.26.0",
+    "prettier": "^3.9.4",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.63.0"
+  }
+}

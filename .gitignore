@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output (handoff runs from source via tsx; dist/ is only for publishing)
+dist/
+
+# Jekyll / GitHub Pages local build artifacts (the docs/ site builds server-side)
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/Gemfile.lock
+
+# OS / editor cruft
+.DS_Store
+*.log
+BUILD_SEQUENCE.txt
+PRODUCT_PLAN.txt
+TODO.md
+ERRORS.md
+
+# QA chat-simulation harness output + isolated temp HOMEs
+qa/logs/
+tmp/
+
+# Benchmark adapters: downloaded datasets, run outputs, and per-run scratch
+# (capsules, task work dirs). The adapter code (src/adapters/) and the
+# comparison script (benchmarks/scripts/) stay tracked.
+benchmarks/data/
+benchmarks/results/
+benchmarks/work/
+
+# Debug pass logs
+debug/logs/
+docs/landing.html
+
+# Local GPU/CPU inference profiling scripts + their outputs (dev tooling, not shipped)
+profiling/
