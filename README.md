@@ -51,6 +51,46 @@ npm test           # node:test suite
 
 ---
 
+## Evaluation
+
+A layered, reproducible eval harness lives in [`evals/`](evals/README.md). The
+mocked suites run fully offline (no model, GPU, network, or credentials); add
+`--live` (or use `eval:model` / `eval:matrix`) to run your real local models.
+
+```sh
+# offline, deterministic (mock model + mock tools)
+npm run eval:validate                       # check every scenario is well-formed
+npm run eval:list                           # list scenarios
+npm run eval:smoke                          # fast sanity suite
+npm run eval:core                           # all canonical scenarios
+npm run eval:extended                       # canonical + seeded variants (150+ instances)
+
+# run one scenario / category, or replay a failure
+npm run eval:scenario -- --id CITATION-CONFLICT-001 --seed 3
+npm run eval:category -- --category privacy
+npm run eval:replay   -- --id CITATION-FABRICATION-901 --seed 901
+
+# run REAL local models (uses your ~/.handoff backend; missing models are skipped)
+npm run eval:model    -- --model qwen3:8b
+npm run eval:model    -- --model qwen3:4b --category ambiguity --verbose
+npm run eval:matrix   -- --models qwen3:8b,qwen3:4b,ornith:9b
+npm run eval:core     -- --live --model qwen3:8b
+
+# track over time
+npm run eval:coverage                                        # regenerate evals/COVERAGE.md
+npm run eval:baseline -- --run <run-id> --name qwen3-8b      # promote a run (never implicit)
+npm run eval:compare  -- --baseline qwen3-8b --candidate <run-id>
+```
+
+Each run writes `evals/reports/<run-id>/` (`index.html`, `summary.md`,
+`FAILURE_BACKLOG.md`, per-failure reports, sanitized transcripts). Flags:
+`--id --category --tag --difficulty --layer --seed --repeat --model --live --verbose --fail-fast`.
+Under `--live` the model is real but tools stay mocked, so a failure is the
+model's, not the environment's. See [`evals/README.md`](evals/README.md) and
+[`evals/AUTHORING.md`](evals/AUTHORING.md).
+
+---
+
 ## Uninstall
 
 ```sh

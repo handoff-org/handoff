@@ -3,8 +3,14 @@ import { join } from 'node:path';
 import { loadScenarios, filterScenarios, EVALS_ROOT, type Filter } from './runners/load.js';
 import { runScenarioInstance } from './runners/engine.js';
 import { expandAll } from './generators/generate.js';
-import { makeRunMeta, environmentInfo, gitCommit } from './reporters/env.js';
-import { writeRun, aggregate, terminalSummary, issueBlocks } from './reporters/report.js';
+import { makeRunMeta, environmentInfo, gitCommit, newRunId } from './reporters/env.js';
+import {
+  writeRun,
+  aggregate,
+  terminalSummary,
+  issueBlocks,
+  type Aggregate,
+} from './reporters/report.js';
 import { toBaseline, loadBaseline, compareRuns, compareMarkdown } from './reporters/compare.js';
 import { coverageMarkdown } from './reporters/coverage.js';
 import type { Scenario, ScenarioResult } from './schema/types.js';
@@ -20,16 +26,36 @@ const BASELINES = join(EVALS_ROOT, 'baselines');
  * with a model-quality failure. Uses the deterministic MOCK tool registry, so only
  * the MODEL is live — tool results stay controlled.
  */
-async function makeLiveModel(): Promise<{ model: ChatModel; modelId: string } | null> {
+async function makeLiveModel(
+  modelOverride?: string,
+): Promise<{ model: ChatModel; modelId: string } | null> {
   try {
     const { loadConfig } = await import('../config/schema.js');
     const { createModel } = await import('../src/agent/model.js');
     const config = await loadConfig();
+    if (modelOverride) config.modelId = modelOverride;
     if (config.backend === 'ollama') {
       const res = await fetch(`${config.ollamaBaseUrl}/api/tags`, {
         signal: AbortSignal.timeout(2500),
       }).catch(() => null);
       if (!res || !res.ok) return null;
+      // If we can read the installed models, verify the requested one is present
+      // so a typo/missing model is a clear SKIP rather than a cryptic per-run error.
+      try {
+        const tags = (await res.json()) as { models?: { name: string }[] };
+        const names = (tags.models ?? []).map((m) => m.name);
+        if (
+          names.length &&
+          !names.some((n) => n === config.modelId || n.startsWith(config.modelId))
+        ) {
+          process.stderr.write(
+            `model "${config.modelId}" not installed in Ollama (have: ${names.join(', ')}).\n`,
+          );
+          return null;
+        }
+      } catch {
+        /* couldn't parse tags; proceed and let the run surface any error */
+      }
     }
     return { model: createModel(config), modelId: `${config.backend}:${config.modelId}` };
   } catch {
@@ -76,7 +102,7 @@ async function runSuite(
   let live: { model: ChatModel; modelId: string } | null = null;
   let liveUnavailable = false;
   if (args['live']) {
-    live = await makeLiveModel();
+    live = await makeLiveModel(args['model'] as string | undefined);
     if (!live) {
       liveUnavailable = true;
       process.stderr.write(
@@ -307,15 +333,83 @@ async function main() {
       process.stdout.write(`Wrote ${join(EVALS_ROOT, 'COVERAGE.md')}\n`);
       break;
     }
+    case 'model': {
+      // Run the (filtered) canonical suite against ONE real model.
+      const scenarios = filterScenarios(healthSuite(loadAll()), filterFromArgs(args));
+      await runSuite(scenarios, `model:${args['model'] ?? 'default'}`, { ...args, live: true });
+      break;
+    }
+    case 'matrix': {
+      // Run the same (filtered) suite against several real models and compare.
+      const models = String(args['models'] ?? '')
+        .split(',')
+        .map((m) => m.trim())
+        .filter(Boolean);
+      if (!models.length) {
+        process.stderr.write('Provide --models a,b,c (comma-separated installed model names).\n');
+        process.exit(1);
+      }
+      const scenarios = filterScenarios(healthSuite(loadAll()), filterFromArgs(args));
+      const perModel: { model: string; agg: Aggregate; runDir: string }[] = [];
+      for (const m of models) {
+        process.stdout.write(`\n===== model: ${m} =====\n`);
+        const { results, runDir } = await runSuite(scenarios, `matrix:${m}`, {
+          ...args,
+          model: m,
+          live: true,
+        });
+        perModel.push({ model: m, agg: aggregate(results), runDir });
+      }
+      const md = matrixMarkdown(perModel);
+      const dir = join(REPORTS, `matrix-${newRunId()}`);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'matrix.md'), md);
+      process.stdout.write('\n' + md + `\nMatrix report: ${join(dir, 'matrix.md')}\n`);
+      break;
+    }
     default:
       process.stdout.write(
         `Handoff eval CLI. Commands:\n` +
           `  validate | list | smoke | core | extended | stress | coverage\n` +
           `  scenario --id ID [--seed N] | category --category C | replay --id ID [--seed N]\n` +
+          `  model --model NAME [--category C]           run one real model (add nothing else; implies --live)\n` +
+          `  matrix --models A,B,C [--category C]         run several real models and compare\n` +
           `  report --run RUNID | compare --baseline NAME --candidate RUNID | baseline --run RUNID [--name N] [--force]\n` +
-          `Flags: --id --category --tag --difficulty --layer --seed --repeat --model --verbose --fail-fast\n`,
+          `Flags: --id --category --tag --difficulty --layer --seed --repeat --model --live --verbose --fail-fast\n`,
       );
   }
+}
+
+function matrixMarkdown(perModel: { model: string; agg: Aggregate; runDir: string }[]): string {
+  const cats = [...new Set(perModel.flatMap((p) => Object.keys(p.agg.byCategory)))].sort();
+  const head = `| capability | ${perModel.map((p) => p.model).join(' | ')} |`;
+  const sep = `|---|${perModel.map(() => '---').join('|')}|`;
+  const rows = cats.map((c) => {
+    const cells = perModel.map((p) => {
+      const v = p.agg.byCategory[c];
+      return v ? `${v.passed}/${v.total}` : '—';
+    });
+    return `| ${c} | ${cells.join(' | ')} |`;
+  });
+  const pct = (p: { agg: Aggregate }) => `${Math.round(p.agg.passRate * 100)}%`;
+  const overall = `| **overall** | ${perModel.map((p) => `**${pct(p)}** (${p.agg.passed}/${p.agg.total})`).join(' | ')} |`;
+  const gate = `| hard-gate fails | ${perModel.map((p) => p.agg.hardGateFailures).join(' | ')} |`;
+  const lat = `| p95 latency ms | ${perModel.map((p) => p.agg.latency.p95).join(' | ')} |`;
+  return [
+    `# Model matrix`,
+    '',
+    `Models: ${perModel.map((p) => p.model).join(', ')}`,
+    '',
+    head,
+    sep,
+    ...rows,
+    overall,
+    gate,
+    lat,
+    '',
+    ...perModel.map((p) => `- ${p.model}: ${p.runDir}`),
+    '',
+  ].join('\n');
 }
 
 function replayView(r: ScenarioResult): string {

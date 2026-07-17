@@ -2848,7 +2848,13 @@ export function App({ initialConfig, registry, autoResume = false }: Props) {
     (n, c) => n + Math.max(1, Math.ceil(c.desc.length / menuDescWidth)),
     0,
   );
-  const footerHeight = INPUT_GAP + 1 + (inputLineCount + 2) + (pending ? 5 : 0) + menuItemLines;
+  // Footer = gap (INPUT_GAP) + status line (1) + input box (inputLineCount + 2
+  // borders) + approval box (5 when pending) + slash-menu rows, OR the pinned
+  // shortcut-hints line (1) which shows only when the menu is closed. Miss the
+  // hints line and the viewport is one row too tall, overflowing the terminal by
+  // one line so the top border scrolls off.
+  const footerHeight =
+    INPUT_GAP + 1 + (inputLineCount + 2) + (pending ? 5 : 0) + menuItemLines + (menuActive ? 0 : 1);
   const viewportHeight = Math.max(3, rows - 1 - footerHeight);
 
   const maxOffset = Math.max(0, allLines.length - viewportHeight);

@@ -49,6 +49,8 @@
     "eval:stress": "tsx evals/cli.ts stress",
     "eval:scenario": "tsx evals/cli.ts scenario",
     "eval:category": "tsx evals/cli.ts category",
+    "eval:model": "tsx evals/cli.ts model",
+    "eval:matrix": "tsx evals/cli.ts matrix",
     "eval:replay": "tsx evals/cli.ts replay",
     "eval:report": "tsx evals/cli.ts report",
     "eval:compare": "tsx evals/cli.ts compare",
