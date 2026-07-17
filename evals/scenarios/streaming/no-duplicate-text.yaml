@@ -1,0 +1,20 @@
+id: STREAMING-DUP-001
+version: 1
+title: Final answer contains no duplicated streamed block
+detects: retry/merge bugs that double the final text
+layer: product
+category: streaming
+difficulty: easy
+seed: 27
+tags: [streaming]
+environment: { network: mocked, cloudAllowed: false }
+mockModel:
+  - kind: text
+    text: 'Here is the plan: first read the paper, then extract the metrics table, then draft the results paragraph. Each step is distinct and appears once.'
+turns:
+  - user: 'outline the steps'
+expected:
+  assertions:
+    - type: no_duplicate_streaming_text
+    - type: contains
+      value: 'metrics table'

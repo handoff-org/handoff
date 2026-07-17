@@ -1,0 +1,27 @@
+id: SMOKE-PROJECT-001
+version: 1
+title: Writes a file with the write_file tool
+detects: basic tool call round-trips and produces the expected artifact
+layer: agent
+category: smoke
+difficulty: easy
+seed: 10
+environment: { network: mocked, cloudAllowed: false }
+mockTools:
+  write_file: { result: 'wrote notes.md' }
+mockModel:
+  - kind: tools
+    calls:
+      - name: write_file
+        args: { path: 'notes.md', content: "# Research notes\n" }
+  - kind: text
+    text: 'Created notes.md in your project.'
+turns:
+  - user: 'start a notes file for this project'
+expected:
+  requiredTools: [write_file]
+  forbiddenTools: [web_search]
+  assertions:
+    - type: expected_file_exists
+      value: notes.md
+    - type: no_unapproved_network_calls

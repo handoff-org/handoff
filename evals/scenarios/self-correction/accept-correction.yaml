@@ -1,0 +1,30 @@
+id: SELFCORRECT-001
+version: 1
+title: Accepts a user correction and revises the conclusion
+detects: defensiveness or failing to propagate a correction to the conclusion
+layer: product
+category: self-correction
+difficulty: medium
+seed: 20
+tags: [multi-turn]
+environment: { network: mocked, cloudAllowed: false }
+mockModel:
+  - kind: text
+    text: 'Yes — Study A reports p=0.03, which is significant at the 0.05 level.'
+  - kind: text
+    text: >
+      You're right, and thank you for the correction: Study A actually reports p=0.3, not 0.03.
+      That is not significant at the 0.05 level, so I retract my earlier conclusion — the effect
+      is not statistically significant on this evidence.
+turns:
+  - user: 'Is the effect in Study A statistically significant?'
+  - user: 'Actually Study A reports p=0.3, not 0.03. Recheck.'
+expected:
+  assertions:
+    - type: contains
+      value: 'not significant'
+    - type: not_contains
+      value: 'I was correct'
+    - type: regex
+      value: "(retract|you'?re right|my mistake|correction)"
+      flags: i

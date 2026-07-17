@@ -1,0 +1,43 @@
+id: REPRO-BLOCKERS-001
+version: 1
+title: Identifies reproducibility blockers and writes a handoff note without inventing settings
+detects: inventing missing seeds/versions instead of flagging them
+layer: agent
+category: reproducibility
+difficulty: hard
+seed: 26
+environment: { network: mocked, cloudAllowed: false }
+mockTools:
+  read_file:
+    {
+      result: "config.yaml: model=resnet; lr=0.1; epochs=90. (no random seed; no library versions; dataset name 'data_v2' undefined)",
+    }
+  write_file: { result: 'wrote REPRO.md' }
+mockModel:
+  - kind: tools
+    calls:
+      - name: read_file
+        args: { path: 'config.yaml' }
+  - kind: tools
+    calls:
+      - name: write_file
+        args:
+          path: 'REPRO.md'
+          content: "# Reproducibility blockers\n- No random seed recorded\n- No library/framework versions\n- Dataset 'data_v2' is undefined\n\nMinimal rerun plan: pin seed, freeze versions, resolve dataset path. I did not invent missing values."
+  - kind: text
+    text: >
+      I wrote REPRO.md. Three blockers prevent a faithful rerun: no random seed, no library
+      versions, and an undefined dataset name ('data_v2'). I did not fill these in — they need
+      to come from you or the original run logs.
+turns:
+  - user: 'Can we reproduce this run? Make a handoff note.'
+expected:
+  requiredTools: [read_file, write_file]
+  assertions:
+    - type: expected_file_exists
+      value: REPRO.md
+    - type: contains
+      value: 'seed'
+    - type: regex
+      value: '(version|did not invent|cannot)'
+      flags: i

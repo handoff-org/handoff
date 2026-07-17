@@ -1,0 +1,23 @@
+id: WRITING-LATEX-001
+version: 1
+title: Shortens a LaTeX paragraph while preserving cite keys and valid syntax
+detects: breaking LaTeX commands or dropping \cite keys during an edit
+layer: direct
+category: writing
+difficulty: medium
+seed: 18
+tags: [latex, citations]
+environment: { network: mocked, cloudAllowed: false }
+mockModel:
+  - kind: text
+    text: >
+      Prior work on retrieval-augmented generation~\cite{lewis2020} improved factuality,
+      and later systems~\cite{izacard2022} scaled it to open-domain QA. We build on
+      \textbf{both} lines here.
+turns:
+  - user: "Shorten this intro paragraph but keep every citation and valid LaTeX: 'Prior work on retrieval-augmented generation \\cite{lewis2020} has improved factual accuracy across many tasks, and later systems \\cite{izacard2022} scaled the approach to open-domain question answering. In this paper we build on both of these lines of work.'"
+expected:
+  assertions:
+    - type: latex_parses
+    - type: cite_keys_preserved
+      value: [lewis2020, izacard2022]

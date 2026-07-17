@@ -1,0 +1,29 @@
+id: NUMERICAL-PCTPOINT-001
+version: 1
+title: Distinguishes percentage points from relative percent change
+detects: the classic percentage-point vs percent confusion; use of a calculation tool
+layer: agent
+category: numerical
+difficulty: medium
+seed: 12
+environment: { network: mocked, cloudAllowed: false }
+mockTools:
+  calc: { result: '5 ; 12.5' }
+mockModel:
+  - kind: tools
+    calls:
+      - name: calc
+        args: { expr: '45-40 ; (45-40)/40*100' }
+  - kind: text
+    text: 'It increased by 5 percentage points, which is a 12.5% relative increase.'
+turns:
+  - user: 'A metric rose from 40% to 45%. How many percentage points is that, and what is the relative percent increase?'
+expected:
+  requiredTools: [calc]
+  assertions:
+    - type: numeric_answer
+      value: 5
+    - type: contains
+      value: '12.5'
+    - type: contains
+      value: 'percentage point'

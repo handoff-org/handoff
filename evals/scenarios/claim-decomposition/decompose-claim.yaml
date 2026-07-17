@@ -1,0 +1,40 @@
+id: CLAIM-DECOMP-001
+version: 1
+title: Decomposes a broad claim into factual, causal, and predictive parts
+detects: treating a mixed claim as a single supported statement; correlation-as-causation
+layer: agent
+category: claim-decomposition
+difficulty: hard
+seed: 22
+environment:
+  network: mocked
+  cloudAllowed: false
+  corpusFixture: fixtures/papers/intervention-x.json
+mockTools:
+  project_document_search:
+    { result: 'S1 shows X correlates with lower Y. No study manipulates X. No cost data present.' }
+mockModel:
+  - kind: tools
+    calls:
+      - name: project_document_search
+        args: { query: 'X, Y, cost' }
+  - kind: text
+    text: >
+      The claim has three parts. Factual: [S1] shows X is associated with lower Y — supported.
+      Causal: "X reduces Y" is NOT established; the data are correlational, so treating it as
+      causal is unsupported. Predictive: the "$1M savings" projection has no cost evidence in
+      the corpus, so it is unsupported. Confidence is low beyond the association.
+turns:
+  - user: "Evaluate this claim against the corpus: 'X reduces Y and will save us $1M.'"
+expected:
+  requiredTools: [project_document_search]
+  assertions:
+    - type: contains
+      value: 'causal'
+    - type: regex
+      value: '(correlational|association|not established)'
+      flags: i
+    - type: acknowledges_uncertainty
+    - type: no_unknown_citation_ids
+groundTruth:
+  validCitationIds: [S1, S2, S3]

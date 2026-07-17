@@ -23,6 +23,15 @@ qa/logs/
 qa/reports/
 tmp/
 
+# Eval framework: the tool stays tracked (scenarios, fixtures, schema, runners,
+# scorers, reporters, README/AUTHORING). Generated artifacts and internal reports
+# are NOT shipped — per-run reports, promoted baselines, and the baseline audit are
+# regenerated locally (npm run eval:*).
+evals/reports/
+evals/baselines/
+evals/BASELINE_AUDIT.md
+tmp_*.ts
+
 # Benchmark adapters: downloaded datasets, run outputs, and per-run scratch
 # (capsules, task work dirs). The adapter code (src/adapters/) and the
 # comparison script (benchmarks/scripts/) stay tracked.

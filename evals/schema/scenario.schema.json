@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://handoff.sh/evals/scenario.schema.json",
+  "title": "Handoff evaluation scenario",
+  "type": "object",
+  "required": ["id", "version", "title", "layer", "category", "difficulty", "turns", "expected"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]+(-[A-Z0-9]+)*-[0-9]{3}$",
+      "description": "Stable ID, e.g. EVIDENCE-CONFLICT-003."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bump on any scoring/prompt change."
+    },
+    "title": { "type": "string", "minLength": 3 },
+    "description": { "type": "string" },
+    "detects": { "type": "string", "description": "What this scenario is intended to detect." },
+    "layer": { "enum": ["direct", "agent", "product", "transport"] },
+    "category": {
+      "enum": [
+        "smoke",
+        "core",
+        "ambiguity",
+        "evidence-synthesis",
+        "citation-integrity",
+        "claim-decomposition",
+        "conflicting-evidence",
+        "numerical",
+        "reproducibility",
+        "long-context",
+        "prompt-injection",
+        "privacy",
+        "tool-use",
+        "abstention",
+        "writing",
+        "self-correction",
+        "ux-quality",
+        "adversarial",
+        "streaming",
+        "relay",
+        "stress"
+      ]
+    },
+    "difficulty": { "enum": ["easy", "medium", "hard"] },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "seed": { "type": "integer", "minimum": 0 },
+    "repeat": { "type": "integer", "minimum": 1, "default": 1 },
+    "allowedNondeterminism": {
+      "type": "string",
+      "enum": ["none", "low", "high"],
+      "default": "none"
+    },
+    "persona": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role": { "type": "string" },
+        "expertise": { "enum": ["novice", "intermediate", "advanced", "expert"] },
+        "communicationPreference": { "type": "string" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "network": { "enum": ["mocked", "offline", "live"], "default": "mocked" },
+        "cloudAllowed": { "type": "boolean", "default": false },
+        "relayEnabled": { "type": "boolean", "default": false },
+        "projectFixture": { "type": "string" },
+        "corpusFixture": { "type": "string" },
+        "conversationFixture": { "type": "string" }
+      }
+    },
+    "modelConfig": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "temperature": { "type": "number" },
+        "contextSize": { "type": "integer" },
+        "think": {}
+      }
+    },
+    "mockModel": {
+      "type": "array",
+      "description": "Deterministic scripted model steps (one consumed per turn/round).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "text",
+              "tools",
+              "malformed_tool",
+              "duplicate_tool",
+              "slow",
+              "throw",
+              "overlong",
+              "truncated_reasoning",
+              "empty"
+            ]
+          },
+          "text": { "type": "string" },
+          "calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "additionalProperties": false,
+              "properties": { "name": { "type": "string" }, "args": {} }
+            }
+          },
+          "name": { "type": "string" },
+          "rawArgs": { "type": "string" },
+          "message": { "type": "string" },
+          "sizeChars": { "type": "integer" }
+        }
+      }
+    },
+    "mockTools": {
+      "type": "object",
+      "description": "Deterministic tool responses keyed by tool name.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "result": { "type": "string" },
+          "error": { "type": "string" },
+          "network": {
+            "type": "boolean",
+            "description": "Marks the tool as a network egress point for privacy scoring."
+          },
+          "sensitive": { "type": "boolean" }
+        }
+      }
+    },
+    "turns": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["user"],
+        "additionalProperties": false,
+        "properties": { "user": { "type": "string" } }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiredBehaviors": { "type": "array", "items": { "type": "string" } },
+        "forbiddenBehaviors": { "type": "array", "items": { "type": "string" } },
+        "requiredTools": { "type": "array", "items": { "type": "string" } },
+        "forbiddenTools": { "type": "array", "items": { "type": "string" } },
+        "assertions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/assertion" }
+        },
+        "rubric": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Rubric dimension -> anchored definition. Scored 0-4 by an optional judge."
+        }
+      }
+    },
+    "groundTruth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "validCitationIds": { "type": "array", "items": { "type": "string" } },
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "stance"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "stance": {
+                "enum": ["supported", "contradicted", "mixed", "unsupported", "insufficient"]
+              },
+              "supportingSources": { "type": "array", "items": { "type": "string" } },
+              "contradictingSources": { "type": "array", "items": { "type": "string" } },
+              "confidenceRange": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "maximumWallTimeMs": { "type": "integer", "minimum": 1 } }
+    },
+    "cleanup": { "type": "boolean", "default": true },
+    "generated": {
+      "type": "object",
+      "description": "Populated by the generator on variant instances.",
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string" },
+        "seed": { "type": "integer" },
+        "mutations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "assertion": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": [
+            "contains",
+            "not_contains",
+            "regex",
+            "numeric_answer",
+            "no_unknown_citation_ids",
+            "citation_stance_matches",
+            "no_secret_in_output",
+            "no_unapproved_network_calls",
+            "required_tools_called",
+            "forbidden_tools_not_called",
+            "expected_file_exists",
+            "forbidden_file_unchanged",
+            "latex_parses",
+            "cite_keys_preserved",
+            "acknowledges_uncertainty",
+            "acknowledges_conflict",
+            "asks_clarification",
+            "no_duplicate_streaming_text",
+            "json_matches_schema"
+          ]
+        },
+        "hardGate": {
+          "type": "boolean",
+          "default": false,
+          "description": "A failure here is a hard gate (critical/high) regardless of other scores."
+        },
+        "value": {},
+        "flags": { "type": "string" },
+        "tolerance": { "type": "number" }
+      }
+    }
+  }
+}

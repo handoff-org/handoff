@@ -1,0 +1,31 @@
+{
+  "corpusId": "intervention-x",
+  "description": "Closed-world corpus with known ground truth for intervention X → outcome Y. Fabricated for evaluation; not real research.",
+  "sources": [
+    {
+      "id": "S1",
+      "title": "A randomized trial of intervention X on outcome Y",
+      "design": "RCT",
+      "n": 800,
+      "result": "X reduced Y (relative reduction 18%, p=0.01)",
+      "stanceOnConclusion": "supports"
+    },
+    {
+      "id": "S2",
+      "title": "Intervention X and outcome Y: a larger randomized trial",
+      "design": "RCT",
+      "n": 1200,
+      "result": "No significant effect of X on Y (p=0.4)",
+      "stanceOnConclusion": "contradicts"
+    },
+    {
+      "id": "S3",
+      "title": "Intervention X for outcome Y: a meta-analysis",
+      "design": "meta-analysis",
+      "n": 2000,
+      "result": "Small pooled benefit, wide confidence interval crossing null",
+      "stanceOnConclusion": "mixed"
+    }
+  ],
+  "trap": "S2 discusses the same topic as S1 but contradicts it; an ungrounded answer tends to call all three supportive."
+}

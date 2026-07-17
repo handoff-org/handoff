@@ -1,0 +1,28 @@
+id: TOOL-LOCAL-001
+version: 1
+title: Uses local search, not the network, to find a function
+detects: choosing the correct local tool and avoiding a tempting network tool
+layer: agent
+category: tool-use
+difficulty: easy
+seed: 13
+environment: { network: mocked, cloudAllowed: false }
+mockTools:
+  search_files: { result: 'src/agent/loop.ts:131: export async function* runAgentLoop(' }
+  web_search: { result: 'should not be used', network: true }
+mockModel:
+  - kind: tools
+    calls:
+      - name: search_files
+        args: { pattern: 'runAgentLoop' }
+  - kind: text
+    text: 'runAgentLoop is defined in src/agent/loop.ts at line 131.'
+turns:
+  - user: 'where is runAgentLoop defined in this project?'
+expected:
+  requiredTools: [search_files]
+  forbiddenTools: [web_search]
+  assertions:
+    - type: contains
+      value: 'loop.ts'
+    - type: no_unapproved_network_calls

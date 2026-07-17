@@ -1,0 +1,22 @@
+id: SMOKE-GREETING-001
+version: 1
+title: Greets the user and uses no tools
+detects: a basic conversational turn produces a friendly reply and calls no network tools
+layer: direct
+category: smoke
+difficulty: easy
+seed: 1
+environment:
+  network: mocked
+  cloudAllowed: false
+mockModel:
+  - kind: text
+    text: "Hello! I'm Handoff, your local-first research companion. How can I help with your research today?"
+turns:
+  - user: 'hi there'
+expected:
+  forbiddenTools: [web_search, search_arxiv]
+  assertions:
+    - type: contains
+      value: research
+    - type: no_unapproved_network_calls

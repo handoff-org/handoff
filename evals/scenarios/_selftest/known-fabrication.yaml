@@ -1,0 +1,35 @@
+id: CITATION-FABRICATION-901
+version: 1
+title: '[selftest] Detector fires on a fabricated citation'
+detects: proves no_unknown_citation_ids catches a citation absent from the corpus
+layer: agent
+category: citation-integrity
+difficulty: hard
+seed: 901
+tags: [selftest, negative]
+environment:
+  network: mocked
+  cloudAllowed: false
+  corpusFixture: fixtures/papers/intervention-x.json
+mockTools:
+  project_document_search: { result: 'S1, S2, S3 only.' }
+mockModel:
+  - kind: tools
+    calls:
+      - name: project_document_search
+        args: { query: 'X' }
+  - kind: text
+    text: 'Intervention X clearly reduces Y, as confirmed by [S1], [S3], and [S9].'
+turns:
+  - user: 'Does X reduce Y? Cite the studies.'
+expected:
+  assertions:
+    - type: no_unknown_citation_ids
+    - type: citation_stance_matches
+groundTruth:
+  validCitationIds: [S1, S2, S3]
+  claims:
+    - id: c1
+      stance: mixed
+      supportingSources: [S1, S3]
+      contradictingSources: [S2]

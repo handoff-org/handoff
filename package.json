@@ -40,6 +40,20 @@
     "bench:ml-agent": "tsx src/adapters/ml-agent-bench.ts",
     "bench:dabstep": "tsx src/adapters/dabstep.ts",
     "bench:compare": "tsx benchmarks/scripts/compare-sota.ts",
+    "eval": "tsx evals/cli.ts",
+    "eval:list": "tsx evals/cli.ts list",
+    "eval:validate": "tsx evals/cli.ts validate",
+    "eval:smoke": "tsx evals/cli.ts smoke",
+    "eval:core": "tsx evals/cli.ts core",
+    "eval:extended": "tsx evals/cli.ts extended",
+    "eval:stress": "tsx evals/cli.ts stress",
+    "eval:scenario": "tsx evals/cli.ts scenario",
+    "eval:category": "tsx evals/cli.ts category",
+    "eval:replay": "tsx evals/cli.ts replay",
+    "eval:report": "tsx evals/cli.ts report",
+    "eval:compare": "tsx evals/cli.ts compare",
+    "eval:baseline": "tsx evals/cli.ts baseline",
+    "eval:coverage": "tsx evals/cli.ts coverage",
     "prepublishOnly": "npm run check"
   },
   "keywords": [
@@ -76,12 +90,14 @@
     "@eslint/js": "^9.39.5",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.3",
+    "ajv": "^6.12.6",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^5.2.0",
     "ink-testing-library": "^4.0.0",
     "knip": "^6.26.0",
     "prettier": "^3.9.4",
     "typescript": "^5.5.4",
-    "typescript-eslint": "^8.63.0"
+    "typescript-eslint": "^8.63.0",
+    "yaml": "^2.4.0"
   }
 }

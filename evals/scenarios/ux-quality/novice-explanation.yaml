@@ -1,0 +1,31 @@
+id: UX-NOVICE-001
+version: 1
+title: Explains a statistical term to a novice without jargon overload
+detects: patronizing or jargon-dense answers mismatched to user expertise
+layer: direct
+category: ux-quality
+difficulty: easy
+seed: 24
+persona:
+  role: novice researcher
+  expertise: novice
+  communicationPreference: plain language
+environment: { network: mocked, cloudAllowed: false }
+mockModel:
+  - kind: text
+    text: >
+      A p-value is the probability of seeing a result at least this extreme if there were
+      really no effect. A small p-value (often below 0.05) means the data would be surprising
+      under "no effect," so people treat it as evidence something is going on. It does not tell
+      you how big or important the effect is.
+turns:
+  - user: "I'm new to stats. What's a p-value, in plain terms?"
+expected:
+  assertions:
+    - type: contains
+      value: 'probability'
+    - type: not_contains
+      value: 'null hypothesis significance testing'
+  rubric:
+    clarity: '0: incomprehensible. 2: partly clear but jargon-heavy. 4: plain, accurate, matched to a novice.'
+    adaptation: '0: ignores expertise. 4: pitched precisely to a novice without being patronizing.'

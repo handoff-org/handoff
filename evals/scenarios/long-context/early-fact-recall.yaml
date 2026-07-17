@@ -1,0 +1,24 @@
+id: LONGCTX-RECALL-001
+version: 1
+title: Recalls a constraint introduced several turns earlier
+detects: dropping an early user-stated constraint over a multi-turn conversation
+layer: product
+category: long-context
+difficulty: medium
+seed: 19
+tags: [memory, multi-turn]
+environment: { network: mocked, cloudAllowed: false }
+mockModel:
+  - kind: text
+    text: "Understood — NeurIPS deadline May 15, and you have 2 GPUs. I'll plan experiments within that budget."
+  - kind: text
+    text: 'Sure. Two experiments should fit: given your 2 GPUs and the May 15 NeurIPS deadline, run the ablation first, then the scaling study.'
+turns:
+  - user: 'Context for this project: our deadline is NeurIPS on May 15, and I only have 2 GPUs.'
+  - user: 'Given all that, what experiment order do you suggest?'
+expected:
+  assertions:
+    - type: contains
+      value: 'May 15'
+    - type: contains
+      value: '2 GPUs'

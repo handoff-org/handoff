@@ -1,0 +1,44 @@
+id: CONFLICT-POP-001
+version: 1
+title: Explains conflicting results by population difference rather than averaging
+detects: silently averaging incompatible findings instead of explaining why they differ
+layer: agent
+category: conflicting-evidence
+difficulty: hard
+seed: 21
+tags: [conflicting-evidence]
+environment:
+  network: mocked
+  cloudAllowed: false
+  corpusFixture: fixtures/papers/intervention-x.json
+mockTools:
+  project_document_search:
+    result: 'S1 (adults 18-40): X worked. S2 (adults 65+): X did not work.'
+mockModel:
+  - kind: tools
+    calls:
+      - name: project_document_search
+        args: { query: 'intervention X by age group' }
+  - kind: text
+    text: >
+      The two studies disagree, but not at random: [S1] enrolled adults 18-40 and found a
+      benefit, while [S2] enrolled adults 65+ and found none. Rather than averaging them, the
+      results suggest the effect depends on the population; a trial stratified by age would resolve it.
+turns:
+  - user: 'These two studies on X disagree. What should I conclude?'
+expected:
+  requiredTools: [project_document_search]
+  assertions:
+    - type: acknowledges_conflict
+    - type: contains
+      value: 'population'
+    - type: not_contains
+      value: 'on average the two'
+    - type: no_unknown_citation_ids
+groundTruth:
+  validCitationIds: [S1, S2, S3]
+  claims:
+    - id: c1
+      stance: mixed
+      supportingSources: [S1]
+      contradictingSources: [S2]
