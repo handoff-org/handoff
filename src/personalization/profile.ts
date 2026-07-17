@@ -1,88 +1,262 @@
----
-title: Architecture
-nav_order: 12
----
+import { z } from 'zod';
 
-# Architecture
+/**
+ * The local adaptive profile: a compact, inspectable record of the user's
+ * preferences and habits, stored at ~/.handoff/profile.json. It is never sent
+ * anywhere; it only ever shapes handoff's behaviour on this machine. See
+ * src/personalization/{store,learn,prompt,redaction}.ts for the pieces that
+ * read and write it.
+ *
+ * Design rules encoded in the shape below:
+ *  - Explicit (user-stated) preferences are high-confidence; inferred ones are
+ *    lower and easy to revise.
+ *  - Everything carries confidence + evidence so `/profile why` can explain it.
+ *  - Sub-sections are all optional so a nearly-empty profile still validates.
+ */
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+export const PROFILE_VERSION = 1;
 
-## Top-level layout
+const ScoredValueSchema = <T extends z.ZodTypeAny>(inner: T) =>
+  z.object({
+    value: inner,
+    confidence: z.number().min(0).max(1),
+    evidenceCount: z.number().int().min(0),
+    updatedAt: z.string(),
+  });
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+export type ScoredValue<T> = {
+  value: T;
+  confidence: number;
+  evidenceCount: number;
+  updatedAt: string;
+};
 
-## Subsystems
+const ProfilePreferenceSchema = z.object({
+  key: z.string(),
+  value: z.unknown(),
+  source: z.enum(['explicit', 'inferred', 'system']),
+  confidence: z.number().min(0).max(1),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  evidenceCount: z.number().int().min(0),
+  lastEvidence: z.string().optional(),
+});
+export type ProfilePreference = z.infer<typeof ProfilePreferenceSchema>;
 
-### Agent
+const ProfileNoteSchema = z.object({
+  text: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
+  source: z.enum(['explicit', 'benchmark', 'inferred']),
+});
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+const sv = ScoredValueSchema;
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+export const AdaptiveProfileSchema = z.object({
+  version: z.literal(PROFILE_VERSION),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 
-### Tools
+  explicitPreferences: z.array(ProfilePreferenceSchema).default([]),
+  inferredPreferences: z.array(ProfilePreferenceSchema).default([]),
 
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
+  interactionStyle: z
+    .object({
+      verbosity: sv(z.enum(['concise', 'balanced', 'detailed'])).optional(),
+      tone: sv(z.enum(['direct', 'friendly', 'technical', 'academic'])).optional(),
+      prefersBullets: sv(z.boolean()).optional(),
+      prefersCodeFirst: sv(z.boolean()).optional(),
+      prefersExplanationsBeforeEdits: sv(z.boolean()).optional(),
+      prefersAskUserChoices: sv(z.boolean()).optional(),
+    })
+    .default({}),
 
-### Workspace
+  researchStyle: z
+    .object({
+      preferredPaperTemplates: sv(z.array(z.string())).optional(),
+      preferredCitationStyle: sv(z.string()).optional(),
+      preferredOutputFormats: sv(z.array(z.string())).optional(),
+      commonProjectTypes: sv(z.array(z.string())).optional(),
+      commonResearchDomains: sv(z.array(z.string())).optional(),
+    })
+    .default({}),
 
-`src/workspace/` handles everything project-scoped:
+  codingStyle: z
+    .object({
+      preferredLanguages: sv(z.array(z.string())).optional(),
+      preferredPackageManagers: sv(z.array(z.string())).optional(),
+      preferredTestCommands: sv(z.array(z.string())).optional(),
+    })
+    .default({}),
 
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
+  modelAndPerformance: z
+    .object({
+      preferredBackend: sv(z.string()).optional(),
+      preferredModels: sv(z.array(z.string())).optional(),
+      rejectedModels: sv(z.array(z.string())).optional(),
+      laptopPerformanceNotes: z.array(ProfileNoteSchema).default([]),
+      safeDefaultContextTokens: sv(z.number()).optional(),
+      prefersCoolMode: sv(z.boolean()).optional(),
+      prefersFastSmallModels: sv(z.boolean()).optional(),
+    })
+    .default({ laptopPerformanceNotes: [] }),
 
-### Research
+  toolHabits: z
+    .object({
+      frequentCommands: sv(z.array(z.string())).optional(),
+      preferredMode: sv(z.enum(['permissions', 'auto'])).optional(),
+      oftenUsesOverleaf: sv(z.boolean()).optional(),
+      oftenUsesResearch: sv(z.boolean()).optional(),
+    })
+    .default({}),
 
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
+  projectDefaults: z
+    .object({
+      defaultPaperTemplate: sv(z.string()).optional(),
+      defaultExperimentLanguage: sv(z.string()).optional(),
+    })
+    .default({}),
 
-### Personalization
+  privacy: z
+    .object({
+      allowProfileInCloudPrompts: z.boolean().default(false),
+      allowDomainInference: z.boolean().default(true),
+      allowProjectPatternLearning: z.boolean().default(true),
+      redactionEnabled: z.boolean().default(true),
+    })
+    .default({
+      allowProfileInCloudPrompts: false,
+      allowDomainInference: true,
+      allowProjectPatternLearning: true,
+      redactionEnabled: true,
+    }),
 
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
+  /** Raw counters for the threshold model, keyed by "<kind>:<value>". Not shown to the user. */
+  counters: z.record(z.string(), z.number()).default({}),
 
-### UI
+  ignoredSuggestions: z.array(z.string()).default([]),
+});
 
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
+export type AdaptiveProfile = z.infer<typeof AdaptiveProfileSchema>;
 
-## Tests
+/** A fresh, empty profile stamped with `now` (ISO string). */
+export function defaultProfile(now: string): AdaptiveProfile {
+  return AdaptiveProfileSchema.parse({
+    version: PROFILE_VERSION,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
 
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+/**
+ * Bring a parsed-but-untrusted object up to the current schema. Unknown/older
+ * versions we can't confidently migrate become a fresh profile (callers back up
+ * the original file first). Returns null when the input can't be salvaged.
+ */
+export function migrate(raw: unknown, _now: string): AdaptiveProfile | null {
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    (raw as { version?: unknown }).version === PROFILE_VERSION
+  ) {
+    const parsed = AdaptiveProfileSchema.safeParse(raw);
+    if (parsed.success) return parsed.data;
+  }
+  // No older versions exist yet; anything else is unsalvageable.
+  return null;
+}
+
+// ── Formatting for /profile show and /profile why ──────────────────────────────
+
+function fmtScored(label: string, s?: ScoredValue<unknown>): string | null {
+  if (!s) return null;
+  const v = Array.isArray(s.value) ? (s.value as unknown[]).join(', ') : String(s.value);
+  if (!v) return null;
+  const conf = Math.round(s.confidence * 100);
+  return `  ${label}: ${v}  (${conf}%)`;
+}
+
+/** A readable, compact summary of everything learned — for `/profile show`. */
+export function formatProfileSummary(p: AdaptiveProfile): string {
+  const lines: string[] = [`Personalization profile (local · ~/.handoff/profile.json)`, ''];
+
+  if (p.explicitPreferences.length) {
+    lines.push('Stated preferences:');
+    for (const pref of p.explicitPreferences) {
+      lines.push(`  • ${pref.value ? String(pref.value) : pref.key}  [${pref.key}]`);
+    }
+    lines.push('');
+  }
+
+  const style: (string | null)[] = [
+    fmtScored('verbosity', p.interactionStyle.verbosity),
+    fmtScored('tone', p.interactionStyle.tone),
+    fmtScored('bullets', p.interactionStyle.prefersBullets),
+    fmtScored('code-first', p.interactionStyle.prefersCodeFirst),
+  ];
+  if (style.some(Boolean)) {
+    lines.push('Interaction style:', ...style.filter((x): x is string => !!x), '');
+  }
+
+  const research: (string | null)[] = [
+    fmtScored('paper templates', p.researchStyle.preferredPaperTemplates),
+    fmtScored('citation style', p.researchStyle.preferredCitationStyle),
+    fmtScored('domains', p.researchStyle.commonResearchDomains),
+  ];
+  if (research.some(Boolean)) {
+    lines.push('Research style:', ...research.filter((x): x is string => !!x), '');
+  }
+
+  const coding: (string | null)[] = [
+    fmtScored('languages', p.codingStyle.preferredLanguages),
+    fmtScored('experiment language', p.projectDefaults.defaultExperimentLanguage),
+  ];
+  if (coding.some(Boolean)) {
+    lines.push('Coding:', ...coding.filter((x): x is string => !!x), '');
+  }
+
+  const model: (string | null)[] = [
+    fmtScored('preferred backend', p.modelAndPerformance.preferredBackend),
+    fmtScored('preferred models', p.modelAndPerformance.preferredModels),
+    fmtScored('rejected models', p.modelAndPerformance.rejectedModels),
+    fmtScored('prefers fast/small', p.modelAndPerformance.prefersFastSmallModels),
+  ];
+  if (model.some(Boolean)) {
+    lines.push('Models & performance:', ...model.filter((x): x is string => !!x), '');
+  }
+
+  const habits: (string | null)[] = [
+    fmtScored('frequent commands', p.toolHabits.frequentCommands),
+    fmtScored('preferred mode', p.toolHabits.preferredMode),
+    fmtScored('uses Overleaf', p.toolHabits.oftenUsesOverleaf),
+    fmtScored('uses /research', p.toolHabits.oftenUsesResearch),
+  ];
+  if (habits.some(Boolean)) {
+    lines.push('Habits:', ...habits.filter((x): x is string => !!x), '');
+  }
+
+  if (lines.length <= 2) {
+    lines.push('(nothing learned yet — state a preference like "from now on, always use NeurIPS")');
+  }
+  lines.push(
+    '',
+    'Manage: /profile disable · /profile forget <key> · /profile reset · /profile export',
+  );
+  return lines.join('\n');
+}
+
+/** Explain one preference (source, confidence, evidence) — for `/profile why <key>`. */
+export function explainPreference(p: AdaptiveProfile, key: string): string {
+  const all = [...p.explicitPreferences, ...p.inferredPreferences];
+  const pref = all.find((x) => x.key === key || x.key.endsWith(`:${key}`));
+  if (!pref) return `No preference found for "${key}". See /profile show for keys.`;
+  return [
+    `${pref.key}`,
+    `  value:      ${pref.value ? String(pref.value) : '(structured)'}`,
+    `  source:     ${pref.source}`,
+    `  confidence: ${Math.round(pref.confidence * 100)}%`,
+    `  evidence:   ${pref.evidenceCount} observation(s)`,
+    ...(pref.lastEvidence ? [`  last:       ${pref.lastEvidence}`] : []),
+    `  updated:    ${pref.updatedAt}`,
+  ].join('\n');
+}

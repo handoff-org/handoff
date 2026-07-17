@@ -1,88 +1,207 @@
----
-title: Architecture
-nav_order: 12
----
+import type { Message } from './model.js';
+import { estimateMessagesTokens } from './contextBudget.js';
 
-# Architecture
+/**
+ * Deterministic, protocol-safe history compaction for laptop context budgets.
+ *
+ * The agent loop otherwise re-sends the entire conversation — including full
+ * tool outputs — on every turn, so prefill cost (and heat) grows without bound.
+ * This trims what the model *sees* each turn while the caller keeps the full
+ * history on disk: the system message stays byte-identical (protecting backend
+ * prompt caching), recent turns stay verbatim, older tool output is capped, and
+ * the oldest turns are dropped once a token budget is exceeded — replaced by a
+ * short factual digest of what they contained, so the model keeps a gist rather
+ * than a blank.
+ *
+ * No model call, no LLM summarisation — the digest is extracted deterministically
+ * from the dropped messages, so the whole function stays pure and unit-testable.
+ *
+ * Protocol safety: an assistant message that issued `tool_calls` is grouped with
+ * its following `tool` result messages into one atomic block, so we never orphan
+ * a tool result from its parent call or keep a call whose results were dropped.
+ * Dropped blocks are always the oldest contiguous prefix, so the kept messages
+ * stay a contiguous suffix (no holes in the middle).
+ */
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+export interface CompactionOptions {
+  /** Target prompt-token budget for the sent history. */
+  maxPromptTokens: number;
+  /** Cap for an individual old tool message's content, in characters. */
+  toolCapChars?: number;
+  /** Cap for the digest that replaces dropped turns, in characters. */
+  summaryCapChars?: number;
+}
 
-## Top-level layout
+// Shown when tool output was shortened but no whole turn was dropped.
+const TRUNCATE_NOTE = '[earlier tool output shortened to fit the context budget]';
+const DEFAULT_TOOL_CAP = 800;
+const DEFAULT_SUMMARY_CAP = 800;
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+type Block = Message[];
 
-## Subsystems
+/** Collapse whitespace/newlines and clip to `max` chars (appending … if cut). */
+function clip(s: string, max: number): string {
+  const one = s.replace(/\s+/g, ' ').trim();
+  return one.length > max ? one.slice(0, max).trimEnd() + '…' : one;
+}
 
-### Agent
+/**
+ * Build a compact, deterministic digest of the dropped blocks so the model keeps
+ * a gist of the trimmed-away history: one line per turn (what the user asked /
+ * what the assistant did + which tools it ran), bounded to `capChars`.
+ */
+function summarizeDroppedBlocks(dropped: Block[], capChars: number): string {
+  const lines: string[] = [];
+  for (const block of dropped) {
+    const lead = block.find((m) => m.role !== 'tool') ?? block[0]!;
+    if (lead.role === 'user') {
+      lines.push(`you: ${clip(lead.content ?? '', 100)}`);
+    } else if (lead.role === 'assistant') {
+      const names = [
+        ...new Set(block.flatMap((m) => (m.tool_calls ?? []).map((c) => c.function.name))),
+      ];
+      const text = clip(lead.content ?? '', 80);
+      let entry = text ? `assistant: ${text}` : 'assistant made tool calls';
+      if (names.length) entry += ` [ran: ${names.join(', ')}]`;
+      lines.push(entry);
+    } else {
+      lines.push(`${lead.role}: ${clip(lead.content ?? '', 80)}`);
+    }
+  }
+  const header = `[earlier conversation summary — ${dropped.length} turn${dropped.length === 1 ? '' : 's'} trimmed to fit the context budget]`;
+  const digest = `${header}\n${lines.join('\n')}`;
+  return digest.length > capChars ? digest.slice(0, capChars).trimEnd() + '…' : digest;
+}
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+/**
+ * Group the non-system messages into atomic blocks. A new block starts at each
+ * user/assistant message; `tool` messages attach to the current block (so an
+ * assistant's tool_calls travel with their results).
+ */
+function groupBlocks(rest: Message[]): Block[] {
+  const blocks: Block[] = [];
+  let cur: Block | null = null;
+  for (const m of rest) {
+    if (m.role === 'tool') {
+      if (cur) cur.push(m);
+      else cur = [m]; // orphan tool (shouldn't happen) — start a block so it's not lost
+    } else {
+      if (cur) blocks.push(cur);
+      cur = [m];
+    }
+  }
+  if (cur) blocks.push(cur);
+  return blocks;
+}
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+/** Cap oversized tool outputs inside a block; other messages pass through. */
+function truncateTools(block: Block, cap: number): Block {
+  return block.map((m) =>
+    m.role === 'tool' && m.content.length > cap
+      ? { ...m, content: m.content.slice(0, cap) + '\n… (truncated to fit context budget)' }
+      : m,
+  );
+}
 
-### Tools
+/**
+ * Drop image attachments from turns before the current one. A vision tool's
+ * images are delivered on a synthetic `user` message right after the tool result
+ * (see src/agent/loop.ts); keeping every past image in history would re-upload
+ * the whole (often multi-MB) blob on every subsequent turn. The model has already
+ * seen prior-turn images, so we keep image bytes only from the current turn.
+ *
+ * The turn boundary is the last *image-less* user message — i.e. a real user
+ * prompt (users never attach images; only tools do). Anchoring there means the
+ * synthetic image-bearing user messages injected within the current turn don't
+ * themselves move the boundary, so all of this turn's images survive its
+ * multi-step tool loop, while prior turns' images are dropped. The tool's text
+ * result stays as the placeholder. Pure; returns a new array, never mutates.
+ */
+export function dropStaleImages(messages: Message[]): Message[] {
+  let anchor = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    if (m.role === 'user' && !m.images?.length) {
+      anchor = i;
+      break;
+    }
+  }
+  if (anchor < 0) return messages.slice(); // no plain user turn yet — nothing to anchor on
+  return messages.map((m, i) =>
+    i >= anchor || !m.images?.length ? m : { ...m, images: undefined },
+  );
+}
 
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
+export function compactHistory(messages: Message[], opts: CompactionOptions): Message[] {
+  const cap = opts.toolCapChars ?? DEFAULT_TOOL_CAP;
+  const summaryCap = opts.summaryCapChars ?? DEFAULT_SUMMARY_CAP;
+  if (messages.length <= 1) return messages.slice();
 
-### Workspace
+  const hasSystem = messages[0]!.role === 'system';
+  const head: Message[] = hasSystem ? [messages[0]!] : [];
+  const rest = hasSystem ? messages.slice(1) : messages.slice();
+  if (rest.length === 0) return messages.slice();
 
-`src/workspace/` handles everything project-scoped:
+  const blocks = groupBlocks(rest);
+  const headTokens = estimateMessagesTokens(head);
+  // Reserve room for the digest that may replace dropped turns. A conservative
+  // fixed reserve (a cap-length string) means the actual digest — always ≤ cap —
+  // is guaranteed to fit, so budget + output reserve can't overflow the window.
+  const summaryReserve = estimateMessagesTokens([
+    { role: 'system', content: 'x'.repeat(summaryCap) },
+  ]);
 
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
+  // Reserve room for head + a possible summary; the rest is for blocks.
+  const available = opts.maxPromptTokens - headTokens - summaryReserve;
 
-### Research
+  // Walk newest → oldest. The last block (current turn / latest tool results) is
+  // always kept verbatim, even if it alone blows the budget — we never drop the
+  // current turn or break protocol. `kept[i]` holds the version to send, or null
+  // if dropped.
+  const kept: (Block | null)[] = new Array(blocks.length).fill(null);
+  let used = 0;
+  let truncatedAny = false;
+  let droppedAny = false;
 
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
+  const lastIdx = blocks.length - 1;
+  kept[lastIdx] = blocks[lastIdx]!;
+  used += estimateMessagesTokens(blocks[lastIdx]!);
 
-### Personalization
+  for (let i = lastIdx - 1; i >= 0; i--) {
+    if (used >= available) {
+      droppedAny = true;
+      continue; // everything from here down is older → dropped
+    }
+    const block = blocks[i]!;
+    const full = estimateMessagesTokens(block);
+    if (used + full <= available) {
+      kept[i] = block;
+      used += full;
+      continue;
+    }
+    const trunc = truncateTools(block, cap);
+    const tt = estimateMessagesTokens(trunc);
+    if (used + tt <= available && tt < full) {
+      kept[i] = trunc;
+      used += tt;
+      truncatedAny = true;
+    } else {
+      droppedAny = true; // even truncated won't fit → drop it (and older)
+    }
+  }
 
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
-
-### UI
-
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
-
-## Tests
-
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+  const out: Message[] = [...head];
+  // Replace dropped turns with a factual digest so the model keeps their gist;
+  // if turns were only truncated (nothing fully dropped), a short note suffices.
+  if (droppedAny) {
+    const dropped = blocks.filter((_, i) => kept[i] === null);
+    out.push({ role: 'system', content: summarizeDroppedBlocks(dropped, summaryCap) });
+  } else if (truncatedAny) {
+    out.push({ role: 'system', content: TRUNCATE_NOTE });
+  }
+  for (let i = 0; i < blocks.length; i++) {
+    const b = kept[i];
+    if (b) out.push(...b);
+  }
+  return out;
+}

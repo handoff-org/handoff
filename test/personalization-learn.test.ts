@@ -1,88 +1,135 @@
----
-title: Architecture
-nav_order: 12
----
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  detectExplicitPreference,
+  applyExplicit,
+  recordEvent,
+  confFor,
+  forgetPreference,
+  type PersonalizationEvent,
+} from '../src/personalization/learn.js';
+import { defaultProfile } from '../src/personalization/profile.js';
 
-# Architecture
+const NOW = '2026-07-05T12:00:00.000Z';
+const fresh = () => defaultProfile(NOW);
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+// ── Explicit detection ─────────────────────────────────────────────────────────
 
-## Top-level layout
+test('a message with no preference trigger is not captured', () => {
+  assert.equal(detectExplicitPreference('write a python script that plots accuracy'), null);
+});
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+test('detects concise verbosity', () => {
+  const d = detectExplicitPreference('from now on I prefer short answers');
+  assert.equal(d?.key, 'verbosity');
+});
 
-## Subsystems
+test('detects a paper template preference', () => {
+  const d = detectExplicitPreference('always use the NeurIPS format');
+  assert.equal(d?.key, 'paper-template');
+});
 
-### Agent
+test('detects "never use cloud models"', () => {
+  const d = detectExplicitPreference('never use cloud models');
+  assert.equal(d?.key, 'avoid-cloud');
+});
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+test('detects a default model and a rejected model', () => {
+  assert.equal(detectExplicitPreference('use qwen3:8b by default')?.key, 'preferred-model');
+  assert.equal(
+    detectExplicitPreference("don't use ornith:35b, it overheats my mac")?.key,
+    'rejected-model',
+  );
+});
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+test('a triggered-but-unclassified statement becomes a generic note', () => {
+  const d = detectExplicitPreference('remember that I keep figures in results/figures');
+  assert.ok(d && d.key.startsWith('note-'));
+});
 
-### Tools
+// ── Applying explicit preferences ───────────────────────────────────────────────
 
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
+test('applyExplicit records the pref at 0.9 and sets the structured field', () => {
+  const d = detectExplicitPreference('always use the ACL template')!;
+  const p = applyExplicit(fresh(), d, 'prefers the ACL paper template', NOW);
+  assert.equal(p.explicitPreferences[0]!.confidence, 0.9);
+  assert.equal(p.researchStyle.preferredPaperTemplates?.value.includes('ACL'), true);
+  assert.equal(p.projectDefaults.defaultPaperTemplate?.value, 'ACL');
+});
 
-### Workspace
+test('preferring a model removes it from rejected and vice-versa', () => {
+  let p = applyExplicit(
+    fresh(),
+    { key: 'rejected-model', phrase: 'avoid model qwen3:8b' },
+    'avoid model qwen3:8b',
+    NOW,
+  );
+  assert.deepEqual(p.modelAndPerformance.rejectedModels?.value, ['qwen3:8b']);
+  p = applyExplicit(
+    p,
+    { key: 'preferred-model', phrase: 'prefers model qwen3:8b' },
+    'prefers model qwen3:8b',
+    NOW,
+  );
+  assert.deepEqual(p.modelAndPerformance.preferredModels?.value, ['qwen3:8b']);
+  assert.deepEqual(p.modelAndPerformance.rejectedModels?.value, []);
+});
 
-`src/workspace/` handles everything project-scoped:
+test('forgetPreference removes an explicit key', () => {
+  const d = detectExplicitPreference('from now on I prefer short answers')!;
+  const p = applyExplicit(fresh(), d, 'prefers concise answers', NOW);
+  const after = forgetPreference(p, 'verbosity');
+  assert.equal(
+    after.explicitPreferences.find((x) => x.key === 'verbosity'),
+    undefined,
+  );
+});
 
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
+// ── Inferred habits (thresholds) ────────────────────────────────────────────────
 
-### Research
+test('confFor: no inference below 3 evidence, rises after', () => {
+  assert.equal(confFor(1), 0);
+  assert.equal(confFor(2), 0);
+  assert.ok(confFor(3) >= 0.55);
+  assert.ok(confFor(6) > confFor(3));
+  assert.ok(confFor(3, 3) < confFor(3), 'opposing evidence damps confidence');
+});
 
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
+test('one command_used event does not create an inferred habit; three do', () => {
+  const cmd = (): PersonalizationEvent => ({
+    type: 'command_used',
+    timestamp: NOW,
+    summary: '/research',
+    metadata: { command: '/research' },
+  });
+  let p = recordEvent(fresh(), cmd(), NOW);
+  assert.equal(p.toolHabits.oftenUsesResearch, undefined);
+  p = recordEvent(p, cmd(), NOW);
+  p = recordEvent(p, cmd(), NOW);
+  assert.equal(p.toolHabits.oftenUsesResearch?.value, true);
+  assert.ok((p.toolHabits.oftenUsesResearch?.confidence ?? 0) >= 0.55);
+});
 
-### Personalization
+test('preferredMode inference flips toward the dominant choice', () => {
+  const ev = (value: string): PersonalizationEvent => ({
+    type: 'settings_changed',
+    timestamp: NOW,
+    summary: `mode=${value}`,
+    metadata: { key: 'mode', value },
+  });
+  let p = fresh();
+  for (let i = 0; i < 4; i++) p = recordEvent(p, ev('auto'), NOW);
+  assert.equal(p.toolHabits.preferredMode?.value, 'auto');
+});
 
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
-
-### UI
-
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
-
-## Tests
-
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+test('a slow benchmark is remembered as a performance note', () => {
+  const ev: PersonalizationEvent = {
+    type: 'model_benchmark',
+    timestamp: NOW,
+    summary: 'x',
+    metadata: { modelId: 'ornith:35b', tier: 'slow', fullGpu: true },
+  };
+  const p = recordEvent(fresh(), ev, NOW);
+  assert.equal(p.modelAndPerformance.laptopPerformanceNotes.length, 1);
+  assert.match(p.modelAndPerformance.laptopPerformanceNotes[0]!.text, /ornith:35b/);
+});

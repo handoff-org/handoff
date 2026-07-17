@@ -1,88 +1,163 @@
----
-title: Architecture
-nav_order: 12
----
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { compactHistory } from '../src/agent/compaction.js';
+import { estimateMessagesTokens } from '../src/agent/contextBudget.js';
+import type { Message } from '../src/agent/model.js';
 
-# Architecture
+const sys: Message = { role: 'system', content: 'SYSTEM PROMPT' };
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+/** A user/assistant exchange of roughly `chars` characters each. */
+function exchange(tag: string, chars: number): Message[] {
+  return [
+    { role: 'user', content: `${tag}-user ${'u'.repeat(chars)}` },
+    { role: 'assistant', content: `${tag}-assistant ${'a'.repeat(chars)}` },
+  ];
+}
 
-## Top-level layout
+test('no-op when the whole history is already under budget', () => {
+  const msgs: Message[] = [sys, ...exchange('t1', 40), ...exchange('t2', 40)];
+  const out = compactHistory(msgs, { maxPromptTokens: 100000 });
+  assert.deepEqual(out, msgs);
+});
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+test('system message is kept byte-identical', () => {
+  const msgs: Message[] = [
+    sys,
+    ...exchange('t1', 4000),
+    ...exchange('t2', 4000),
+    ...exchange('t3', 40),
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 500 });
+  assert.equal(out[0]!.role, 'system');
+  assert.equal(out[0]!.content, 'SYSTEM PROMPT');
+});
 
-## Subsystems
+test('recent turns kept verbatim; oldest dropped; replaced by one digest', () => {
+  const msgs: Message[] = [sys, ...exchange('old', 8000), ...exchange('recent', 40)];
+  const out = compactHistory(msgs, { maxPromptTokens: 400 });
+  const text = out.map((m) => m.content).join('\n');
+  // Recent exchange survives verbatim.
+  assert.match(text, /recent-user/);
+  assert.match(text, /recent-assistant/);
+  // The old exchange is gone verbatim, but its gist survives in the digest.
+  assert.doesNotMatch(text, /u{200}/); // the full 8000-char old content is not present
+  const digests = out.filter((m) => m.content.includes('earlier conversation summary'));
+  assert.equal(digests.length, 1, 'exactly one digest, inserted once');
+  assert.match(digests[0]!.content, /you: old-user/);
+  assert.match(digests[0]!.content, /assistant: old-assistant/);
+});
 
-### Agent
+test('the digest captures dropped tool calls and respects its cap', () => {
+  const msgs: Message[] = [
+    sys,
+    { role: 'user', content: 'add authentication to the app' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [
+        { id: '1', type: 'function', function: { name: 'write_file', arguments: '{}' } },
+      ],
+    },
+    { role: 'tool', content: 'ok', tool_call_id: '1' },
+    // A large current turn that is always kept and pushes the older turns out.
+    { role: 'user', content: 'X'.repeat(4000) },
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 300, summaryCapChars: 400 });
+  const digest = out.find(
+    (m) => m.role === 'system' && m.content.includes('earlier conversation summary'),
+  );
+  assert.ok(digest, 'a digest system message should be inserted');
+  assert.match(digest!.content, /you: add authentication/);
+  assert.match(digest!.content, /ran: write_file/); // the dropped tool call is named
+  assert.ok(digest!.content.length <= 400, `digest over cap: ${digest!.content.length}`);
+});
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+test('truncation with no full drops inserts a short note, not a summary', () => {
+  const bigTool = 'X'.repeat(8000);
+  const msgs: Message[] = [
+    sys,
+    { role: 'user', content: 'run it' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: '1', type: 'function', function: { name: 'run', arguments: '{}' } }],
+    },
+    { role: 'tool', content: bigTool, tool_call_id: '1' },
+    ...exchange('recent', 40),
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 1200, toolCapChars: 200 });
+  const notes = out.filter((m) => m.role === 'system' && m.content.startsWith('[earlier'));
+  assert.equal(notes.length, 1);
+  assert.match(notes[0]!.content, /tool output shortened/);
+  assert.doesNotMatch(notes[0]!.content, /summary/);
+});
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+test('old tool output is capped rather than dropped when it can fit truncated', () => {
+  const bigTool = 'X'.repeat(8000);
+  const msgs: Message[] = [
+    sys,
+    { role: 'user', content: 'run it' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: '1', type: 'function', function: { name: 'run', arguments: '{}' } }],
+    },
+    { role: 'tool', content: bigTool, tool_call_id: '1' },
+    ...exchange('recent', 40),
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 1200, toolCapChars: 200 });
+  const toolMsg = out.find((m) => m.role === 'tool');
+  // Kept, but capped well below the original 8000 chars.
+  assert.ok(toolMsg, 'tool message should be retained (truncated)');
+  assert.ok(toolMsg!.content.length < 400);
+  assert.match(toolMsg!.content, /truncated to fit context budget/);
+});
 
-### Tools
+test('tool_call ↔ tool_result pairing is preserved (no orphan tool messages)', () => {
+  const msgs: Message[] = [
+    sys,
+    ...exchange('filler', 8000), // will be dropped
+    { role: 'user', content: 'do a thing' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: 'abc', type: 'function', function: { name: 'run', arguments: '{}' } }],
+    },
+    { role: 'tool', content: 'result', tool_call_id: 'abc' },
+    { role: 'assistant', content: 'done' },
+  ];
+  const out = compactHistory(msgs, { maxPromptTokens: 400 });
+  // Every tool message must have its parent assistant tool_call present.
+  const callIds = new Set<string>();
+  for (const m of out) {
+    if (m.role === 'assistant' && m.tool_calls) for (const c of m.tool_calls) callIds.add(c.id);
+  }
+  for (const m of out) {
+    if (m.role === 'tool')
+      assert.ok(callIds.has(m.tool_call_id!), `orphan tool result ${m.tool_call_id}`);
+  }
+  // And an assistant tool_call must have its result present.
+  const resultIds = new Set(out.filter((m) => m.role === 'tool').map((m) => m.tool_call_id));
+  for (const id of callIds) assert.ok(resultIds.has(id), `tool_call ${id} lost its result`);
+});
 
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
+test('result stays within budget when head + last block allow it', () => {
+  const msgs: Message[] = [
+    sys,
+    ...exchange('a', 6000),
+    ...exchange('b', 6000),
+    ...exchange('c', 40),
+  ];
+  const budget = 600;
+  const out = compactHistory(msgs, { maxPromptTokens: budget });
+  assert.ok(
+    estimateMessagesTokens(out) <= budget,
+    `over budget: ${estimateMessagesTokens(out)} > ${budget}`,
+  );
+});
 
-### Workspace
-
-`src/workspace/` handles everything project-scoped:
-
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
-
-### Research
-
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
-
-### Personalization
-
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
-
-### UI
-
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
-
-## Tests
-
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+test('history with no system message still compacts safely', () => {
+  const msgs: Message[] = [...exchange('old', 8000), ...exchange('recent', 40)];
+  const out = compactHistory(msgs, { maxPromptTokens: 400 });
+  assert.match(out.map((m) => m.content).join('\n'), /recent-user/);
+});

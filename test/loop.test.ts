@@ -1,88 +1,407 @@
----
-title: Architecture
-nav_order: 12
----
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { runAgentLoop, type AgentEvent } from '../src/agent/loop.js';
+import { ToolRegistry } from '../src/tools/registry.js';
+import type { ChatModel, ChatOptions, Message, StreamPart, ToolCall } from '../src/agent/model.js';
+import type { ToolSchema } from '../src/tools/registry.js';
 
-# Architecture
+interface Turn {
+  content: string;
+  tool_calls?: ToolCall[];
+}
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+/** A ChatModel that replays a fixed script — one Turn per loop iteration. */
+class FakeModel implements ChatModel {
+  readonly modelId = 'fake';
+  private turns: Turn[];
+  constructor(turns: Turn[]) {
+    this.turns = [...turns];
+  }
+  async *chatStream(): AsyncGenerator<StreamPart> {
+    const turn = this.turns.shift() ?? { content: '' };
+    yield {
+      type: 'final',
+      content: turn.content,
+      ...(turn.tool_calls ? { tool_calls: turn.tool_calls } : {}),
+    };
+  }
+}
 
-## Top-level layout
+function call(id: string, name: string, args: object): ToolCall {
+  return { id, function: { name, arguments: JSON.stringify(args) } };
+}
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+async function collect(
+  userMessage: string,
+  history: Message[],
+  model: ChatModel,
+  registry: ToolRegistry,
+  opts: Parameters<typeof runAgentLoop>[4],
+): Promise<AgentEvent[]> {
+  const out: AgentEvent[] = [];
+  for await (const e of runAgentLoop(userMessage, history, model, registry, opts)) out.push(e);
+  return out;
+}
 
-## Subsystems
+const signal = new AbortController().signal;
+const sys: Message[] = [{ role: 'system', content: 'sys' }];
 
-### Agent
+function echoRegistry(): ToolRegistry {
+  const r = new ToolRegistry();
+  r.register({
+    name: 'write_file',
+    description: 'write',
+    sensitive: true,
+    parameters: { type: 'object', properties: { path: { type: 'string' } } },
+    async execute(args) {
+      return `Written to ${String(args['path'])}`;
+    },
+  });
+  return r;
+}
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+test('ask_user is routed to the UI, not executed as a tool', async () => {
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'ask_user', { question: 'Pick', options: ['A', 'B'] })] },
+    { content: 'all done' },
+  ]);
+  const asked: { q: string; options: string[] }[] = [];
+  const events = await collect('go', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+    askUser: async (q, options) => {
+      asked.push({ q, options });
+      return 'A';
+    },
+  });
+  assert.deepEqual(asked, [{ q: 'Pick', options: ['A', 'B'] }]);
+  const result = events.find((e) => e.type === 'tool_result');
+  assert.equal(result && result.type === 'tool_result' && result.result, 'The user selected: A');
+});
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+test('a skipped ask_user reports the skip', async () => {
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'ask_user', { question: 'Pick', options: [] })] },
+    { content: 'ok' },
+  ]);
+  const events = await collect('go', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+    askUser: async () => '',
+  });
+  const result = events.find((e) => e.type === 'tool_result');
+  assert.match(result && result.type === 'tool_result' ? result.result : '', /skipped/);
+});
 
-### Tools
+test('duplicate identical tool calls in one turn run only once', async () => {
+  const model = new FakeModel([
+    {
+      content: '',
+      tool_calls: [
+        call('1', 'write_file', { path: 'a.txt' }),
+        call('2', 'write_file', { path: 'a.txt' }),
+      ],
+    },
+    { content: 'done' },
+  ]);
+  const events = await collect('go', sys, model, echoRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  const calls = events.filter((e) => e.type === 'tool_call');
+  assert.equal(calls.length, 1, 'the duplicate call should have been dropped');
+});
 
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
+test('a denied tool yields the denial message and does not execute', async () => {
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'write_file', { path: 'a.txt' })] },
+    { content: 'done' },
+  ]);
+  const events = await collect('go', sys, model, echoRegistry(), {
+    signal,
+    approve: async () => false,
+  });
+  const result = events.find((e) => e.type === 'tool_result');
+  assert.match(result && result.type === 'tool_result' ? result.result : '', /Denied by the user/);
+});
 
-### Workspace
+test('a plain answer with no tools completes in one turn', async () => {
+  const model = new FakeModel([{ content: 'hello there' }]);
+  const events = await collect('hi', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  const end = events.find((e) => e.type === 'message_end');
+  assert.equal(end && end.type === 'message_end' && end.content, 'hello there');
+  const done = events.at(-1);
+  assert.equal(done?.type, 'done');
+});
 
-`src/workspace/` handles everything project-scoped:
+test('an empty response (no content, no tool calls) surfaces a clear error, not a silent stop', async () => {
+  const model = new FakeModel([{ content: '   ' }]); // whitespace only
+  const events = await collect('hi', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  const err = events.find((e) => e.type === 'error');
+  assert.ok(err && err.type === 'error', 'expected an error event for an empty response');
+  assert.match(err.type === 'error' ? err.message : '', /empty response/i);
+  assert.equal(events.at(-1)?.type, 'done'); // still completes cleanly
+});
 
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
+test('a max-iterations run ends with the "stopped after N rounds" error', async () => {
+  // A model that always asks for a tool never finishes on its own.
+  const turns = Array.from({ length: 12 }, () => ({
+    content: '',
+    tool_calls: [call('x', 'write_file', { path: 'a.txt' })],
+  }));
+  const events = await collect('go', sys, new FakeModel(turns), echoRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  const err = events.find((e) => e.type === 'error');
+  assert.match(
+    err && err.type === 'error' ? err.message : '',
+    /Stopped after \d+ tool-call rounds/,
+  );
+});
 
-### Research
+test('budget compacts the SENT history while done.messages stays full', async () => {
+  // A model that records exactly what messages it was handed each turn.
+  class CapturingModel implements ChatModel {
+    readonly modelId = 'capture';
+    seen: Message[][] = [];
+    async *chatStream(messages: Message[]): AsyncGenerator<StreamPart> {
+      this.seen.push(messages.map((m) => ({ ...m })));
+      yield { type: 'final', content: 'ok' };
+    }
+  }
+  // A long history with a giant old tool output that must be trimmed.
+  const history: Message[] = [
+    { role: 'system', content: 'SYS' },
+    { role: 'user', content: 'earlier question ' + 'q'.repeat(2000) },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: '1', type: 'function', function: { name: 'run', arguments: '{}' } }],
+    },
+    { role: 'tool', content: 'HUGE'.repeat(4000), tool_call_id: '1' },
+    { role: 'assistant', content: 'earlier answer' },
+  ];
+  const model = new CapturingModel();
+  const events = await collect('new question', history, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+    budget: { maxPromptTokens: 300, toolCapChars: 100 },
+  });
 
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
+  // The model saw a compacted array: system preserved, giant tool output shrunk.
+  const sent = model.seen[0]!;
+  assert.equal(sent[0]!.content, 'SYS');
+  const sentText = sent.map((m) => m.content).join('\n');
+  assert.ok(
+    !sentText.includes('HUGE'.repeat(1000)),
+    'giant tool output should be trimmed in the sent view',
+  );
 
-### Personalization
+  // But the persisted transcript keeps every message at full size.
+  const done = events.find((e) => e.type === 'done');
+  assert.ok(done && done.type === 'done');
+  const full = done.type === 'done' ? done.messages : [];
+  const huge = full.find((m) => m.role === 'tool');
+  assert.ok(huge && huge.content.length >= 16000, 'done.messages must retain the full tool output');
+});
 
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
+test('a truncated, reasoning-only empty response gives an actionable error', async () => {
+  // A model that reasons, then ends truncated (num_predict hit) with no content.
+  class TruncatedModel implements ChatModel {
+    readonly modelId = 'trunc';
+    async *chatStream(): AsyncGenerator<StreamPart> {
+      yield { type: 'reasoning' };
+      yield { type: 'final', content: '', truncated: true };
+    }
+  }
+  const events = await collect('go', sys, new TruncatedModel(), new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  const err = events.find((e) => e.type === 'error');
+  assert.ok(err && err.type === 'error');
+  assert.match(err.type === 'error' ? err.message : '', /output limit|reasoning/i);
+  assert.match(err.type === 'error' ? err.message : '', /\/model/);
+});
 
-### UI
+/** Records the `think` flag of each call; scripts pass 1 vs the no-think retry. */
+class RetryProbeModel implements ChatModel {
+  readonly modelId = 'retry';
+  calls: (boolean | undefined)[] = [];
+  constructor(private readonly answerOnRetry: boolean) {}
+  async *chatStream(
+    _messages: Message[],
+    _tools: ToolSchema[] | undefined,
+    _signal?: AbortSignal,
+    opts?: ChatOptions,
+  ): AsyncGenerator<StreamPart> {
+    const think = opts?.think ?? true;
+    this.calls.push(opts?.think);
+    if (think) {
+      // Pass 1: spent the whole budget reasoning, hit the cap, produced nothing.
+      yield { type: 'reasoning' };
+      yield { type: 'final', content: '', truncated: true };
+    } else if (this.answerOnRetry) {
+      // Pass 2 (thinking off): answers directly.
+      yield { type: 'delta', text: 'the answer' };
+      yield { type: 'final', content: 'the answer' };
+    } else {
+      // Pass 2 still starves.
+      yield { type: 'reasoning' };
+      yield { type: 'final', content: '', truncated: true };
+    }
+  }
+}
 
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
+test('a reasoning turn that truncates empty is retried once without thinking, then answers', async () => {
+  const model = new RetryProbeModel(true);
+  const events = await collect('hard question', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  assert.deepEqual(model.calls, [true, false], 'pass 1 thinks, pass 2 disables thinking');
+  assert.ok(!events.some((e) => e.type === 'error'), 'the retry produced an answer, so no error');
+  const end = events.find((e) => e.type === 'message_end');
+  assert.equal(end && end.type === 'message_end' ? end.content : '', 'the answer');
+});
 
-## Tests
+test('the no-think retry error is preset-aware (deep → suggests long_context)', async () => {
+  const model = new RetryProbeModel(false);
+  const events = await collect('q', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+    preset: 'deep',
+  });
+  assert.deepEqual(model.calls, [true, false], 'still tried the no-think retry');
+  const err = events.find((e) => e.type === 'error');
+  assert.match(err && err.type === 'error' ? err.message : '', /long_context/);
+});
 
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+// ── Parallel tool execution ─────────────────────────────────────────────────
+
+/** A registry of coordinating tools that record peak concurrency + finish order. */
+function concurrencyRegistry(track: { active: number; maxActive: number; finished: string[] }) {
+  const r = new ToolRegistry();
+  const mk = (name: string, parallelSafe: boolean, delayMs: number) =>
+    r.register({
+      name,
+      description: name,
+      parallelSafe,
+      parameters: { type: 'object', properties: {} },
+      async execute() {
+        track.active++;
+        track.maxActive = Math.max(track.maxActive, track.active);
+        await new Promise((res) => setTimeout(res, delayMs));
+        track.active--;
+        track.finished.push(name);
+        return `${name}:done`;
+      },
+    });
+  return { r, mk };
+}
+
+test('all-parallel-safe tool calls in one turn run concurrently, results stay in call order', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  // The first call is SLOWER than the second, so if execution were sequential the
+  // second could not finish first. Concurrency is proven by maxActive === 2.
+  mk('web_search', true, 40);
+  mk('web_fetch', true, 5);
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'web_search', {}), call('2', 'web_fetch', {})] },
+    { content: 'done' },
+  ]);
+  const events = await collect('go', sys, model, r, { signal, approve: async () => true });
+
+  assert.equal(track.maxActive, 2, 'both reads should be in flight at once');
+  assert.deepEqual(track.finished, ['web_fetch', 'web_search'], 'the faster call finished first');
+  // …but the emitted results and the pushed tool messages stay in CALL order.
+  const results = events
+    .filter((e) => e.type === 'tool_result')
+    .map((e) => (e.type === 'tool_result' ? e.result : ''));
+  assert.deepEqual(results, ['web_search:done', 'web_fetch:done']);
+  const done = events.at(-1);
+  const toolMsgs = done?.type === 'done' ? done.messages.filter((m) => m.role === 'tool') : [];
+  assert.deepEqual(
+    toolMsgs.map((m) => [m.tool_call_id, m.content]),
+    [
+      ['1', 'web_search:done'],
+      ['2', 'web_fetch:done'],
+    ],
+    'each tool result answers its own call id, in order',
+  );
+});
+
+test('a batch with any non-parallel-safe tool falls back to sequential execution', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  mk('read_file', true, 10);
+  mk('write_file', false, 10); // mutating → the whole batch must stay serial
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'read_file', {}), call('2', 'write_file', {})] },
+    { content: 'ok' },
+  ]);
+  await collect('go', sys, model, r, { signal, approve: async () => true });
+  assert.equal(track.maxActive, 1, 'a mixed batch must never run concurrently');
+});
+
+test('a single parallel-safe call is not treated as a parallel batch', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  mk('web_search', true, 5);
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'web_search', {})] },
+    { content: 'ok' },
+  ]);
+  const events = await collect('go', sys, model, r, { signal, approve: async () => true });
+  assert.equal(track.maxActive, 1);
+  const result = events.find((e) => e.type === 'tool_result');
+  assert.equal(result && result.type === 'tool_result' ? result.result : '', 'web_search:done');
+});
+
+test('a denied call in a parallel batch is denied while the others still run', async () => {
+  const track = { active: 0, maxActive: 0, finished: [] as string[] };
+  const { r, mk } = concurrencyRegistry(track);
+  mk('web_search', true, 10);
+  mk('web_fetch', true, 10);
+  const model = new FakeModel([
+    { content: '', tool_calls: [call('1', 'web_search', {}), call('2', 'web_fetch', {})] },
+    { content: 'done' },
+  ]);
+  // Deny only web_fetch.
+  const events = await collect('go', sys, model, r, {
+    signal,
+    approve: async (name) => name !== 'web_fetch',
+  });
+  const results = events
+    .filter((e) => e.type === 'tool_result')
+    .map((e) => (e.type === 'tool_result' ? e.result : ''));
+  assert.equal(results[0], 'web_search:done');
+  assert.match(results[1] ?? '', /Denied by the user/);
+});
+
+test('a truncated turn with no reasoning is not retried', async () => {
+  class TruncNoReason implements ChatModel {
+    readonly modelId = 'trunc-plain';
+    calls = 0;
+    async *chatStream(): AsyncGenerator<StreamPart> {
+      this.calls++;
+      yield { type: 'final', content: '', truncated: true };
+    }
+  }
+  const model = new TruncNoReason();
+  const events = await collect('q', sys, model, new ToolRegistry(), {
+    signal,
+    approve: async () => true,
+  });
+  assert.equal(model.calls, 1, 'no retry without reasoning');
+  const err = events.find((e) => e.type === 'error');
+  assert.match(err && err.type === 'error' ? err.message : '', /output limit/);
+});

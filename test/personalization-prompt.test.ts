@@ -1,88 +1,87 @@
----
-title: Architecture
-nav_order: 12
----
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { buildPersonalizationPrompt, type PromptContext } from '../src/personalization/prompt.js';
+import { detectExplicitPreference, applyExplicit } from '../src/personalization/learn.js';
+import { defaultProfile, type AdaptiveProfile } from '../src/personalization/profile.js';
 
-# Architecture
+const NOW = '2026-07-05T12:00:00.000Z';
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+/** A profile with a couple of explicit prefs (verbosity + paper template + language). */
+function sample(): AdaptiveProfile {
+  let p = defaultProfile(NOW);
+  p = applyExplicit(
+    p,
+    detectExplicitPreference('from now on I prefer short answers')!,
+    'prefers concise answers',
+    NOW,
+  );
+  p = applyExplicit(
+    p,
+    detectExplicitPreference('always use the NeurIPS format')!,
+    'prefers the NeurIPS paper template',
+    NOW,
+  );
+  p = applyExplicit(
+    p,
+    detectExplicitPreference('I prefer python for experiments')!,
+    'prefers python for experiments/code',
+    NOW,
+  );
+  return p;
+}
 
-## Top-level layout
+const ctx = (over: Partial<PromptContext> = {}): PromptContext => ({
+  enabled: true,
+  includeInPrompt: true,
+  isCloudBackend: false,
+  allowCloud: false,
+  focus: 'research',
+  ...over,
+});
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+test('disabled or not-included → empty string', () => {
+  assert.equal(buildPersonalizationPrompt(sample(), ctx({ enabled: false })), '');
+  assert.equal(buildPersonalizationPrompt(sample(), ctx({ includeInPrompt: false })), '');
+});
 
-## Subsystems
+test('empty profile → empty string', () => {
+  assert.equal(buildPersonalizationPrompt(defaultProfile(NOW), ctx()), '');
+});
 
-### Agent
+test('renders a compact, deterministic block', () => {
+  const a = buildPersonalizationPrompt(sample(), ctx());
+  const b = buildPersonalizationPrompt(sample(), ctx());
+  assert.equal(a, b, 'deterministic');
+  assert.match(a, /User preferences/);
+  assert.match(a, /concise answers/);
+  assert.ok(a.length < 1200, 'stays compact');
+});
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+test('cloud backend excludes the profile unless allowed', () => {
+  assert.equal(
+    buildPersonalizationPrompt(sample(), ctx({ isCloudBackend: true, allowCloud: false })),
+    '',
+  );
+  assert.notEqual(
+    buildPersonalizationPrompt(sample(), ctx({ isCloudBackend: true, allowCloud: true })),
+    '',
+  );
+});
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+test('focus=general keeps global style but drops project/research lines', () => {
+  const general = buildPersonalizationPrompt(sample(), ctx({ focus: 'general' }));
+  assert.match(general, /concise answers/); // global style survives
+  assert.doesNotMatch(general, /NeurIPS/); // research-specific line dropped
+});
 
-### Tools
-
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
-
-### Workspace
-
-`src/workspace/` handles everything project-scoped:
-
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
-
-### Research
-
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
-
-### Personalization
-
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
-
-### UI
-
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
-
-## Tests
-
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+test('low-confidence inferred entries are omitted', () => {
+  const p = defaultProfile(NOW);
+  // An inferred value below the 0.6 threshold must not appear.
+  p.interactionStyle.prefersBullets = {
+    value: true,
+    confidence: 0.55,
+    evidenceCount: 3,
+    updatedAt: NOW,
+  };
+  assert.equal(buildPersonalizationPrompt(p, ctx()), '');
+});

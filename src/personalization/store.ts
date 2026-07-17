@@ -1,88 +1,98 @@
----
-title: Architecture
-nav_order: 12
----
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+import { AdaptiveProfileSchema, defaultProfile, migrate, type AdaptiveProfile } from './profile.js';
 
-# Architecture
+/**
+ * Persistence for the local adaptive profile. Everything is best-effort and
+ * crash-safe: a corrupt profile is backed up and replaced with a fresh one
+ * rather than throwing, and writes go through a temp-file + rename so a crash
+ * mid-write can't truncate the file. Mirrors config/store.ts.
+ */
 
-A high-level map of how handoff is structured. It's a TypeScript app that runs directly
-from source — there is **no build step**; [tsx](https://github.com/privatenumber/tsx)
-executes `.ts`/`.tsx` files, and the terminal UI is built with
-[Ink](https://github.com/vadimdemedes/ink) (React for the terminal).
+const HANDOFF_DIR = join(homedir(), '.handoff');
+export const PROFILE_PATH = join(HANDOFF_DIR, 'profile.json');
 
-## Top-level layout
+function stamp(): string {
+  return new Date().toISOString();
+}
 
-```
-bin/            CLI entry point
-src/
-  agent/        model backends, inference loop, presets
-  tools/        tool registry and built-in tools
-  workspace/    projects, experiments, claims, Overleaf sync
-  research/     literature search and fact-checking
-  skills/       user-defined skill loading and execution
-  personalization/  local adaptive profile (never leaves the machine)
-  util/         shared helpers
-config/         config schema, storage, sessions, model catalog
-ui/             all Ink components and the terminal renderer
-skills/         built-in skills (one folder per skill)
-templates/      paper templates (ACL, NeurIPS, blank)
-installers/     install/uninstall scripts (macOS, Linux, Windows)
-test/           test suite
-```
+let _bakSeq = 0;
+function fileStamp(): string {
+  return `${stamp().replace(/[:.]/g, '-')}-${++_bakSeq}`;
+}
 
-## Subsystems
+/**
+ * Load the profile. On a missing file → a fresh default (not written to disk
+ * until something is learned). On corrupt/invalid JSON → move the bad file to a
+ * timestamped `.bak` and return a fresh default. Never throws.
+ */
+export function loadProfile(): AdaptiveProfile {
+  const now = stamp();
+  if (!existsSync(PROFILE_PATH)) return defaultProfile(now);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(PROFILE_PATH, 'utf-8'));
+  } catch {
+    backupCorrupt();
+    return defaultProfile(now);
+  }
+  const migrated = migrate(raw, now);
+  if (migrated) return migrated;
+  backupCorrupt();
+  return defaultProfile(now);
+}
 
-### Agent
+function backupCorrupt(): void {
+  try {
+    copyFileSync(PROFILE_PATH, `${PROFILE_PATH}.${fileStamp()}.bak`);
+  } catch {
+    /* best-effort */
+  }
+}
 
-The core inference loop in `src/agent/` drives all model interaction. It streams
-responses, handles tool calls, manages conversation history, and coordinates the
-approval gate for sensitive operations. Backend support covers Ollama, llama.cpp,
-MLX, vLLM, and HuggingFace — all sharing a common interface.
+// Serialize writes so overlapping best-effort saves never clobber each other.
+let writeChain: Promise<void> = Promise.resolve();
 
-Inference presets (`cool` / `fast` / `balanced` / `deep`) tune context window, output
-length, and keep-alive as a single named choice. A context-management layer keeps
-prompts within the configured budget across long sessions.
+/** Persist the profile atomically (temp file + rename). Best-effort, never throws. */
+export function saveProfile(profile: AdaptiveProfile): Promise<void> {
+  // Validate + stamp before writing; bail quietly if the object is malformed.
+  const parsed = AdaptiveProfileSchema.safeParse({ ...profile, updatedAt: stamp() });
+  if (!parsed.success) return writeChain;
+  const data = JSON.stringify(parsed.data, null, 2);
+  writeChain = writeChain.then(async () => {
+    try {
+      mkdirSync(HANDOFF_DIR, { recursive: true });
+      const tmp = `${PROFILE_PATH}.${process.pid}.tmp`;
+      writeFileSync(tmp, data, 'utf-8');
+      renameSync(tmp, PROFILE_PATH);
+    } catch {
+      /* persisting the profile is best-effort */
+    }
+  });
+  return writeChain;
+}
 
-### Tools
+/** Back up the current profile (if any) and return a fresh default. */
+export function resetProfile(): AdaptiveProfile {
+  if (existsSync(PROFILE_PATH)) {
+    try {
+      renameSync(PROFILE_PATH, `${PROFILE_PATH}.${fileStamp()}.bak`);
+    } catch {
+      /* best-effort */
+    }
+  }
+  return defaultProfile(stamp());
+}
 
-`src/tools/` holds the tool registry and built-in tools: file read/write/edit,
-directory operations, file search, shell execution, web fetch, web search, PDF reading,
-and user prompts. Workspace, research, and skills modules register additional tools at
-startup. All file writes resolve through the active project root.
-
-### Workspace
-
-`src/workspace/` handles everything project-scoped:
-
-- **Projects** — scaffold, active-project pointer, path resolution
-- **Experiments** — code execution in isolated environments, run capture
-- **Capsules** — per-run reproducibility records (code, environment, metrics, outputs)
-- **Claims** — append-only claim ledger and paper auditing
-- **Overleaf** — two-way LaTeX sync over git
-- **Handoff packets** — audience-specific transfer summaries
-
-### Research
-
-`src/research/` provides literature access: OpenAlex and arXiv search, paper fetching,
-PDF reading, LaTeX source extraction, citation management, and a per-project notebook.
-The `/research` command runs fact-checks against this layer.
-
-### Personalization
-
-`src/personalization/` is a fully local adaptive profile. It detects explicit
-preferences from conversation, tracks lightweight usage habits, and injects a compact
-preference block into the system prompt. Nothing is stored or sent without user opt-in.
-A privacy gate screens all stored strings before write.
-
-### UI
-
-`ui/` contains all Ink components: the main app orchestrator, modal pickers (model,
-settings, project, Overleaf, and more), the transcript renderer, syntax highlighting,
-the diff display, and the banner. The renderer controls viewport layout precisely,
-keeping the input box anchored to the bottom.
-
-## Tests
-
-`npm test` runs the suite via tsx. Tests cover core logic, workspace operations with
-an isolated home directory, the agent loop against a scripted model, and Ink render
-checks for key UI components.
+/** Write a timestamped copy of the profile and return its path (or null). */
+export function exportProfile(profile: AdaptiveProfile): string | null {
+  try {
+    mkdirSync(HANDOFF_DIR, { recursive: true });
+    const dest = join(HANDOFF_DIR, `profile-export-${fileStamp()}.json`);
+    writeFileSync(dest, JSON.stringify(profile, null, 2), 'utf-8');
+    return dest;
+  } catch {
+    return null;
+  }
+}
