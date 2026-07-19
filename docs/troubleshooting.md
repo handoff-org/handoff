@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Troubleshooting
-nav_order: 11
 ---
 
 # Troubleshooting

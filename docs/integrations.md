@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Zotero & OpenReview
-nav_order: 7
 ---
 
 # Zotero & OpenReview

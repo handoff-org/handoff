@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Claims & handoff
-nav_order: 5
 ---
 
 # Claims, provenance & handoff

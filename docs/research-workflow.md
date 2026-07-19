@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Research workflow
-nav_order: 3
 ---
 
 # Research workflow

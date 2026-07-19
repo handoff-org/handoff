@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Choosing a model
-nav_order: 9
 ---
 
 # Choosing a model

@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Architecture
-nav_order: 12
 ---
 
 # Architecture

@@ -16,12 +16,7 @@ description: >-
 url: 'https://handoff-org.github.io'
 baseurl: '/handoff'
 
-# just-the-docs, pulled in as a remote theme (supported on GitHub Pages via the
-# jekyll-remote-theme plugin). Gives a searchable sidebar built for multi-page docs.
-remote_theme: just-the-docs/just-the-docs
-
 plugins:
-  - jekyll-remote-theme
   - jekyll-relative-links
   - jekyll-seo-tag
 
@@ -30,29 +25,9 @@ relative_links:
   enabled: true
   collections: false
 
-# --- just-the-docs options -------------------------------------------------
-color_scheme: dark
-logo: '/assets/sq/logolite300.png'
-favicon_ico: '/assets/letter120.png'
-search_enabled: true
-heading_anchors: true
-aux_links:
-  'handoff on GitHub':
-    - 'https://github.com/handoff-org/handoff'
-  'Contributing':
-    - 'https://github.com/handoff-org/handoff/blob/master/.github/CONTRIBUTING.md'
-aux_links_new_tab: true
-
-# Small footer on every page.
-back_to_top: true
-back_to_top_text: 'Back to top'
-footer_content: >-
-  handoff · private research you can prove ·
-  <a href="https://github.com/handoff-org/handoff">GitHub</a> ·
-  Elastic License 2.0
-
 # Files Jekyll should not copy into the built site.
 exclude:
   - Gemfile
   - Gemfile.lock
   - vendor
+  - product-audit.md

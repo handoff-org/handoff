@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Peer GPU network
-nav_order: 13
 ---
 
 # Handoff peer GPU network

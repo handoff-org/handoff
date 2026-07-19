@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Commands
-nav_order: 4
 ---
 
 # Commands & keys

@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Configuration
-nav_order: 8
 ---
 
 # Configuration

@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Skills
-nav_order: 10
 ---
 
 # Skills

@@ -1,6 +1,6 @@
 ---
+layout: doc
 title: Overleaf sync
-nav_order: 6
 ---
 
 # Overleaf sync
