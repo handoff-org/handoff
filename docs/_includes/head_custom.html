@@ -202,10 +202,42 @@
       }
     }
 
+    // ── Reveal-on-scroll + motif draw ────────────────────────────────────────────
+    function initReveal() {
+      if (!('IntersectionObserver' in window)) {
+        document.querySelectorAll('.hf-reveal, .hf-motif-wrap').forEach(function (el) {
+          el.classList.add('hf-visible');
+        });
+        return;
+      }
+
+      var revealObs = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('hf-visible');
+              revealObs.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12 }
+      );
+
+      document.querySelectorAll('.hf-reveal, .hf-motif-wrap').forEach(function (el) {
+        revealObs.observe(el);
+      });
+
+      // Stagger siblings inside .hf-workflow and .hf-feature-pairs
+      document.querySelectorAll('.hf-workflow__step, .hf-fp').forEach(function (el, i) {
+        el.style.transitionDelay = (i % 4) * 0.07 + 's';
+      });
+    }
+
     ready(function () {
       initCopyButtons();
       initLangLabels();
       initTOC();
+      initReveal();
     });
   })();
 </script>

@@ -9,6 +9,12 @@ docs/_site/
 docs/.jekyll-cache/
 docs/.jekyll-metadata
 docs/Gemfile.lock
+docs/.bundle/
+
+# OpenAI Sans — proprietary typeface, local-only. Not redistributed in this repo.
+# Place the woff2 files in docs/assets/fonts/ on each machine manually.
+# The live site falls back to Geist when the files are absent.
+docs/assets/fonts/OpenAISans-*.woff2
 
 # OS / editor cruft
 .DS_Store

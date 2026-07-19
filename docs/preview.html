@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>handoff — homepage preview</title>
+
+  <style>
+    /* ── OpenAI Sans (local-only; falls back to Geist) ──────────────────── */
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-LightItalic.woff2') format('woff2'); font-weight: 300; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-RegularItalic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-Medium.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-MediumItalic.woff2') format('woff2'); font-weight: 500; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-Semibold.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-SemiboldItalic.woff2') format('woff2'); font-weight: 600; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'OpenAI Sans'; src: url('assets/fonts/OpenAISans-BoldItalic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
+    /* ── Geist ──────────────────────────────────────────────────────────── */
+    @font-face { font-family: 'Geist'; src: url('assets/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Geist'; src: url('assets/fonts/Geist-Italic-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'Geist Mono'; src: url('assets/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+
+    /* ── Tokens ─────────────────────────────────────────────────────────── */
+    :root {
+      --hf-bg:           #1a1a1a;
+      --hf-bg-2:         #1e1e22;
+      --hf-surface:      #202024;
+      --hf-surface-2:    #26262c;
+      --hf-border:       #2c2c33;
+      --hf-border-2:     #3a3a45;
+      --hf-text:         #e2e2ea;
+      --hf-muted:        #88889a;
+      --hf-dim:          #484858;
+      --hf-accent:       #4ade80;
+      --hf-accent-faint: rgba(74, 222, 128, 0.1);
+      --hf-accent-glow:  rgba(74, 222, 128, 0.18);
+      --hf-green:        #4ade80;
+      --hf-amber:        #fbbf24;
+      --font-sans:       'Geist', -apple-system, BlinkMacSystemFont, ui-sans-serif, sans-serif;
+      --font-editorial:  'OpenAI Sans', 'Geist', -apple-system, ui-sans-serif, sans-serif;
+      --font-mono:       'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      --ease:            cubic-bezier(0.22, 0.7, 0.22, 1);
+      --nav-h:           60px;
+    }
+
+    /* ── Base ───────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    html, body { overflow-x: hidden; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--hf-bg);
+      color: var(--hf-text);
+      font-size: 1rem;
+      line-height: 1.65;
+      letter-spacing: -0.006em;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img, svg { max-width: 100%; display: block; }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: var(--hf-surface);
+      border: 1px solid var(--hf-border);
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+    }
+
+    /* ── Fixed top nav ──────────────────────────────────────────────────── */
+    .hf-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: var(--nav-h);
+      transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
+      border-bottom: 1px solid transparent;
+    }
+    .hf-nav--scrolled {
+      background: rgba(26, 26, 26, 0.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom-color: var(--hf-border);
+    }
+    .hf-nav__inner {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .hf-nav__logo {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      margin-right: auto;
+    }
+    .hf-nav__logo img {
+      height: 18px;
+      width: auto;
+      display: block;
+    }
+    .hf-nav__links {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-right: 1.25rem;
+    }
+    .hf-nav__links a {
+      font-size: 0.86rem;
+      color: var(--hf-muted);
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .hf-nav__links a:hover { color: var(--hf-text); background: var(--hf-surface); }
+    @media (max-width: 540px) { .hf-nav__links { display: none; } }
+
+    /* ── Hero ───────────────────────────────────────────────────────────── */
+    .hf-hero {
+      background: var(--hf-bg);
+      padding-top: var(--nav-h);
+    }
+    .hf-hero__banner-wrap {
+      width: 100%;
+      overflow: hidden;
+      line-height: 0;
+      border-bottom: 1px solid var(--hf-border);
+    }
+    .hf-banner-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      cursor: default;
+    }
+    .hf-banner-text {
+      transition: filter 0.5s ease;
+    }
+    .hf-letter {
+      transition: filter 0.25s ease, opacity 0.25s ease;
+    }
+    .hf-letter--lit {
+      filter: drop-shadow(0 0 14px rgba(74,222,128,0.9))
+              drop-shadow(0 0 36px rgba(74,222,128,0.55))
+              drop-shadow(0 0 70px rgba(74,222,128,0.28));
+    }
+    /* Ambient idle glow — very subtle, always on */
+    @keyframes hf-banner-ambient {
+      0%,100% { filter: drop-shadow(0 0 6px rgba(74,222,128,0.12)); }
+      50%      { filter: drop-shadow(0 0 18px rgba(74,222,128,0.28)); }
+    }
+    .hf-banner-text {
+      animation: hf-banner-ambient 5s ease-in-out infinite;
+    }
+    /* When any letter is lit, pause the ambient so glow doesn't fight */
+    .hf-banner-text.hf-hovering {
+      animation: none;
+      filter: none;
+    }
+    .hf-hero__content {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 5.5rem 2.5rem 6.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+    @media (max-width: 720px) {
+      .hf-hero__content { grid-template-columns: 1fr; gap: 3rem; padding: 3rem 1.5rem 4rem; }
+    }
+    .hf-hero__lead { max-width: 40rem; }
+    .hf-hero__title {
+      font-family: var(--font-editorial);
+      font-size: clamp(3.2rem, 5.5vw, 5.4rem);
+      font-weight: 600;
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+      margin: 0 0 1.4rem;
+      color: var(--hf-text);
+    }
+    .hf-hero__sub {
+      font-size: clamp(1.05rem, 1.2vw, 1.22rem);
+      color: #b0b0c8;
+      line-height: 1.65;
+      letter-spacing: -0.012em;
+      max-width: 40ch;
+      margin: 0 0 2.2rem;
+      text-wrap: balance;
+    }
+    .hf-hero__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+    }
+
+    /* ── Eyebrow ────────────────────────────────────────────────────────── */
+    .hf-eyebrow {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--hf-accent);
+      margin: 0 0 1.1rem;
+    }
+
+    /* ── Hero meta badges ───────────────────────────────────────────────── */
+    .hf-hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.78rem;
+      color: var(--hf-dim);
+      margin-bottom: 1.8rem;
+    }
+    .hf-hero-meta span { display: flex; align-items: center; gap: 0.3rem; }
+    .hf-meta-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--hf-green);
+      display: inline-block;
+      animation: hf-pulse 2.4s ease-in-out infinite;
+    }
+
+    /* ── DAG legend ─────────────────────────────────────────────────────── */
+    .hf-dag-legend {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.7rem;
+      padding: 0 0.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.64rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--hf-dim);
+      user-select: none;
+    }
+    .hf-dag-legend span { flex: 1; text-align: center; }
+
+    /* ── Reveal ─────────────────────────────────────────────────────────── */
+    .hf-reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.72s var(--ease), transform 0.72s var(--ease);
+    }
+    .hf-reveal.hf-visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .hf-reveal { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .hf-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.58rem 1.2rem;
+      border-radius: 999px;
+      font-family: var(--font-sans);
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none !important;
+      transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease), filter 0.2s;
+    }
+    .hf-btn:hover { transform: translateY(-2px); }
+    .hf-btn svg {
+      width: 15px; height: 15px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .hf-btn--primary {
+      background: var(--hf-accent);
+      color: #0e1f13;
+      border: 1px solid var(--hf-accent);
+      box-shadow: 0 2px 14px var(--hf-accent-glow);
+    }
+    .hf-btn--primary:hover { filter: brightness(1.09); box-shadow: 0 4px 22px var(--hf-accent-glow); }
+    .hf-btn--outline {
+      background: transparent;
+      color: var(--hf-muted);
+      border: 1px solid var(--hf-border-2);
+    }
+    .hf-btn--outline:hover { border-color: var(--hf-text); color: var(--hf-text); }
+    .hf-btn--sm { padding: 0.4rem 0.95rem; font-size: 0.84rem; }
+
+    /* ── Main content container ─────────────────────────────────────────── */
+    .hf-main { padding-bottom: 8rem; }
+    .hf-container {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0 2.5rem;
+    }
+
+    /* ── Motif ──────────────────────────────────────────────────────────── */
+    .hf-motif-wrap {
+      margin: 0;
+      justify-self: center;
+      width: 100%;
+      max-width: 260px;
+    }
+    .hf-motif-svg { width: 100%; height: auto; overflow: visible; }
+    .hf-mn { fill: var(--hf-surface); stroke: var(--hf-border-2); stroke-width: 1.4; }
+    .hf-mn--hot { fill: var(--hf-accent-faint); stroke: var(--hf-accent); }
+    .hf-mn--weak { fill: rgba(251,191,36,0.1); stroke: var(--hf-amber); }
+    .hf-ml {
+      fill: none;
+      stroke: var(--hf-border-2);
+      stroke-width: 1.4;
+      stroke-linecap: round;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+    .hf-ml--hot { stroke: var(--hf-accent); stroke-width: 2; }
+    .hf-ml--weak { stroke: var(--hf-amber); stroke-width: 1.5; }
+    .hf-motif-wrap.hf-visible .hf-ml {
+      animation: hf-motif-draw 1.1s var(--ease) forwards;
+    }
+    .hf-motif-wrap.hf-visible .hf-ml:nth-child(1) { animation-delay: 0.000s; }
+    .hf-motif-wrap.hf-visible .hf-ml:nth-child(2) { animation-delay: 0.090s; }
+    .hf-motif-wrap.hf-visible .hf-ml:nth-child(3) { animation-delay: 0.200s; }
+    .hf-motif-wrap.hf-visible .hf-ml:nth-child(4) { animation-delay: 0.290s; }
+    .hf-motif-wrap.hf-visible .hf-ml:nth-child(5) { animation-delay: 0.360s; }
+    .hf-motif-wrap.hf-visible .hf-ml:nth-child(6) { animation-delay: 0.420s; }
+    @keyframes hf-motif-draw { to { stroke-dashoffset: 0; } }
+    @keyframes hf-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+
+    /* ── Terminal card ──────────────────────────────────────────────────── */
+    .hf-terminal {
+      background: var(--hf-bg-2);
+      border: 1px solid var(--hf-border);
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.55;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .hf-terminal__bar {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.7rem 1rem; border-bottom: 1px solid var(--hf-border);
+      background: var(--hf-surface);
+    }
+    .hf-terminal__dot { width: 11px; height: 11px; border-radius: 50%; }
+    .hf-terminal__dot--r { background: #ff5f57; }
+    .hf-terminal__dot--y { background: #ffbd2e; }
+    .hf-terminal__dot--g { background: #28c840; }
+    .hf-terminal__title {
+      flex:1; text-align: center; font-size: 0.72rem;
+      color: var(--hf-dim); letter-spacing: 0.02em;
+    }
+    .hf-terminal__body { padding: 1rem 1.1rem; }
+    .hf-terminal__line {
+      display: flex; gap: 0.7rem; padding: 0.12rem 0; align-items: baseline;
+      animation: hf-fade-up 0.35s ease both;
+    }
+    .hf-terminal__line--cmd { margin-bottom: 0.6rem; }
+    .hf-terminal__prompt { color: var(--hf-accent); font-weight: 700; user-select: none; flex-shrink: 0; }
+    .hf-terminal__cmd-text { color: var(--hf-text); }
+    .hf-terminal__key { color: var(--hf-dim); min-width: 4.8rem; flex-shrink: 0; font-size: 0.78rem; }
+    .hf-terminal__val { color: var(--hf-muted); font-size: 0.78rem; }
+    .hf-terminal__val--on { color: var(--hf-green); }
+    .hf-terminal__val--accent { color: var(--hf-accent); }
+    .hf-terminal__val--amber { color: var(--hf-amber); }
+    .hf-terminal__val--muted { color: var(--hf-dim); font-style: italic; }
+    .hf-terminal__status {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--hf-green); margin-left: auto;
+      animation: hf-pulse 2.4s ease-in-out infinite; flex-shrink: 0;
+    }
+    .hf-terminal__cursor {
+      display: inline-block; width: 7px; height: 0.85em;
+      background: var(--hf-accent); border-radius: 1px;
+      animation: hf-cursor-blink 1.1s step-end infinite; opacity: 0.85;
+      vertical-align: text-bottom; margin-left: 0.1em;
+    }
+    .hf-terminal__divider { border: none; border-top: 1px solid var(--hf-border); margin: 0.5rem 0; }
+    @keyframes hf-cursor-blink { 0%,100%{opacity:0.85} 50%{opacity:0} }
+    @keyframes hf-fade-up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+    .hf-terminal__line:nth-child(1){animation-delay:0s}
+    .hf-terminal__line:nth-child(2){animation-delay:0.06s}
+    .hf-terminal__line:nth-child(3){animation-delay:0.12s}
+    .hf-terminal__line:nth-child(4){animation-delay:0.18s}
+    .hf-terminal__line:nth-child(5){animation-delay:0.24s}
+    .hf-terminal__line:nth-child(6){animation-delay:0.30s}
+    .hf-terminal__line:nth-child(7){animation-delay:0.36s}
+    .hf-terminal__line:nth-child(8){animation-delay:0.42s}
+    .hf-terminal__line:nth-child(9){animation-delay:0.48s}
+    .hf-terminal__line:nth-child(10){animation-delay:0.54s}
+
+    /* ── Install section ────────────────────────────────────────────────── */
+    .hf-install {
+      margin: 4.5rem 0;
+      padding-top: 4.5rem;
+      border-top: 1px solid var(--hf-border);
+    }
+    .hf-install h2 {
+      font-size: 1.6rem; font-weight: 600; letter-spacing: -0.032em;
+      margin: 0 0 1.25rem; color: var(--hf-text);
+    }
+    pre.hf-code {
+      background: var(--hf-surface);
+      border: 1px solid var(--hf-border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--hf-text);
+      overflow-x: auto;
+      margin: 0 0 0.75rem;
+    }
+    pre.hf-code .comment { color: var(--hf-muted); }
+    pre.hf-code .cmd { color: var(--hf-accent); }
+
+    /* ── Editorial sections ─────────────────────────────────────────────── */
+    .hf-ed-section {
+      padding: 5.5rem 0;
+      border-top: 1px solid var(--hf-border);
+    }
+    .hf-ed-section--tint {
+      background: var(--hf-surface);
+      border-radius: 16px;
+      padding-left: 3rem;
+      padding-right: 3rem;
+      margin-bottom: 1rem;
+      border-top: none;
+    }
+    .hf-ed-heading {
+      font-family: var(--font-editorial);
+      font-size: clamp(2rem, 2.4vw, 3rem);
+      font-weight: 600;
+      letter-spacing: -0.036em;
+      line-height: 1.08;
+      margin: 0 0 0.8rem;
+      color: var(--hf-text);
+    }
+    .hf-ed-lead {
+      color: var(--hf-muted);
+      font-size: 1rem;
+      max-width: 56ch;
+      margin: 0 0 3.5rem;
+      line-height: 1.7;
+    }
+
+    /* ── Workflow ───────────────────────────────────────────────────────── */
+    .hf-workflow {
+      list-style: none;
+      margin: 0; padding: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 660px) { .hf-workflow { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 380px) { .hf-workflow { grid-template-columns: 1fr; } }
+    .hf-workflow__step {
+      border-top: 2px solid var(--hf-border-2);
+      padding-top: 1.1rem;
+      position: relative;
+    }
+    .hf-workflow__step:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      top: -0.3rem;
+      right: -1rem;
+      color: var(--hf-dim);
+      font-size: 0.9rem;
+    }
+    @media (max-width: 660px) {
+      .hf-workflow__step:not(:last-child)::after { display: none; }
+    }
+    .hf-workflow__n {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--hf-accent);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.5rem;
+    }
+    .hf-workflow__cmd {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--hf-accent);
+      background: var(--hf-accent-faint);
+      border: 1px solid var(--hf-accent-glow);
+      border-radius: 4px;
+      padding: 0.12em 0.5em;
+      margin-bottom: 0.55rem;
+    }
+    .hf-workflow__title {
+      font-family: var(--font-editorial);
+      font-size: 1rem; font-weight: 600; color: var(--hf-text); margin: 0 0 0.35rem;
+    }
+    .hf-workflow__desc {
+      font-size: 0.84rem; color: var(--hf-muted); margin: 0; line-height: 1.55;
+    }
+
+    /* ── Feature pairs ──────────────────────────────────────────────────── */
+    .hf-feature-pairs { display: grid; gap: 5rem; margin-top: 2.5rem; }
+    .hf-fp {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 4.5rem;
+      align-items: start;
+      padding-top: 3.5rem;
+      border-top: 1px solid var(--hf-border);
+    }
+    .hf-fp:first-child { border-top: none; padding-top: 0; }
+    @media (max-width: 660px) { .hf-fp { grid-template-columns: 1fr; gap: 1.5rem; } }
+    .hf-fp--flip { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+    .hf-fp--flip .hf-fp__lead { order: 2; }
+    .hf-fp--flip .hf-fp__demo { order: 1; }
+    @media (max-width: 660px) {
+      .hf-fp--flip .hf-fp__lead,
+      .hf-fp--flip .hf-fp__demo { order: 0; }
+    }
+    .hf-fp__num {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.68rem; font-weight: 600;
+      color: var(--hf-accent);
+      letter-spacing: 0.14em; text-transform: uppercase;
+      margin-bottom: 0.55rem;
+    }
+    .hf-fp__title {
+      font-family: var(--font-editorial);
+      font-size: clamp(1.2rem, 1.5vw, 1.65rem);
+      font-weight: 600; letter-spacing: -0.026em;
+      color: var(--hf-text); margin: 0 0 0.8rem;
+    }
+    .hf-fp__desc { font-size: 0.96rem; color: var(--hf-muted); line-height: 1.75; margin: 0; }
+
+    /* Mini demo terminals */
+    .hf-demo {
+      background: var(--hf-bg-2);
+      border: 1px solid var(--hf-border);
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.65;
+    }
+    .hf-demo__bar {
+      display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.55rem 0.9rem;
+      border-bottom: 1px solid var(--hf-border);
+      background: var(--hf-surface);
+    }
+    .hf-demo__dot { width: 9px; height: 9px; border-radius: 50%; }
+    .hf-demo__dot--r { background: #ff5f57; }
+    .hf-demo__dot--y { background: #ffbd2e; }
+    .hf-demo__dot--g { background: #28c840; }
+    .hf-demo__body { padding: 0.9rem 1rem; }
+    .hf-demo__line { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.08rem 0; }
+    .hf-demo__line--cmd { margin-bottom: 0.4rem; }
+    .hf-demo__p { color: var(--hf-accent); font-weight: 700; flex-shrink: 0; user-select: none; }
+    .hf-demo__c { color: var(--hf-text); }
+    .hf-demo__o { color: var(--hf-muted); padding-left: 1.4rem; }
+    .hf-demo__o--on { color: var(--hf-green); }
+    .hf-demo__o--accent { color: var(--hf-accent); }
+    .hf-demo__o--amber { color: var(--hf-amber); }
+    .hf-demo__o--dim { color: var(--hf-dim); font-style: italic; }
+    .hf-demo__hr { border: none; border-top: 1px solid var(--hf-border); margin: 0.45rem 0; }
+
+    /* ── Privacy badges ─────────────────────────────────────────────────── */
+    .hf-privacy-strip {
+      display: flex; flex-wrap: wrap; gap: 0.6rem 1.1rem;
+      padding: 1.1rem 1.4rem;
+      background: var(--hf-surface);
+      border: 1px solid var(--hf-border);
+      border-radius: 10px;
+      margin: 2.5rem 0;
+    }
+    .hf-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.78rem; font-weight: 500;
+      color: var(--hf-muted);
+      padding: 0.25rem 0.65rem;
+      background: var(--hf-bg);
+      border: 1px solid var(--hf-border);
+      border-radius: 100px;
+    }
+    .hf-badge::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--hf-accent); opacity: 0.7; flex-shrink: 0;
+    }
+
+    /* ── CTA strip ──────────────────────────────────────────────────────── */
+    .hf-cta-strip {
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: space-between; gap: 1.5rem;
+      padding: 3rem 3.5rem;
+      background: var(--hf-surface);
+      border: 1px solid var(--hf-border);
+      border-radius: 16px;
+      margin: 5rem 0;
+    }
+    .hf-cta-text { font-size: 1.15rem; font-weight: 600; color: var(--hf-text); margin: 0; letter-spacing: -0.025em; }
+    .hf-cta-sub { font-size: 0.9rem; color: var(--hf-muted); margin: 0.3rem 0 0; }
+
+    /* ── Docs grid ──────────────────────────────────────────────────────── */
+    .hf-docs-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.65rem; margin: 1.5rem 0;
+    }
+    @media (max-width: 720px) { .hf-docs-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .hf-docs-grid { grid-template-columns: 1fr; } }
+    .hf-docs-card {
+      display: block; padding: 1.3rem 1.4rem;
+      background: var(--hf-surface);
+      border: 1px solid var(--hf-border);
+      border-radius: 10px; text-decoration: none !important;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .hf-docs-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--hf-border-2);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+    .hf-docs-card__title {
+      font-size: 0.86rem; font-weight: 600;
+      color: var(--hf-accent); margin: 0 0 0.25rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .hf-docs-card__title::after {
+      content: '→'; font-size: 0.8em; opacity: 0.6;
+      transition: transform 0.15s;
+    }
+    .hf-docs-card:hover .hf-docs-card__title::after { transform: translateX(3px); }
+    .hf-docs-card__desc { font-size: 0.78rem; color: var(--hf-muted); line-height: 1.45; margin: 0; }
+
+    /* ── Backend / model-runner marquee ────────────────────────────────── */
+    .hf-backends {
+      padding: 4rem 0 4.5rem;
+      border-top: 1px solid var(--hf-border);
+    }
+    .hf-backends__label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--hf-dim);
+      text-align: center;
+      margin: 0 0 2.5rem;
+    }
+    .hf-marquee-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+    .hf-marquee-wrap::before,
+    .hf-marquee-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 9rem;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .hf-marquee-wrap::before {
+      left: 0;
+      background: linear-gradient(to right, var(--hf-bg), transparent);
+    }
+    .hf-marquee-wrap::after {
+      right: 0;
+      background: linear-gradient(to left, var(--hf-bg), transparent);
+    }
+    .hf-marquee-track {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      width: max-content;
+      animation: hf-marquee 62s linear infinite;
+    }
+    .hf-marquee-track:hover { animation-play-state: paused; }
+    @keyframes hf-marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .hf-brand-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 1.75rem 2.5rem;
+      flex-shrink: 0;
+      color: var(--hf-dim);
+      transition: color 0.25s, background 0.25s;
+      cursor: default;
+      border-right: 1px solid var(--hf-border);
+      min-width: 120px;
+    }
+    .hf-brand-item:first-child { border-left: 1px solid var(--hf-border); }
+    .hf-brand-item:hover { color: var(--hf-muted); background: var(--hf-surface); }
+    .hf-brand-item__logo {
+      height: 48px;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
+      display: block;
+      opacity: 0.55;
+      transition: opacity 0.25s;
+    }
+    .hf-brand-item:hover .hf-brand-item__logo { opacity: 1; }
+    /* Ollama logo is black paths — invert for dark background */
+    .hf-brand-item__logo--invert {
+      filter: invert(1) brightness(0.9);
+    }
+    /* Wide text-style logos look better at a taller fixed height */
+    .hf-brand-item__logo--wide {
+      height: 36px;
+      max-width: 220px;
+    }
+    /* Icon-only logos get a bit more height */
+    .hf-brand-item__logo--icon {
+      height: 54px;
+      max-width: 80px;
+    }
+    .hf-brand-item__name {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--hf-dim);
+      transition: color 0.25s;
+    }
+    .hf-brand-item:hover .hf-brand-item__name { color: var(--hf-muted); }
+
+    /* ── Section headings ───────────────────────────────────────────────── */
+    h2.hf-section-h2 {
+      font-size: 1.5rem; font-weight: 600;
+      letter-spacing: -0.028em; line-height: 1.1;
+      margin: 3rem 0 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--hf-border);
+      color: var(--hf-text);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ─── FIXED TOP NAV ──────────────────────────────────────────────────── -->
+  <nav class="hf-nav" id="hf-nav">
+    <div class="hf-nav__inner">
+      <a href="#" class="hf-nav__logo">
+        <img src="assets/bn/banner.svg" alt="handoff" />
+      </a>
+      <div class="hf-nav__links">
+        <a href="#hf-install">Install</a>
+        <a href="#hf-workflow">Workflow</a>
+        <a href="#hf-capabilities">Capabilities</a>
+        <a href="#hf-docs">Docs</a>
+      </div>
+      <a href="#" class="hf-btn hf-btn--primary hf-btn--sm">Get started</a>
+    </div>
+  </nav>
+
+  <!-- ─── HERO ───────────────────────────────────────────────────────────── -->
+  <section class="hf-hero">
+
+    <!-- Full-width banner wordmark — inlined so CSS can animate letters -->
+    <div class="hf-hero__banner-wrap">
+      <svg class="hf-banner-svg" viewBox="0 0 1920 600"
+           xmlns="http://www.w3.org/2000/svg"
+           xmlns:xlink="http://www.w3.org/1999/xlink"
+           aria-hidden="true">
+        <defs>
+          <linearGradient id="hf-banner-grad"
+            x1="38.292217" y1="255.99998" x2="473.70779" y2="255.99998"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="matrix(1.8676973,0,0,1.8676973,481.86898,-178.13034)">
+            <stop offset="0.09173355" style="stop-color:#1ae41f;stop-opacity:1;"/>
+            <stop offset="1"          style="stop-color:#ffffff;stop-opacity:0;"/>
+          </linearGradient>
+        </defs>
+        <rect width="1920" height="600" x="0" y="0" fill="#1a1a1a"/>
+        <text class="hf-banner-text"
+              style="font-size:249.026px;font-family:Helvetica,Arial,sans-serif;fill:url(#hf-banner-grad);fill-opacity:1;"
+              x="537.33673" y="388.21698">h&gt;ndoff</text>
+      </svg>
+    </div>
+
+    <!-- Headline + CTAs below banner -->
+    <div class="hf-hero__content">
+
+      <div class="hf-hero__lead">
+        <p class="hf-eyebrow hf-reveal">Local-first research companion</p>
+        <h1 class="hf-hero__title hf-reveal">Research<br>you can prove.</h1>
+        <p class="hf-hero__sub hf-reveal">
+          Read papers, run experiments, write LaTeX — all on your own machine.
+          Every claim traced to its evidence. Nothing leaves unless you say so.
+        </p>
+        <div class="hf-hero-meta hf-reveal">
+          <span><span class="hf-meta-dot"></span>Ollama · llama.cpp · MLX · vLLM</span>
+          <span>TypeScript TUI</span>
+          <span>ELv2 license</span>
+        </div>
+        <div class="hf-hero__actions hf-reveal">
+          <a class="hf-btn hf-btn--primary" href="#">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Get started
+          </a>
+          <a class="hf-btn hf-btn--outline" href="#">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1.5-4-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1-.3-3.5 1.3a12 12 0 0 0-6.3 0C6.5 2.8 5.5 3.1 5.5 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+
+      <!-- Provenance DAG motif — right column in hero -->
+      <figure class="hf-motif-wrap hf-reveal"
+              aria-label="Diagram: a research session branches into claims, each connecting to evidence. Green paths are verified; amber needs a citation.">
+        <svg class="hf-motif-svg" viewBox="0 0 280 310" role="img">
+          <g>
+            <path class="hf-ml hf-ml--hot"  pathLength="1" d="M140 53  C140 96,  85 96,  85 138"/>
+            <path class="hf-ml hf-ml--weak" pathLength="1" d="M140 53  C140 96,  195 96, 195 138"/>
+            <path class="hf-ml hf-ml--hot"  pathLength="1" d="M85 157  C85 203, 44 203, 44 243"/>
+            <path class="hf-ml hf-ml--hot"  pathLength="1" d="M85 157  C85 203, 130 203, 130 243"/>
+            <path class="hf-ml"             pathLength="1" d="M195 157 C195 203, 130 203, 130 243"/>
+            <path class="hf-ml hf-ml--weak" pathLength="1" d="M195 157 C195 212, 209 212, 209 243"/>
+          </g>
+          <rect class="hf-mn hf-mn--hot"  x="131" y="35"  width="18" height="18" rx="4"/>
+          <rect class="hf-mn hf-mn--hot"  x="76"  y="138" width="18" height="18" rx="3"/>
+          <rect class="hf-mn hf-mn--weak" x="186" y="138" width="18" height="18" rx="3"/>
+          <circle class="hf-mn hf-mn--hot" cx="44"  cy="252" r="9"/>
+          <circle class="hf-mn hf-mn--hot" cx="130" cy="252" r="9"/>
+          <circle class="hf-mn"            cx="209" cy="252" r="9"/>
+        </svg>
+        <div class="hf-dag-legend">
+          <span>Session</span>
+          <span>Claims</span>
+          <span>Evidence</span>
+        </div>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ─── MAIN CONTENT ───────────────────────────────────────────────────── -->
+  <main class="hf-main">
+    <div class="hf-container">
+
+      <!-- ─── TERMINAL CARD ───────────────────────────────────────────── -->
+      <div class="hf-install hf-reveal">
+        <div class="hf-terminal" style="max-width:580px;">
+          <div class="hf-terminal__bar">
+            <span class="hf-terminal__dot hf-terminal__dot--r"></span>
+            <span class="hf-terminal__dot hf-terminal__dot--y"></span>
+            <span class="hf-terminal__dot hf-terminal__dot--g"></span>
+            <span class="hf-terminal__title">handoff</span>
+          </div>
+          <div class="hf-terminal__body">
+            <div class="hf-terminal__line hf-terminal__line--cmd">
+              <span class="hf-terminal__prompt">h&gt;</span>
+              <span class="hf-terminal__cmd-text">/research attention is all you need</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__val hf-terminal__val--muted"> searching OpenAlex + arXiv…</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__val hf-terminal__val--on"> ✓ Vaswani et al. 2017 — direct match</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__val hf-terminal__val--on"> ✓ 847 citing papers found</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__val hf-terminal__val--accent"> claim: supported · added to ledger</span>
+            </div>
+            <hr class="hf-terminal__divider" />
+            <div class="hf-terminal__line hf-terminal__line--cmd">
+              <span class="hf-terminal__prompt">h&gt;</span>
+              <span class="hf-terminal__cmd-text">/audit-paper</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__key">supported</span>
+              <span class="hf-terminal__val hf-terminal__val--on">12 claims</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__key">weak</span>
+              <span class="hf-terminal__val hf-terminal__val--amber">2 need citations</span>
+            </div>
+            <div class="hf-terminal__line">
+              <span class="hf-terminal__key">model</span>
+              <span class="hf-terminal__val">qwen3:8b · local</span>
+              <span class="hf-terminal__status"></span>
+            </div>
+            <hr class="hf-terminal__divider" />
+            <div class="hf-terminal__line hf-terminal__line--cmd">
+              <span class="hf-terminal__prompt">h&gt;</span>
+              <span class="hf-terminal__cursor"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── INSTALL ──────────────────────────────────────────────────── -->
+      <div id="hf-install" class="hf-install hf-reveal" style="margin-top:0;">
+        <h2>Install</h2>
+        <pre class="hf-code"><span class="comment"># macOS / Linux</span>
+<span class="cmd">curl -fsSL https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.sh | bash</span>
+
+<span class="comment"># Windows (PowerShell)</span>
+<span class="cmd">irm https://raw.githubusercontent.com/handoff-org/handoff/master/installers/install.ps1 | iex</span></pre>
+        <p style="font-size:0.88rem;color:var(--hf-muted);margin:0.5rem 0 0;">Then run <code>handoff</code> and follow the setup wizard.</p>
+      </div>
+
+      <!-- ─── WORKFLOW ─────────────────────────────────────────────────── -->
+      <div id="hf-workflow" class="hf-ed-section hf-ed-section--tint" style="margin-top:2.5rem;">
+        <p class="hf-eyebrow hf-reveal">Workflow</p>
+        <h2 class="hf-ed-heading hf-reveal">From blank terminal to defended paper</h2>
+        <p class="hf-ed-lead hf-reveal">Four commands cover the full research arc. Everything in between is handled by handoff — locally, reproducibly, with every step on record.</p>
+        <ol class="hf-workflow">
+          <li class="hf-workflow__step hf-reveal">
+            <span class="hf-workflow__n">01</span>
+            <span class="hf-workflow__cmd">/project new</span>
+            <p class="hf-workflow__title">Scaffold</p>
+            <p class="hf-workflow__desc">Create a private workspace with a Zotero library, experiment log, and LaTeX template — all local.</p>
+          </li>
+          <li class="hf-workflow__step hf-reveal">
+            <span class="hf-workflow__n">02</span>
+            <span class="hf-workflow__cmd">/research</span>
+            <p class="hf-workflow__title">Verify</p>
+            <p class="hf-workflow__desc">Fact-check claims against OpenAlex and arXiv. Confirmed citations go straight into the ledger.</p>
+          </li>
+          <li class="hf-workflow__step hf-reveal">
+            <span class="hf-workflow__n">03</span>
+            <span class="hf-workflow__cmd">/audit-paper</span>
+            <p class="hf-workflow__title">Audit</p>
+            <p class="hf-workflow__desc">Catalog every claim. Flag the ones without evidence before a reviewer does.</p>
+          </li>
+          <li class="hf-workflow__step hf-reveal">
+            <span class="hf-workflow__n">04</span>
+            <span class="hf-workflow__cmd">/handoff</span>
+            <p class="hf-workflow__title">Transfer</p>
+            <p class="hf-workflow__desc">Generate a grounded summary packet — claims, evidence, capsules — for collaborators or future self.</p>
+          </li>
+        </ol>
+      </div>
+
+      <!-- ─── CAPABILITIES ──────────────────────────────────────────────── -->
+      <div id="hf-capabilities" class="hf-ed-section">
+        <p class="hf-eyebrow hf-reveal">Capabilities</p>
+        <h2 class="hf-ed-heading hf-reveal">Everything the research loop needs</h2>
+
+        <div class="hf-feature-pairs">
+
+          <div class="hf-fp hf-reveal">
+            <div class="hf-fp__lead">
+              <span class="hf-fp__num">Literature</span>
+              <p class="hf-fp__title">Read and fact-check against live databases</p>
+              <p class="hf-fp__desc"><code>/research &lt;claim&gt;</code> searches OpenAlex and arXiv in real time, finds matching papers, and marks the claim supported or weak in the ledger. Annotate PDFs with <code>/zotero-prep</code>. Read figures and PDF pages on multimodal models with <code>view_image</code>.</p>
+            </div>
+            <div class="hf-fp__demo hf-demo">
+              <div class="hf-demo__bar">
+                <span class="hf-demo__dot hf-demo__dot--r"></span>
+                <span class="hf-demo__dot hf-demo__dot--y"></span>
+                <span class="hf-demo__dot hf-demo__dot--g"></span>
+              </div>
+              <div class="hf-demo__body">
+                <div class="hf-demo__line hf-demo__line--cmd">
+                  <span class="hf-demo__p">h&gt;</span>
+                  <span class="hf-demo__c">/research attention is all you need</span>
+                </div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--dim"> searching OpenAlex + arXiv…</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--on"> ✓ Vaswani et al. 2017 — direct match</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--on"> ✓ 847 citing papers found</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--accent"> claim: supported · added to ledger</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hf-fp hf-fp--flip hf-reveal">
+            <div class="hf-fp__lead">
+              <span class="hf-fp__num">Experiments</span>
+              <p class="hf-fp__title">Run Python in isolated, reproducible capsules</p>
+              <p class="hf-fp__desc">Each experiment gets its own <code>uv</code> project — dependencies locked, stdout captured, a <code>repro.sh</code> generated automatically. Re-run any past experiment in one command, on any machine.</p>
+            </div>
+            <div class="hf-fp__demo hf-demo">
+              <div class="hf-demo__bar">
+                <span class="hf-demo__dot hf-demo__dot--r"></span>
+                <span class="hf-demo__dot hf-demo__dot--y"></span>
+                <span class="hf-demo__dot hf-demo__dot--g"></span>
+              </div>
+              <div class="hf-demo__body">
+                <div class="hf-demo__line hf-demo__line--cmd">
+                  <span class="hf-demo__p">h&gt;</span>
+                  <span class="hf-demo__c">/run train.py --epochs 10</span>
+                </div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--dim"> creating isolated uv env…</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--on"> ✓ epoch 10/10 · loss 0.042</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--accent"> capsule saved · repro.sh written</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hf-fp hf-reveal">
+            <div class="hf-fp__lead">
+              <span class="hf-fp__num">Writing</span>
+              <p class="hf-fp__title">Draft in LaTeX, sync two-way with Overleaf</p>
+              <p class="hf-fp__desc">Start from ACL, NeurIPS, or a blank template. Edit in-place with a diff box. Two-way Overleaf sync lets you work from the terminal or the browser — always in sync.</p>
+            </div>
+            <div class="hf-fp__demo hf-demo">
+              <div class="hf-demo__bar">
+                <span class="hf-demo__dot hf-demo__dot--r"></span>
+                <span class="hf-demo__dot hf-demo__dot--y"></span>
+                <span class="hf-demo__dot hf-demo__dot--g"></span>
+              </div>
+              <div class="hf-demo__body">
+                <div class="hf-demo__line hf-demo__line--cmd">
+                  <span class="hf-demo__p">h&gt;</span>
+                  <span class="hf-demo__c">/paper new --template acl</span>
+                </div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--on"> ✓ paper.tex scaffolded</span></div>
+                <hr class="hf-demo__hr"/>
+                <div class="hf-demo__line hf-demo__line--cmd">
+                  <span class="hf-demo__p">h&gt;</span>
+                  <span class="hf-demo__c">/overleaf sync</span>
+                </div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--on"> ✓ pushed 3 changes · in sync</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hf-fp hf-fp--flip hf-reveal">
+            <div class="hf-fp__lead">
+              <span class="hf-fp__num">Provenance</span>
+              <p class="hf-fp__title">Every claim traced, every number reproducible</p>
+              <p class="hf-fp__desc">The claim ledger records what you asserted and what supports it. <code>/audit-paper</code> sweeps your draft and flags anything without evidence. <code>/handoff</code> bundles the whole record into a portable packet.</p>
+            </div>
+            <div class="hf-fp__demo hf-demo">
+              <div class="hf-demo__bar">
+                <span class="hf-demo__dot hf-demo__dot--r"></span>
+                <span class="hf-demo__dot hf-demo__dot--y"></span>
+                <span class="hf-demo__dot hf-demo__dot--g"></span>
+              </div>
+              <div class="hf-demo__body">
+                <div class="hf-demo__line hf-demo__line--cmd">
+                  <span class="hf-demo__p">h&gt;</span>
+                  <span class="hf-demo__c">/audit-paper</span>
+                </div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--on"> supported  12 claims</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o hf-demo__o--amber"> weak       2 need citations</span></div>
+                <div class="hf-demo__line"><span class="hf-demo__o"> model      qwen3:8b · local</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── BACKEND MARQUEE ──────────────────────────────────────────── -->
+      <div class="hf-backends">
+        <p class="hf-backends__label">Runs on your hardware — no cloud required</p>
+        <div class="hf-marquee-wrap">
+          <div class="hf-marquee-track" id="hf-marquee-track">
+
+            <!-- JS duplicates the set at runtime for seamless loop -->
+
+            <!-- Ollama -->
+            <div class="hf-brand-item">
+              <img class="hf-brand-item__logo hf-brand-item__logo--icon hf-brand-item__logo--invert"
+                   src="assets/logos/ollama.svg" alt="Ollama" width="17" height="25">
+              <span class="hf-brand-item__name">Ollama</span>
+            </div>
+
+            <!-- Hugging Face -->
+            <div class="hf-brand-item">
+              <img class="hf-brand-item__logo hf-brand-item__logo--icon"
+                   src="assets/logos/huggingface.svg" alt="Hugging Face" width="95" height="88">
+              <span class="hf-brand-item__name">Hugging Face</span>
+            </div>
+
+            <!-- Apple MLX -->
+            <div class="hf-brand-item">
+              <img class="hf-brand-item__logo hf-brand-item__logo--wide"
+                   src="assets/logos/mlx.svg" alt="Apple MLX" width="433" height="140">
+              <span class="hf-brand-item__name">Apple MLX</span>
+            </div>
+
+            <!-- llama.cpp -->
+            <div class="hf-brand-item">
+              <img class="hf-brand-item__logo hf-brand-item__logo--wide"
+                   src="assets/logos/llamacpp.svg" alt="llama.cpp" width="2793" height="600">
+              <span class="hf-brand-item__name">llama.cpp</span>
+            </div>
+
+            <!-- vLLM -->
+            <div class="hf-brand-item">
+              <img class="hf-brand-item__logo hf-brand-item__logo--wide"
+                   src="assets/logos/vllm.png" alt="vLLM">
+              <span class="hf-brand-item__name">vLLM</span>
+            </div>
+
+          </div><!-- /track -->
+        </div><!-- /wrap -->
+      </div><!-- /backends -->
+
+      <!-- ─── PRIVACY BADGES ────────────────────────────────────────────── -->
+      <div class="hf-privacy-strip hf-reveal">
+        <span class="hf-badge">No cloud required</span>
+        <span class="hf-badge">Data stays on your machine</span>
+        <span class="hf-badge">Ollama · llama.cpp · MLX · vLLM</span>
+        <span class="hf-badge">HuggingFace opt-in only</span>
+        <span class="hf-badge">Source available · ELv2</span>
+      </div>
+
+      <!-- ─── CTA ───────────────────────────────────────────────────────── -->
+      <div class="hf-cta-strip hf-reveal">
+        <div>
+          <p class="hf-cta-text">Ready to get started?</p>
+          <p class="hf-cta-sub">Install takes under a minute. First research session in five.</p>
+        </div>
+        <a href="#" class="hf-btn hf-btn--primary">Get started →</a>
+      </div>
+
+      <!-- ─── DOCS GRID ─────────────────────────────────────────────────── -->
+      <h2 id="hf-docs" class="hf-section-h2">Docs</h2>
+      <div class="hf-docs-grid">
+        <a href="https://handoff-org.github.io/handoff/getting-started" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Getting started</p><p class="hf-docs-card__desc">Install, first launch, first project.</p></a>
+        <a href="https://handoff-org.github.io/handoff/research-workflow" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Research workflow</p><p class="hf-docs-card__desc">Literature → experiments → results → paper.</p></a>
+        <a href="https://handoff-org.github.io/handoff/commands" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Commands</p><p class="hf-docs-card__desc">Every slash command and key binding.</p></a>
+        <a href="https://handoff-org.github.io/handoff/claims-and-handoff" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Claims &amp; handoff</p><p class="hf-docs-card__desc">Claim ledger, audit, transfer packets.</p></a>
+        <a href="https://handoff-org.github.io/handoff/overleaf" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Overleaf sync</p><p class="hf-docs-card__desc">Two-way LaTeX sync, tokens, troubleshooting.</p></a>
+        <a href="https://handoff-org.github.io/handoff/integrations" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Zotero &amp; OpenReview</p><p class="hf-docs-card__desc">Annotate papers, fetch and answer reviews.</p></a>
+        <a href="https://handoff-org.github.io/handoff/configuration" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Configuration</p><p class="hf-docs-card__desc">Config file, env vars, backends, themes.</p></a>
+        <a href="https://handoff-org.github.io/handoff/models" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Choosing a model</p><p class="hf-docs-card__desc">Fast local models, presets, doctor &amp; benchmark.</p></a>
+        <a href="https://handoff-org.github.io/handoff/skills" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Skills</p><p class="hf-docs-card__desc">Save and replay your own workflows.</p></a>
+        <a href="https://handoff-org.github.io/handoff/troubleshooting" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Troubleshooting</p><p class="hf-docs-card__desc">Fixes for the common snags.</p></a>
+        <a href="https://handoff-org.github.io/handoff/architecture" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Architecture</p><p class="hf-docs-card__desc">Contributor's tour of the codebase.</p></a>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      var nav = document.getElementById('hf-nav');
+
+      // Nav: add frosted-glass backdrop on scroll
+      function onScroll() {
+        if (window.scrollY > 12) {
+          nav.classList.add('hf-nav--scrolled');
+        } else {
+          nav.classList.remove('hf-nav--scrolled');
+        }
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      // Scroll-reveal via IntersectionObserver
+      if (!('IntersectionObserver' in window)) {
+        document.querySelectorAll('.hf-reveal, .hf-motif-wrap').forEach(function (el) {
+          el.classList.add('hf-visible');
+        });
+        return;
+      }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('hf-visible');
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll('.hf-reveal, .hf-motif-wrap').forEach(function (el) {
+        obs.observe(el);
+      });
+
+      // Stagger workflow steps and feature pairs
+      document.querySelectorAll('.hf-workflow__step').forEach(function (el, i) {
+        el.style.transitionDelay = (i * 0.07) + 's';
+      });
+      document.querySelectorAll('.hf-fp').forEach(function (el, i) {
+        el.style.transitionDelay = (i * 0.05) + 's';
+      });
+
+      // ── Docs cards: prevent dead "#" scroll-to-top ──────────────────────
+      // ── Carousel: duplicate track for seamless loop ──────────────────────
+      var track = document.getElementById('hf-marquee-track');
+      if (track) {
+        var clone = track.innerHTML;
+        track.innerHTML += clone;
+      }
+
+      // ── Banner letter hover glow ─────────────────────────────────────────
+      // Split the banner text into individual <tspan> elements so each letter
+      // can receive its own glow on hover. Uses getCharNumAtPosition() for
+      // reliable hit-detection regardless of font metrics.
+      var bannerText = document.querySelector('.hf-banner-text');
+      if (bannerText) {
+        var raw = bannerText.textContent;
+        bannerText.textContent = '';
+        var tspans = raw.split('').map(function (ch) {
+          var ts = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          ts.setAttribute('class', 'hf-letter');
+          ts.textContent = ch;
+          bannerText.appendChild(ts);
+          return ts;
+        });
+
+        var bannerSVG = bannerText.closest('svg');
+        var litIdx = -1;
+
+        bannerSVG.addEventListener('mousemove', function (e) {
+          var pt = bannerSVG.createSVGPoint();
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          var svgPt = pt.matrixTransform(bannerSVG.getScreenCTM().inverse());
+          var idx = bannerText.getCharNumAtPosition(svgPt);
+          if (idx !== litIdx) {
+            bannerText.classList.add('hf-hovering');
+            tspans.forEach(function (ts, i) {
+              ts.classList.toggle('hf-letter--lit', i === idx);
+            });
+            litIdx = idx;
+          }
+        });
+
+        bannerSVG.addEventListener('mouseleave', function () {
+          bannerText.classList.remove('hf-hovering');
+          tspans.forEach(function (ts) { ts.classList.remove('hf-letter--lit'); });
+          litIdx = -1;
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

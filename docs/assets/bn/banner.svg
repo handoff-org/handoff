@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="1920"
+   height="600"
+   viewBox="0 0 1920 600"
+   version="1.1"
+   id="svg1"
+   inkscape:export-filename="banner600.png"
+   inkscape:export-xdpi="600"
+   inkscape:export-ydpi="600"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="banner.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="0.32871426"
+     inkscape:cx="1066.2756"
+     inkscape:cy="699.69583"
+     inkscape:window-width="1710"
+     inkscape:window-height="1045"
+     inkscape:window-x="0"
+     inkscape:window-y="34"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5"
+       id="linearGradient6"
+       x1="38.292217"
+       y1="255.99998"
+       x2="473.70779"
+       y2="255.99998"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.8676973,0,0,1.8676973,481.86898,-178.13034)" />
+    <linearGradient
+       id="linearGradient5"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#1ae41f;stop-opacity:1;"
+         offset="0.09173355"
+         id="stop5" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0;"
+         offset="1"
+         id="stop6" />
+    </linearGradient>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#1a1a1a;fill-opacity:1;stroke-width:2.09632"
+       id="rect5"
+       width="1920"
+       height="600"
+       x="0"
+       y="-7.233103e-14" />
+    <text
+       xml:space="preserve"
+       style="font-size:249.026px;writing-mode:lr-tb;direction:ltr;fill:url(#linearGradient6);fill-opacity:1;stroke-width:1.8677"
+       x="537.33673"
+       y="388.21698"
+       id="text1"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         x="537.33673"
+         y="388.21698"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:249.026px;font-family:Helvetica;-inkscape-font-specification:Helvetica;fill:url(#linearGradient6);fill-opacity:1;stroke-width:1.8677">h&gt;ndoff</tspan></text>
+  </g>
+</svg>
