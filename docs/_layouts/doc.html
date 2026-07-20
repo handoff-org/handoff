@@ -204,8 +204,8 @@
       border-radius: 4px; padding: 0.1em 0.42em;
       color: var(--hf-accent);
     }
-    /* Code blocks (Rouge) */
-    .hf-doc-prose .highlighter-rouge,
+    /* Code blocks (Rouge — block-level divs only, not inline code spans) */
+    .hf-doc-prose div.highlighter-rouge,
     .hf-doc-prose pre {
       position: relative;
       background: var(--hf-surface);
@@ -214,12 +214,12 @@
       margin: 1rem 0 1.6rem;
       overflow: hidden;
     }
-    .hf-doc-prose .highlighter-rouge .highlight,
+    .hf-doc-prose div.highlighter-rouge .highlight,
     .hf-doc-prose pre {
       overflow-x: auto;
       padding: 1rem 1.2rem;
     }
-    .hf-doc-prose .highlighter-rouge code,
+    .hf-doc-prose div.highlighter-rouge code,
     .hf-doc-prose pre code {
       background: none; border: none; padding: 0; border-radius: 0;
       font-size: 0.82rem; line-height: 1.65; color: var(--hf-text);
@@ -252,6 +252,23 @@
       white-space: nowrap;
     }
     .hf-doc-prose tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    /* Command definition lists */
+    .hf-doc-prose .hf-cmds { margin: 1.2rem 0 2rem; padding: 0; }
+    .hf-doc-prose .hf-cmds dt {
+      margin: 0; padding: 1.2rem 0 0.3rem;
+      border-top: 1px solid var(--hf-border);
+      font-family: var(--font-mono); font-size: 0.88rem;
+      color: var(--hf-accent); font-weight: 500;
+    }
+    .hf-doc-prose .hf-cmds dt:first-child { padding-top: 0; border-top: none; }
+    .hf-doc-prose .hf-cmds dt code {
+      font-size: inherit; color: inherit;
+      background: none; border: none; padding: 0;
+    }
+    .hf-doc-prose .hf-cmds dd {
+      margin: 0.35rem 0 0.5rem; padding: 0;
+      color: var(--hf-muted); font-size: 0.9rem; line-height: 1.7;
+    }
     /* Lists */
     .hf-doc-prose ul, .hf-doc-prose ol {
       padding-left: 1.5rem; margin: 0 0 1.1rem;
@@ -400,7 +417,7 @@
       var CHECK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
       var LANG_MAP = { sh:'shell', bash:'bash', zsh:'shell', shell:'shell', js:'js', javascript:'js', ts:'ts', typescript:'ts', json:'json', yaml:'yaml', yml:'yaml', toml:'toml', python:'python', py:'python', ruby:'ruby', rust:'rust', go:'go', java:'java', css:'css', scss:'scss', html:'html', sql:'sql', diff:'diff', latex:'latex', tex:'latex', text:null, plaintext:null };
 
-      document.querySelectorAll('.hf-doc-prose .highlighter-rouge').forEach(function (block) {
+      document.querySelectorAll('.hf-doc-prose div.highlighter-rouge').forEach(function (block) {
         block.style.position = 'relative';
 
         // Copy button
