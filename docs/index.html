@@ -360,7 +360,7 @@
       animation: hf-fade-up 0.35s ease both;
     }
     .hf-terminal__line--cmd { margin-bottom: 0.6rem; }
-    .hf-terminal__prompt { color: var(--hf-accent); font-weight: 700; user-select: none; flex-shrink: 0; }
+    .hf-terminal__prompt { color: var(--hf-accent); font-weight: 500; user-select: none; flex-shrink: 0; }
     .hf-terminal__cmd-text { color: var(--hf-text); }
     .hf-terminal__key { color: var(--hf-dim); min-width: 4.8rem; flex-shrink: 0; font-size: 0.78rem; }
     .hf-terminal__val { color: var(--hf-muted); font-size: 0.78rem; }
@@ -395,12 +395,12 @@
 
     /* ── Install section ────────────────────────────────────────────────── */
     .hf-install {
-      margin: 4.5rem 0;
-      padding-top: 4.5rem;
+      margin: 8rem 0;
+      padding-top: 7rem;
       border-top: 1px solid var(--hf-border);
     }
     .hf-install h2 {
-      font-size: 1.6rem; font-weight: 600; letter-spacing: -0.032em;
+      font-size: 1.6rem; font-weight: 500; letter-spacing: -0.032em;
       margin: 0 0 1.25rem; color: var(--hf-text);
     }
     pre.hf-code {
@@ -420,7 +420,7 @@
 
     /* ── Editorial sections ─────────────────────────────────────────────── */
     .hf-ed-section {
-      padding: 5.5rem 0;
+      padding: 9rem 0;
       border-top: 1px solid var(--hf-border);
     }
     .hf-ed-section--tint {
@@ -434,7 +434,7 @@
     .hf-ed-heading {
       font-family: var(--font-editorial);
       font-size: clamp(2rem, 2.4vw, 3rem);
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: -0.036em;
       line-height: 1.08;
       margin: 0 0 0.8rem;
@@ -496,14 +496,14 @@
     }
     .hf-workflow__title {
       font-family: var(--font-editorial);
-      font-size: 1rem; font-weight: 600; color: var(--hf-text); margin: 0 0 0.35rem;
+      font-size: 1rem; font-weight: 500; color: var(--hf-text); margin: 0 0 0.35rem;
     }
     .hf-workflow__desc {
       font-size: 0.84rem; color: var(--hf-muted); margin: 0; line-height: 1.55;
     }
 
     /* ── Feature pairs ──────────────────────────────────────────────────── */
-    .hf-feature-pairs { display: grid; gap: 5rem; margin-top: 2.5rem; }
+    .hf-feature-pairs { display: grid; gap: 9rem; margin-top: 4rem; }
     .hf-fp {
       display: grid;
       grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -532,7 +532,7 @@
     .hf-fp__title {
       font-family: var(--font-editorial);
       font-size: clamp(1.2rem, 1.5vw, 1.65rem);
-      font-weight: 600; letter-spacing: -0.026em;
+      font-weight: 500; letter-spacing: -0.026em;
       color: var(--hf-text); margin: 0 0 0.8rem;
     }
     .hf-fp__desc { font-size: 0.96rem; color: var(--hf-muted); line-height: 1.75; margin: 0; }
@@ -560,7 +560,7 @@
     .hf-demo__body { padding: 0.9rem 1rem; }
     .hf-demo__line { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.08rem 0; }
     .hf-demo__line--cmd { margin-bottom: 0.4rem; }
-    .hf-demo__p { color: var(--hf-accent); font-weight: 700; flex-shrink: 0; user-select: none; }
+    .hf-demo__p { color: var(--hf-accent); font-weight: 500; flex-shrink: 0; user-select: none; }
     .hf-demo__c { color: var(--hf-text); }
     .hf-demo__o { color: var(--hf-muted); padding-left: 1.4rem; }
     .hf-demo__o--on { color: var(--hf-green); }
@@ -600,9 +600,9 @@
       background: var(--hf-surface);
       border: 1px solid var(--hf-border);
       border-radius: 16px;
-      margin: 5rem 0;
+      margin: 8rem 0;
     }
-    .hf-cta-text { font-size: 1.15rem; font-weight: 600; color: var(--hf-text); margin: 0; letter-spacing: -0.025em; }
+    .hf-cta-text { font-size: 1.15rem; font-weight: 400; color: var(--hf-text); margin: 0; letter-spacing: -0.025em; }
     .hf-cta-sub { font-size: 0.9rem; color: var(--hf-muted); margin: 0.3rem 0 0; }
 
     /* ── Docs grid ──────────────────────────────────────────────────────── */
@@ -625,7 +625,7 @@
       box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     }
     .hf-docs-card__title {
-      font-size: 0.86rem; font-weight: 600;
+      font-size: 0.86rem; font-weight: 500;
       color: var(--hf-accent); margin: 0 0 0.25rem;
       display: flex; align-items: center; gap: 0.4rem;
     }
@@ -638,7 +638,7 @@
 
     /* ── Backend / model-runner marquee ────────────────────────────────── */
     .hf-backends {
-      padding: 4rem 0 4.5rem;
+      padding: 7rem 0;
       border-top: 1px solid var(--hf-border);
     }
     .hf-backends__label {
@@ -738,12 +738,150 @@
 
     /* ── Section headings ───────────────────────────────────────────────── */
     h2.hf-section-h2 {
-      font-size: 1.5rem; font-weight: 600;
+      font-size: 1.5rem; font-weight: 500;
       letter-spacing: -0.028em; line-height: 1.1;
       margin: 3rem 0 1.5rem;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--hf-border);
       color: var(--hf-text);
+    }
+
+    /* ── Directional reveals ────────────────────────────────────────────── */
+    .hf-reveal--left  { transform: translateX(-28px); }
+    .hf-reveal--right { transform: translateX(28px);  }
+    .hf-reveal--left.hf-visible,
+    .hf-reveal--right.hf-visible { transform: none; }
+
+    /* ── Feature-pair motion overrides ─────────────────────────────────── */
+    .hf-fp__lead  { opacity: 0; transform: translateX(-28px); transition: opacity 0.72s var(--ease), transform 0.72s var(--ease); }
+    .hf-fp__demo  { opacity: 0; transform: translateX(28px);  transition: opacity 0.72s var(--ease), transform 0.72s var(--ease); }
+    .hf-fp--flip .hf-fp__lead { transform: translateX(28px);  }
+    .hf-fp--flip .hf-fp__demo { transform: translateX(-28px); }
+    .hf-fp.hf-visible .hf-fp__lead,
+    .hf-fp.hf-visible .hf-fp__demo { opacity: 1; transform: none; }
+    .hf-fp.hf-visible .hf-fp__demo { transition-delay: 0.1s; }
+    @media (prefers-reduced-motion: reduce) {
+      .hf-fp__lead, .hf-fp__demo { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* ── Workflow scroll narrative ──────────────────────────────────────── */
+    .hf-workflow-scroll {
+      position: relative;
+      height: 500vh;
+    }
+    .hf-workflow-stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+      background: var(--hf-bg);
+      border-top: 1px solid var(--hf-border);
+      border-bottom: 1px solid var(--hf-border);
+    }
+    .hf-wf-eyebrow {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.7rem;
+      color: var(--hf-accent);
+      margin: 0 0 2rem;
+      opacity: 0;
+      transition: opacity 0.6s var(--ease);
+    }
+    .hf-workflow-stage.hf-wf-entered .hf-wf-eyebrow { opacity: 1; }
+    .hf-wf-step {
+      position: absolute;
+      width: 100%;
+      max-width: 580px;
+      padding: 0 2.5rem;
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.65s var(--ease), transform 0.65s var(--ease);
+      pointer-events: none;
+    }
+    .hf-wf-step--active {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+    .hf-wf-step--past {
+      opacity: 0;
+      transform: translateY(-22px);
+      transition-duration: 0.45s;
+    }
+    .hf-wf-step__cmd {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--hf-accent);
+      background: var(--hf-accent-faint);
+      border: 1px solid var(--hf-accent-glow);
+      border-radius: 6px;
+      padding: 0.22em 0.7em;
+      margin-bottom: 1.4rem;
+    }
+    .hf-wf-step__n {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--hf-dim);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    .hf-wf-step__title {
+      font-family: var(--font-editorial);
+      font-size: clamp(2.4rem, 4vw, 4rem);
+      font-weight: 500;
+      letter-spacing: -0.045em;
+      line-height: 1.02;
+      color: var(--hf-text);
+      margin: 0 0 1.2rem;
+    }
+    .hf-wf-step__desc {
+      font-size: 1.05rem;
+      color: var(--hf-muted);
+      line-height: 1.72;
+      margin: 0 auto;
+      max-width: 44ch;
+    }
+    /* Progress dots at bottom of sticky stage */
+    .hf-wf-progress {
+      position: absolute;
+      bottom: 2.8rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.55rem;
+      align-items: center;
+    }
+    .hf-wf-dot {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--hf-dim);
+      transition: background 0.35s, width 0.35s var(--ease);
+      width: 6px;
+    }
+    .hf-wf-dot--active {
+      background: var(--hf-accent);
+      width: 24px;
+    }
+    /* Thin scroll-progress bar at very top of sticky stage */
+    .hf-wf-scrollbar {
+      position: absolute;
+      top: 0; left: 0;
+      height: 2px;
+      background: var(--hf-accent);
+      transition: width 0.1s linear;
+      width: 0;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hf-wf-step { opacity: 1; transform: none; transition: none; }
     }
   </style>
 </head>
@@ -862,39 +1000,52 @@
         <p style="font-size:0.88rem;color:var(--hf-muted);margin:0.5rem 0 0;">Then run <code>handoff</code> and follow the setup wizard.</p>
       </div>
 
-      <!-- ─── WORKFLOW ─────────────────────────────────────────────────── -->
-      <div id="hf-workflow" class="hf-ed-section hf-ed-section--tint" style="margin-top:2.5rem;">
-        <p class="hf-eyebrow hf-reveal">Workflow</p>
-        <h2 class="hf-ed-heading hf-reveal">From blank terminal to defended paper</h2>
-        <p class="hf-ed-lead hf-reveal">Four commands cover the full research arc. Everything in between is handled by handoff — locally, reproducibly, with every step on record.</p>
-        <ol class="hf-workflow">
-          <li class="hf-workflow__step hf-reveal">
-            <span class="hf-workflow__n">01</span>
-            <span class="hf-workflow__cmd">/project new</span>
-            <p class="hf-workflow__title">Scaffold</p>
-            <p class="hf-workflow__desc">Create a private workspace with a Zotero library, experiment log, and LaTeX template — all local.</p>
-          </li>
-          <li class="hf-workflow__step hf-reveal">
-            <span class="hf-workflow__n">02</span>
-            <span class="hf-workflow__cmd">/research</span>
-            <p class="hf-workflow__title">Verify</p>
-            <p class="hf-workflow__desc">Fact-check claims against OpenAlex and arXiv. Confirmed citations go straight into the ledger.</p>
-          </li>
-          <li class="hf-workflow__step hf-reveal">
-            <span class="hf-workflow__n">03</span>
-            <span class="hf-workflow__cmd">/audit-paper</span>
-            <p class="hf-workflow__title">Audit</p>
-            <p class="hf-workflow__desc">Catalog every claim. Flag the ones without evidence before a reviewer does.</p>
-          </li>
-          <li class="hf-workflow__step hf-reveal">
-            <span class="hf-workflow__n">04</span>
-            <span class="hf-workflow__cmd">/handoff</span>
-            <p class="hf-workflow__title">Transfer</p>
-            <p class="hf-workflow__desc">Generate a grounded summary packet — claims, evidence, capsules — for collaborators or future self.</p>
-          </li>
-        </ol>
-      </div>
+    </div><!-- /hf-container -->
 
+    <!-- ─── WORKFLOW SCROLL NARRATIVE ──────────────────────────────────── -->
+    <div id="hf-workflow" class="hf-workflow-scroll">
+      <div class="hf-workflow-stage" id="hf-workflow-stage">
+        <div class="hf-wf-scrollbar" id="hf-wf-scrollbar"></div>
+        <p class="hf-wf-eyebrow">Workflow</p>
+
+        <div class="hf-wf-step" data-step="0">
+          <span class="hf-wf-step__cmd">/project new</span>
+          <p class="hf-wf-step__n">01</p>
+          <h3 class="hf-wf-step__title">Scaffold</h3>
+          <p class="hf-wf-step__desc">Create a private workspace with a Zotero library, experiment log, and LaTeX template. All local, nothing uploaded.</p>
+        </div>
+
+        <div class="hf-wf-step" data-step="1">
+          <span class="hf-wf-step__cmd">/research</span>
+          <p class="hf-wf-step__n">02</p>
+          <h3 class="hf-wf-step__title">Verify</h3>
+          <p class="hf-wf-step__desc">Fact-check claims against OpenAlex and arXiv in real time. Confirmed citations go straight into the ledger.</p>
+        </div>
+
+        <div class="hf-wf-step" data-step="2">
+          <span class="hf-wf-step__cmd">/audit-paper</span>
+          <p class="hf-wf-step__n">03</p>
+          <h3 class="hf-wf-step__title">Audit</h3>
+          <p class="hf-wf-step__desc">Catalog every claim in your draft. Flag anything without evidence before a reviewer does.</p>
+        </div>
+
+        <div class="hf-wf-step" data-step="3">
+          <span class="hf-wf-step__cmd">/handoff</span>
+          <p class="hf-wf-step__n">04</p>
+          <h3 class="hf-wf-step__title">Transfer</h3>
+          <p class="hf-wf-step__desc">Generate a grounded summary packet — claims, evidence, capsules — ready for collaborators or your future self.</p>
+        </div>
+
+        <div class="hf-wf-progress" id="hf-wf-progress">
+          <span class="hf-wf-dot" data-dot="0"></span>
+          <span class="hf-wf-dot" data-dot="1"></span>
+          <span class="hf-wf-dot" data-dot="2"></span>
+          <span class="hf-wf-dot" data-dot="3"></span>
+        </div>
+      </div>
+    </div><!-- /hf-workflow -->
+
+    <div class="hf-container">
       <!-- ─── CAPABILITIES ──────────────────────────────────────────────── -->
       <div id="hf-capabilities" class="hf-ed-section">
         <p class="hf-eyebrow hf-reveal">Capabilities</p>
@@ -1074,17 +1225,17 @@
       <!-- ─── DOCS GRID ─────────────────────────────────────────────────── -->
       <h2 id="hf-docs" class="hf-section-h2">Docs</h2>
       <div class="hf-docs-grid">
-        <a href="https://handoff-org.github.io/handoff/getting-started" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Getting started</p><p class="hf-docs-card__desc">Install, first launch, first project.</p></a>
-        <a href="https://handoff-org.github.io/handoff/research-workflow" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Research workflow</p><p class="hf-docs-card__desc">Literature → experiments → results → paper.</p></a>
-        <a href="https://handoff-org.github.io/handoff/commands" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Commands</p><p class="hf-docs-card__desc">Every slash command and key binding.</p></a>
-        <a href="https://handoff-org.github.io/handoff/claims-and-handoff" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Claims &amp; handoff</p><p class="hf-docs-card__desc">Claim ledger, audit, transfer packets.</p></a>
-        <a href="https://handoff-org.github.io/handoff/overleaf" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Overleaf sync</p><p class="hf-docs-card__desc">Two-way LaTeX sync, tokens, troubleshooting.</p></a>
-        <a href="https://handoff-org.github.io/handoff/integrations" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Zotero &amp; OpenReview</p><p class="hf-docs-card__desc">Annotate papers, fetch and answer reviews.</p></a>
-        <a href="https://handoff-org.github.io/handoff/configuration" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Configuration</p><p class="hf-docs-card__desc">Config file, env vars, backends, themes.</p></a>
-        <a href="https://handoff-org.github.io/handoff/models" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Choosing a model</p><p class="hf-docs-card__desc">Fast local models, presets, doctor &amp; benchmark.</p></a>
-        <a href="https://handoff-org.github.io/handoff/skills" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Skills</p><p class="hf-docs-card__desc">Save and replay your own workflows.</p></a>
-        <a href="https://handoff-org.github.io/handoff/troubleshooting" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Troubleshooting</p><p class="hf-docs-card__desc">Fixes for the common snags.</p></a>
-        <a href="https://handoff-org.github.io/handoff/architecture" class="hf-docs-card" target="_blank"><p class="hf-docs-card__title">Architecture</p><p class="hf-docs-card__desc">Contributor's tour of the codebase.</p></a>
+        <a href="getting-started" class="hf-docs-card"><p class="hf-docs-card__title">Getting started</p><p class="hf-docs-card__desc">Install, first launch, first project.</p></a>
+        <a href="research-workflow" class="hf-docs-card"><p class="hf-docs-card__title">Research workflow</p><p class="hf-docs-card__desc">Literature to experiments to results to paper.</p></a>
+        <a href="commands" class="hf-docs-card"><p class="hf-docs-card__title">Commands</p><p class="hf-docs-card__desc">Every slash command and key binding.</p></a>
+        <a href="claims-and-handoff" class="hf-docs-card"><p class="hf-docs-card__title">Claims &amp; handoff</p><p class="hf-docs-card__desc">Claim ledger, audit, transfer packets.</p></a>
+        <a href="overleaf" class="hf-docs-card"><p class="hf-docs-card__title">Overleaf sync</p><p class="hf-docs-card__desc">Two-way LaTeX sync, tokens, troubleshooting.</p></a>
+        <a href="integrations" class="hf-docs-card"><p class="hf-docs-card__title">Zotero &amp; OpenReview</p><p class="hf-docs-card__desc">Annotate papers, fetch and answer reviews.</p></a>
+        <a href="configuration" class="hf-docs-card"><p class="hf-docs-card__title">Configuration</p><p class="hf-docs-card__desc">Config file, env vars, backends, themes.</p></a>
+        <a href="models" class="hf-docs-card"><p class="hf-docs-card__title">Choosing a model</p><p class="hf-docs-card__desc">Fast local models, presets, doctor &amp; benchmark.</p></a>
+        <a href="skills" class="hf-docs-card"><p class="hf-docs-card__title">Skills</p><p class="hf-docs-card__desc">Save and replay your own workflows.</p></a>
+        <a href="troubleshooting" class="hf-docs-card"><p class="hf-docs-card__title">Troubleshooting</p><p class="hf-docs-card__desc">Fixes for the common snags.</p></a>
+        <a href="architecture" class="hf-docs-card"><p class="hf-docs-card__title">Architecture</p><p class="hf-docs-card__desc">Contributor's tour of the codebase.</p></a>
       </div>
 
     </div>
@@ -1094,56 +1245,88 @@
     (function () {
       var nav = document.getElementById('hf-nav');
 
-      // Nav: add frosted-glass backdrop on scroll
+      // ── Nav frosted-glass on scroll ──────────────────────────────────────
       function onScroll() {
-        if (window.scrollY > 12) {
-          nav.classList.add('hf-nav--scrolled');
-        } else {
-          nav.classList.remove('hf-nav--scrolled');
-        }
+        nav.classList.toggle('hf-nav--scrolled', window.scrollY > 12);
       }
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
 
-      // Scroll-reveal via IntersectionObserver
-      if (!('IntersectionObserver' in window)) {
-        document.querySelectorAll('.hf-reveal, .hf-motif-wrap').forEach(function (el) {
+      // ── IntersectionObserver reveal (fade + directional) ─────────────────
+      if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('hf-visible');
+              obs.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.hf-reveal, .hf-motif-wrap, .hf-fp').forEach(function (el) {
+          obs.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.hf-reveal, .hf-motif-wrap, .hf-fp').forEach(function (el) {
           el.classList.add('hf-visible');
         });
-        return;
       }
-      var obs = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('hf-visible');
-            obs.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.12 });
-      document.querySelectorAll('.hf-reveal, .hf-motif-wrap').forEach(function (el) {
-        obs.observe(el);
-      });
 
-      // Stagger workflow steps and feature pairs
-      document.querySelectorAll('.hf-workflow__step').forEach(function (el, i) {
-        el.style.transitionDelay = (i * 0.07) + 's';
-      });
-      document.querySelectorAll('.hf-fp').forEach(function (el, i) {
-        el.style.transitionDelay = (i * 0.05) + 's';
-      });
-
-      // ── Docs cards: prevent dead "#" scroll-to-top ──────────────────────
-      // ── Carousel: duplicate track for seamless loop ──────────────────────
+      // ── Carousel: duplicate track for seamless loop ───────────────────────
       var track = document.getElementById('hf-marquee-track');
-      if (track) {
-        var clone = track.innerHTML;
-        track.innerHTML += clone;
+      if (track) { track.innerHTML += track.innerHTML; }
+
+      // ── Workflow scroll narrative ─────────────────────────────────────────
+      var wfScroll  = document.getElementById('hf-workflow');
+      var wfStage   = document.getElementById('hf-workflow-stage');
+      var wfBar     = document.getElementById('hf-wf-scrollbar');
+      var wfDots    = document.querySelectorAll('#hf-wf-progress .hf-wf-dot');
+      var wfSteps   = document.querySelectorAll('#hf-workflow .hf-wf-step');
+      var NUM_STEPS = wfSteps.length;
+      var activeStep = -1;
+
+      function updateWorkflow() {
+        if (!wfScroll || !wfStage) return;
+        var rect     = wfScroll.getBoundingClientRect();
+        var scrolled = -rect.top;                          // px scrolled into the section
+        var totalH   = wfScroll.offsetHeight - window.innerHeight;
+
+        // Eyebrow fades in as soon as section enters viewport
+        if (scrolled > -window.innerHeight * 0.5) {
+          wfStage.classList.add('hf-wf-entered');
+        }
+
+        if (scrolled < 0 || totalH <= 0) return;
+        var progress = Math.min(scrolled / totalH, 1);    // 0 → 1
+
+        // Progress bar
+        if (wfBar) wfBar.style.width = (progress * 100) + '%';
+
+        // Which step?
+        var idx = Math.min(Math.floor(progress * NUM_STEPS), NUM_STEPS - 1);
+
+        if (idx === activeStep) return;
+        activeStep = idx;
+
+        wfSteps.forEach(function (step, i) {
+          step.classList.remove('hf-wf-step--active', 'hf-wf-step--past');
+          if (i < idx)  step.classList.add('hf-wf-step--past');
+          if (i === idx) step.classList.add('hf-wf-step--active');
+        });
+
+        wfDots.forEach(function (dot, i) {
+          dot.classList.toggle('hf-wf-dot--active', i === idx);
+        });
       }
+
+      window.addEventListener('scroll', updateWorkflow, { passive: true });
+      // Kick once so first step shows if already in view
+      updateWorkflow();
+      // Also show step 0 immediately when not scrolled at all
+      if (wfSteps.length > 0) wfSteps[0].classList.add('hf-wf-step--active');
+      if (wfDots.length > 0)  wfDots[0].classList.add('hf-wf-dot--active');
+      activeStep = 0;
 
       // ── Banner letter hover glow ─────────────────────────────────────────
-      // Split the banner text into individual <tspan> elements so each letter
-      // can receive its own glow on hover. Uses getCharNumAtPosition() for
-      // reliable hit-detection regardless of font metrics.
       var bannerText = document.querySelector('.hf-banner-text');
       if (bannerText) {
         var raw = bannerText.textContent;
@@ -1155,25 +1338,19 @@
           bannerText.appendChild(ts);
           return ts;
         });
-
         var bannerSVG = bannerText.closest('svg');
         var litIdx = -1;
-
         bannerSVG.addEventListener('mousemove', function (e) {
           var pt = bannerSVG.createSVGPoint();
-          pt.x = e.clientX;
-          pt.y = e.clientY;
+          pt.x = e.clientX; pt.y = e.clientY;
           var svgPt = pt.matrixTransform(bannerSVG.getScreenCTM().inverse());
           var idx = bannerText.getCharNumAtPosition(svgPt);
           if (idx !== litIdx) {
             bannerText.classList.add('hf-hovering');
-            tspans.forEach(function (ts, i) {
-              ts.classList.toggle('hf-letter--lit', i === idx);
-            });
+            tspans.forEach(function (ts, i) { ts.classList.toggle('hf-letter--lit', i === idx); });
             litIdx = idx;
           }
         });
-
         bannerSVG.addEventListener('mouseleave', function () {
           bannerText.classList.remove('hf-hovering');
           tspans.forEach(function (ts) { ts.classList.remove('hf-letter--lit'); });
