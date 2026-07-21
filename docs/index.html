@@ -448,60 +448,6 @@
       line-height: 1.7;
     }
 
-    /* ── Workflow ───────────────────────────────────────────────────────── */
-    .hf-workflow {
-      list-style: none;
-      margin: 0; padding: 0;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-    }
-    @media (max-width: 660px) { .hf-workflow { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 380px) { .hf-workflow { grid-template-columns: 1fr; } }
-    .hf-workflow__step {
-      border-top: 2px solid var(--hf-border-2);
-      padding-top: 1.1rem;
-      position: relative;
-    }
-    .hf-workflow__step:not(:last-child)::after {
-      content: '→';
-      position: absolute;
-      top: -0.3rem;
-      right: -1rem;
-      color: var(--hf-dim);
-      font-size: 0.9rem;
-    }
-    @media (max-width: 660px) {
-      .hf-workflow__step:not(:last-child)::after { display: none; }
-    }
-    .hf-workflow__n {
-      display: block;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--hf-accent);
-      letter-spacing: 0.06em;
-      margin-bottom: 0.5rem;
-    }
-    .hf-workflow__cmd {
-      display: inline-block;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--hf-accent);
-      background: var(--hf-accent-faint);
-      border: 1px solid var(--hf-accent-glow);
-      border-radius: 4px;
-      padding: 0.12em 0.5em;
-      margin-bottom: 0.55rem;
-    }
-    .hf-workflow__title {
-      font-family: var(--font-editorial);
-      font-size: 1rem; font-weight: 500; color: var(--hf-text); margin: 0 0 0.35rem;
-    }
-    .hf-workflow__desc {
-      font-size: 0.84rem; color: var(--hf-muted); margin: 0; line-height: 1.55;
-    }
-
     /* ── Feature pairs ──────────────────────────────────────────────────── */
     .hf-feature-pairs { display: grid; gap: 9rem; margin-top: 4rem; }
     .hf-fp {
@@ -764,126 +710,84 @@
       .hf-fp__lead, .hf-fp__demo { opacity: 1; transform: none; transition: none; }
     }
 
-    /* ── Workflow scroll narrative ──────────────────────────────────────── */
-    .hf-workflow-scroll {
-      position: relative;
-      height: 500vh;
-    }
-    .hf-workflow-stage {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: hidden;
-      background: var(--hf-bg);
+    /* ── Workflow section ───────────────────────────────────────────────── */
+    .hf-workflow-section {
+      padding: 8rem 2.5rem;
       border-top: 1px solid var(--hf-border);
       border-bottom: 1px solid var(--hf-border);
     }
-    .hf-wf-eyebrow {
-      position: absolute;
-      top: 3.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      font-family: var(--font-mono);
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      font-size: 0.7rem;
-      color: var(--hf-accent);
-      margin: 0;
-      opacity: 0;
-      transition: opacity 0.6s var(--ease);
-    }
-    .hf-workflow-stage.hf-wf-entered .hf-wf-eyebrow { opacity: 1; }
-    .hf-wf-step {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, calc(-50% + 22px));
-      width: calc(100% - 5rem);
-      max-width: 580px;
+    .hf-workflow-inner {
+      max-width: 76rem;
+      margin: 0 auto;
       text-align: center;
-      opacity: 0;
-      transition: opacity 0.65s var(--ease), transform 0.65s var(--ease);
-      pointer-events: none;
     }
-    .hf-wf-step--active {
-      opacity: 1;
-      transform: translate(-50%, -50%);
-      pointer-events: auto;
+    .hf-wf-heading {
+      font-family: var(--font-editorial);
+      font-size: clamp(2.4rem, 3.5vw, 4.2rem);
+      font-weight: 500;
+      letter-spacing: -0.045em;
+      line-height: 1.04;
+      color: var(--hf-text);
+      margin: 0 0 1rem;
     }
-    .hf-wf-step--past {
-      opacity: 0;
-      transform: translate(-50%, calc(-50% - 22px));
-      transition-duration: 0.45s;
+    .hf-wf-subhead {
+      font-size: 1rem;
+      color: var(--hf-muted);
+      margin: 0 0 4rem;
+      line-height: 1.65;
     }
-    .hf-wf-step__cmd {
-      display: inline-block;
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--hf-accent);
-      background: var(--hf-accent-faint);
-      border: 1px solid var(--hf-accent-glow);
-      border-radius: 6px;
-      padding: 0.22em 0.7em;
-      margin-bottom: 1.4rem;
+    .hf-wf-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: 1px solid var(--hf-border);
+      border-radius: 12px;
+      overflow: hidden;
+      text-align: left;
     }
-    .hf-wf-step__n {
-      display: block;
+    @media (max-width: 760px) { .hf-wf-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 440px) { .hf-wf-grid { grid-template-columns: 1fr; } }
+    .hf-wf-card {
+      padding: 2.5rem 2rem;
+      border-right: 1px solid var(--hf-border);
+    }
+    .hf-wf-card:last-child { border-right: none; }
+    @media (max-width: 760px) {
+      .hf-wf-card:nth-child(2) { border-right: none; }
+      .hf-wf-card:nth-child(3) { border-top: 1px solid var(--hf-border); }
+      .hf-wf-card:nth-child(4) { border-top: 1px solid var(--hf-border); border-right: none; }
+    }
+    .hf-wf-card__n {
       font-family: var(--font-mono);
       font-size: 0.65rem;
       color: var(--hf-dim);
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      margin-bottom: 0.6rem;
+      margin: 0 0 0.8rem;
     }
-    .hf-wf-step__title {
+    .hf-wf-card__cmd {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--hf-accent);
+      background: var(--hf-accent-faint);
+      border: 1px solid var(--hf-accent-glow);
+      border-radius: 5px;
+      padding: 0.18em 0.6em;
+      margin-bottom: 1.2rem;
+    }
+    .hf-wf-card__title {
       font-family: var(--font-editorial);
-      font-size: clamp(2.4rem, 4vw, 4rem);
+      font-size: 1.25rem;
       font-weight: 500;
-      letter-spacing: -0.045em;
-      line-height: 1.02;
+      letter-spacing: -0.025em;
       color: var(--hf-text);
-      margin: 0 0 1.2rem;
+      margin: 0 0 0.65rem;
     }
-    .hf-wf-step__desc {
-      font-size: 1.05rem;
+    .hf-wf-card__desc {
+      font-size: 0.88rem;
       color: var(--hf-muted);
-      line-height: 1.72;
-      margin: 0 auto;
-      max-width: 44ch;
-    }
-    /* Progress dots at bottom of sticky stage */
-    .hf-wf-progress {
-      position: absolute;
-      bottom: 2.8rem;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 0.55rem;
-      align-items: center;
-    }
-    .hf-wf-dot {
-      height: 6px;
-      border-radius: 3px;
-      background: var(--hf-dim);
-      transition: background 0.35s, width 0.35s var(--ease);
-      width: 6px;
-    }
-    .hf-wf-dot--active {
-      background: var(--hf-accent);
-      width: 24px;
-    }
-    /* Thin scroll-progress bar at very top of sticky stage */
-    .hf-wf-scrollbar {
-      position: absolute;
-      top: 0; left: 0;
-      height: 2px;
-      background: var(--hf-accent);
-      transition: width 0.1s linear;
-      width: 0;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .hf-wf-step { opacity: 1; transform: none; transition: none; }
+      line-height: 1.65;
+      margin: 0;
     }
   </style>
 </head>
@@ -1004,48 +908,40 @@
 
     </div><!-- /hf-container -->
 
-    <!-- ─── WORKFLOW SCROLL NARRATIVE ──────────────────────────────────── -->
-    <div id="hf-workflow" class="hf-workflow-scroll">
-      <div class="hf-workflow-stage" id="hf-workflow-stage">
-        <div class="hf-wf-scrollbar" id="hf-wf-scrollbar"></div>
-        <p class="hf-wf-eyebrow">Workflow</p>
-
-        <div class="hf-wf-step" data-step="0">
-          <span class="hf-wf-step__cmd">/project new</span>
-          <p class="hf-wf-step__n">01</p>
-          <h3 class="hf-wf-step__title">Scaffold</h3>
-          <p class="hf-wf-step__desc">Create a private workspace with a Zotero library, experiment log, and LaTeX template. All local, nothing uploaded.</p>
-        </div>
-
-        <div class="hf-wf-step" data-step="1">
-          <span class="hf-wf-step__cmd">/research</span>
-          <p class="hf-wf-step__n">02</p>
-          <h3 class="hf-wf-step__title">Verify</h3>
-          <p class="hf-wf-step__desc">Fact-check claims against OpenAlex and arXiv in real time. Confirmed citations go straight into the ledger.</p>
-        </div>
-
-        <div class="hf-wf-step" data-step="2">
-          <span class="hf-wf-step__cmd">/audit-paper</span>
-          <p class="hf-wf-step__n">03</p>
-          <h3 class="hf-wf-step__title">Audit</h3>
-          <p class="hf-wf-step__desc">Catalog every claim in your draft. Flag anything without evidence before a reviewer does.</p>
-        </div>
-
-        <div class="hf-wf-step" data-step="3">
-          <span class="hf-wf-step__cmd">/handoff</span>
-          <p class="hf-wf-step__n">04</p>
-          <h3 class="hf-wf-step__title">Transfer</h3>
-          <p class="hf-wf-step__desc">Generate a grounded summary packet — claims, evidence, capsules — ready for collaborators or your future self.</p>
-        </div>
-
-        <div class="hf-wf-progress" id="hf-wf-progress">
-          <span class="hf-wf-dot" data-dot="0"></span>
-          <span class="hf-wf-dot" data-dot="1"></span>
-          <span class="hf-wf-dot" data-dot="2"></span>
-          <span class="hf-wf-dot" data-dot="3"></span>
+    <!-- ─── WORKFLOW ─────────────────────────────────────────────────────── -->
+    <section id="hf-workflow" class="hf-workflow-section">
+      <div class="hf-workflow-inner">
+        <p class="hf-eyebrow hf-reveal">Workflow</p>
+        <h2 class="hf-wf-heading hf-reveal">From blank terminal<br>to defended paper</h2>
+        <p class="hf-wf-subhead hf-reveal">Four commands cover the full research arc.</p>
+        <div class="hf-wf-grid">
+          <div class="hf-wf-card hf-reveal">
+            <p class="hf-wf-card__n">01</p>
+            <span class="hf-wf-card__cmd">/project new</span>
+            <h3 class="hf-wf-card__title">Scaffold</h3>
+            <p class="hf-wf-card__desc">Create a private workspace with a Zotero library, experiment log, and LaTeX template. All local, nothing uploaded.</p>
+          </div>
+          <div class="hf-wf-card hf-reveal">
+            <p class="hf-wf-card__n">02</p>
+            <span class="hf-wf-card__cmd">/research</span>
+            <h3 class="hf-wf-card__title">Verify</h3>
+            <p class="hf-wf-card__desc">Fact-check claims against OpenAlex and arXiv in real time. Confirmed citations go straight into the ledger.</p>
+          </div>
+          <div class="hf-wf-card hf-reveal">
+            <p class="hf-wf-card__n">03</p>
+            <span class="hf-wf-card__cmd">/audit-paper</span>
+            <h3 class="hf-wf-card__title">Audit</h3>
+            <p class="hf-wf-card__desc">Catalog every claim in your draft. Flag anything without evidence before a reviewer does.</p>
+          </div>
+          <div class="hf-wf-card hf-reveal">
+            <p class="hf-wf-card__n">04</p>
+            <span class="hf-wf-card__cmd">/handoff</span>
+            <h3 class="hf-wf-card__title">Transfer</h3>
+            <p class="hf-wf-card__desc">Generate a grounded summary packet — claims, evidence, capsules — ready for collaborators or your future self.</p>
+          </div>
         </div>
       </div>
-    </div><!-- /hf-workflow -->
+    </section><!-- /hf-workflow -->
 
     <div class="hf-container">
       <!-- ─── CAPABILITIES ──────────────────────────────────────────────── -->
@@ -1276,57 +1172,6 @@
       // ── Carousel: duplicate track for seamless loop ───────────────────────
       var track = document.getElementById('hf-marquee-track');
       if (track) { track.innerHTML += track.innerHTML; }
-
-      // ── Workflow scroll narrative ─────────────────────────────────────────
-      var wfScroll  = document.getElementById('hf-workflow');
-      var wfStage   = document.getElementById('hf-workflow-stage');
-      var wfBar     = document.getElementById('hf-wf-scrollbar');
-      var wfDots    = document.querySelectorAll('#hf-wf-progress .hf-wf-dot');
-      var wfSteps   = document.querySelectorAll('#hf-workflow .hf-wf-step');
-      var NUM_STEPS = wfSteps.length;
-      var activeStep = -1;
-
-      function updateWorkflow() {
-        if (!wfScroll || !wfStage) return;
-        var rect     = wfScroll.getBoundingClientRect();
-        var scrolled = -rect.top;                          // px scrolled into the section
-        var totalH   = wfScroll.offsetHeight - window.innerHeight;
-
-        // Eyebrow fades in as soon as section enters viewport
-        if (scrolled > -window.innerHeight * 0.5) {
-          wfStage.classList.add('hf-wf-entered');
-        }
-
-        if (scrolled < 0 || totalH <= 0) return;
-        var progress = Math.min(scrolled / totalH, 1);    // 0 → 1
-
-        // Progress bar
-        if (wfBar) wfBar.style.width = (progress * 100) + '%';
-
-        // Which step?
-        var idx = Math.min(Math.floor(progress * NUM_STEPS), NUM_STEPS - 1);
-
-        if (idx === activeStep) return;
-        activeStep = idx;
-
-        wfSteps.forEach(function (step, i) {
-          step.classList.remove('hf-wf-step--active', 'hf-wf-step--past');
-          if (i < idx)  step.classList.add('hf-wf-step--past');
-          if (i === idx) step.classList.add('hf-wf-step--active');
-        });
-
-        wfDots.forEach(function (dot, i) {
-          dot.classList.toggle('hf-wf-dot--active', i === idx);
-        });
-      }
-
-      window.addEventListener('scroll', updateWorkflow, { passive: true });
-      // Kick once so first step shows if already in view
-      updateWorkflow();
-      // Also show step 0 immediately when not scrolled at all
-      if (wfSteps.length > 0) wfSteps[0].classList.add('hf-wf-step--active');
-      if (wfDots.length > 0)  wfDots[0].classList.add('hf-wf-dot--active');
-      activeStep = 0;
 
       // ── Banner letter hover glow ─────────────────────────────────────────
       var bannerText = document.querySelector('.hf-banner-text');
