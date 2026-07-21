@@ -125,7 +125,36 @@
     /* ── Hero ───────────────────────────────────────────────────────────── */
     .hf-hero {
       background: var(--hf-bg);
-      padding-top: var(--nav-h);
+    }
+    /* Full-screen splash: logo fills first viewport */
+    .hf-hero__splash {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--hf-border);
+    }
+    .hf-hero__splash .hf-hero__banner-wrap {
+      border-bottom: none;
+    }
+    .hf-hero__scroll-cue {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--hf-dim);
+      white-space: nowrap;
+      animation: hf-cue-float 2.4s ease-in-out infinite;
+    }
+    @keyframes hf-cue-float {
+      0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
+      50%       { opacity: 0.7; transform: translateX(-50%) translateY(7px); }
     }
     .hf-hero__banner-wrap {
       width: 100%;
@@ -813,29 +842,32 @@
   <!-- ─── HERO ───────────────────────────────────────────────────────────── -->
   <section class="hf-hero">
 
-    <!-- Full-width banner wordmark — inlined so CSS can animate letters -->
-    <div class="hf-hero__banner-wrap">
-      <svg class="hf-banner-svg" viewBox="0 0 1920 600"
-           xmlns="http://www.w3.org/2000/svg"
-           xmlns:xlink="http://www.w3.org/1999/xlink"
-           aria-hidden="true">
-        <defs>
-          <linearGradient id="hf-banner-grad"
-            x1="38.292217" y1="255.99998" x2="473.70779" y2="255.99998"
-            gradientUnits="userSpaceOnUse"
-            gradientTransform="matrix(1.8676973,0,0,1.8676973,481.86898,-178.13034)">
-            <stop offset="0.09173355" style="stop-color:#1ae41f;stop-opacity:1;"/>
-            <stop offset="1"          style="stop-color:#ffffff;stop-opacity:0;"/>
-          </linearGradient>
-        </defs>
-        <rect width="1920" height="600" x="0" y="0" fill="#1a1a1a"/>
-        <text class="hf-banner-text"
-              style="font-size:249.026px;font-family:Helvetica,Arial,sans-serif;fill:url(#hf-banner-grad);fill-opacity:1;"
-              x="537.33673" y="388.21698">h&gt;ndoff</text>
-      </svg>
+    <!-- Full-screen splash: centered wordmark -->
+    <div class="hf-hero__splash">
+      <div class="hf-hero__banner-wrap">
+        <svg class="hf-banner-svg" viewBox="0 0 1920 600"
+             xmlns="http://www.w3.org/2000/svg"
+             xmlns:xlink="http://www.w3.org/1999/xlink"
+             aria-hidden="true">
+          <defs>
+            <linearGradient id="hf-banner-grad"
+              x1="38.292217" y1="255.99998" x2="473.70779" y2="255.99998"
+              gradientUnits="userSpaceOnUse"
+              gradientTransform="matrix(1.8676973,0,0,1.8676973,481.86898,-178.13034)">
+              <stop offset="0.09173355" style="stop-color:#1ae41f;stop-opacity:1;"/>
+              <stop offset="1"          style="stop-color:#ffffff;stop-opacity:0;"/>
+            </linearGradient>
+          </defs>
+          <rect width="1920" height="600" x="0" y="0" fill="#1a1a1a"/>
+          <text class="hf-banner-text"
+                style="font-size:249.026px;font-family:Helvetica,Arial,sans-serif;fill:url(#hf-banner-grad);fill-opacity:1;"
+                x="537.33673" y="388.21698">h&gt;ndoff</text>
+        </svg>
+      </div>
+      <p class="hf-hero__scroll-cue">scroll</p>
     </div>
 
-    <!-- Headline + CTAs below banner -->
+    <!-- Headline + CTAs below the fold -->
     <div class="hf-hero__content">
 
       <div class="hf-hero__lead">
